@@ -41,3 +41,21 @@ The current plan is:
 For now we are proving the smallest possible loop: embedded Acheron bytecode
 inside a CP/M-65 program that can call back out to native 6502 code and print a
 known string.
+
+## VM Runner Direction
+
+The next bootstrap step is a real CP/M-65 VM runner program:
+
+- program name: `vm.com`
+- input file format: `.avm`
+- default input file: `main.avm`
+- job: load the payload, validate its header, and enter AcheronVM at the file's
+  entry offset
+
+For the first file-based payloads we will keep the ABI narrow:
+
+- payload bytes are raw Acheron instruction bytes
+- entry offset is an offset into that payload
+- the runner supplies any native helper routines needed by the demo programs
+- later compiler/runtime work can expand this with relocation data, exports, and
+  project-specific opcodes

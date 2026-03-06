@@ -1,0 +1,5 @@
+# Placeholder hello payload for the staged vm runner.
+# The calln target is intentionally zero until vm.com defines and patches
+# a concrete native helper entry point.
+calln 0x0000
+native

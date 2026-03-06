@@ -26,3 +26,4 @@ Release disk image (C64 CP/M-65) with tools + examples + automated verification.
 ## Progress Log (Append-Only)
 
 - 2026-03-03: Bootstrap repository created with initial structure, docs seeds, inspiration copy script, and smoke tests.
+- 2026-03-06: Added WSL2 environment probe/setup scripts, local path validation, and non-destructive tooling tests.

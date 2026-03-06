@@ -31,3 +31,4 @@ Release disk image (C64 CP/M-65) with tools + examples + automated verification.
 - 2026-03-06: Added a hello.com smoke program, ABI notes, and a build path that prefers native CP/M-65 ASM with llvm-mos fallback.
 - 2026-03-06: Added AcheronVM planning docs, a staged vmhello proof source, and blockers-aware build/test plumbing for the VM backend.
 - 2026-03-06: Defined the versioned `.avm` file format, added a host packer, and staged the file-based vm.com runner/test path.
+- 2026-03-06: Added a minimal Action-like compiler for Print/PrintE, plus a VM ABI doc and compiler-to-.avm smoke test path.

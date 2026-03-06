@@ -22,6 +22,7 @@ class TestRepoLayout(unittest.TestCase):
             "docs/cpm65_cmdline.md",
             "docs/blockers.md",
             "docs/spec.md",
+            "docs/vm_abi.md",
             "src/compiler",
             "src/vm",
             "src/vm/vmhello/vmhello.asm",
@@ -30,6 +31,7 @@ class TestRepoLayout(unittest.TestCase):
             "src/tools_cpm",
             "src/tools_cpm/hello/hello.asm",
             "src/tools_cpm/hello/hello.c",
+            "tools/actionc64u_compile.py",
             "tools/avm_pack.py",
             "tools/env_check.sh",
             "tools/setup_wsl.sh",
@@ -42,6 +44,7 @@ class TestRepoLayout(unittest.TestCase):
             "pytest/__main__.py",
             "tools",
             "examples",
+            "examples/hello.act",
             "examples/hello.avm",
             "examples/hello.avm.txt",
             "tests",
@@ -49,6 +52,7 @@ class TestRepoLayout(unittest.TestCase):
             "tests/test_hello_com.py",
             "tests/test_vmhello.py",
             "tests/test_vmrun_file.py",
+            "tests/test_compile_and_run.py",
         ]
 
         missing = [path for path in required if not (root / path).exists()]

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import sys
 
-from avo_format import AvoFormatError, AvoObject, read_avo
+from avo_format import AvoFormatError, AvoObject, OverlayObject, read_avo
 from avm_pack import pack_avm
 
 
@@ -18,6 +18,12 @@ class LinkError(Exception):
 class IncludedObject:
     path: Path
     obj: AvoObject
+    base_offset: int
+
+
+@dataclass(frozen=True)
+class IncludedOverlay:
+    overlay: OverlayObject
     base_offset: int
 
 
@@ -68,7 +74,45 @@ def resolve_objects(main_path: Path, main_obj: AvoObject, libraries: list[tuple[
     return resolved
 
 
-def render_map(included: list[IncludedObject], export_index: dict[str, tuple[Path, AvoObject]]) -> str:
+def encode_overlay_segment(overlays: list[OverlayObject]) -> bytes:
+    if not overlays:
+        return b""
+    blob = bytearray(b"OVLT")
+    if len(overlays) > 0xFF:
+        raise LinkError("too many overlays for bootstrap overlay segment")
+    blob.append(len(overlays))
+    for overlay in overlays:
+        name_bytes = overlay.name.encode("ascii")
+        if len(name_bytes) > 0xFF:
+            raise LinkError(f"overlay name too long: {overlay.name}")
+        if len(overlay.payload) > 0xFFFF:
+            raise LinkError(f"overlay payload too large: {overlay.name}")
+        blob.append(len(name_bytes))
+        blob.extend(name_bytes)
+        blob.extend(len(overlay.payload).to_bytes(2, "little"))
+        blob.extend(overlay.payload)
+    return bytes(blob)
+
+
+def layout_overlays(payload_len: int, overlays: list[OverlayObject]) -> list[IncludedOverlay]:
+    if not overlays:
+        return []
+    header_len = 5
+    per_overlay_header = 3
+    layout: list[IncludedOverlay] = []
+    cursor = payload_len + header_len
+    for overlay in overlays:
+        cursor += len(overlay.name.encode("ascii")) + per_overlay_header
+        layout.append(IncludedOverlay(overlay=overlay, base_offset=cursor))
+        cursor += len(overlay.payload)
+    return layout
+
+
+def render_map(
+    included: list[IncludedObject],
+    export_index: dict[str, tuple[Path, AvoObject]],
+    overlays: list[IncludedOverlay],
+) -> str:
     lines = ["# ActionC64U Link Map", ""]
     lines.append(f"entry main @ 0x{included[0].base_offset + included[0].obj.entry_offset:04x}")
     lines.append("")
@@ -88,6 +132,11 @@ def render_map(included: list[IncludedObject], export_index: dict[str, tuple[Pat
         for symbol in item.obj.imports:
             provider_path, provider_obj = export_index[symbol]
             lines.append(f"- {item.obj.module_name}: {symbol} -> {provider_obj.module_name} ({provider_path})")
+    if overlays:
+        lines.append("")
+        lines.append("overlays:")
+        for item in overlays:
+            lines.append(f"- {item.overlay.name} base=0x{item.base_offset:04x} size={len(item.overlay.payload)}")
     lines.append("")
     return "\n".join(lines)
 
@@ -98,10 +147,12 @@ def link(main_path: Path, runtime_dirs: list[Path], avm_output: Path, map_output
     export_index = build_export_index([(main_path.resolve(), main_obj), *libraries])
     included = resolve_objects(main_path, main_obj, libraries)
     payload = b"".join(item.obj.payload for item in included)
+    overlay_bytes = encode_overlay_segment(main_obj.overlays)
+    overlay_layout = layout_overlays(len(payload), main_obj.overlays)
     avm_output.parent.mkdir(parents=True, exist_ok=True)
-    avm_output.write_bytes(pack_avm(payload, entry_offset=main_obj.entry_offset))
+    avm_output.write_bytes(pack_avm(payload + overlay_bytes, entry_offset=main_obj.entry_offset))
     map_output.parent.mkdir(parents=True, exist_ok=True)
-    map_output.write_text(render_map(included, export_index), encoding="ascii")
+    map_output.write_text(render_map(included, export_index, overlay_layout), encoding="ascii")
 
 
 def build_parser() -> argparse.ArgumentParser:

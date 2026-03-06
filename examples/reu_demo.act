@@ -1,0 +1,8 @@
+MODULE reudemo
+PROC main()
+REU BYTE ARRAY big(50000)
+ReuPoke8(big, 0, 65)
+IF ReuPeek8(big, 0) = 65 THEN
+PrintE("reu ok")
+FI
+RETURN

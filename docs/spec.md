@@ -12,8 +12,13 @@ The host reference compiler currently accepts a single-file program in this form
 
 ```text
 [MODULE <identifier>]
+[OVERLAY <identifier>
+  ...
+ENDOVERLAY]
+...
 PROC main()
-  [BYTE|CARD|INT name[,name...]]
+  [BYTE|CARD|INT|REAL name[,name...]]
+  [REU BYTE ARRAY name(length)]
   ...
   <statements>
 RETURN
@@ -23,6 +28,7 @@ Current constraints:
 
 - one source file produces one program
 - `MODULE` is optional and currently ignored by code generation
+- overlay blocks, when used, must appear before `PROC main()`
 - only `PROC main()` is recognized
 - declarations must appear at the top of `main`, before executable statements
 - comments start with `;`
@@ -38,6 +44,9 @@ PrintI(expr)
 PrintIE(expr)
 PrintR(expr)
 PrintRE(expr)
+ReuPoke8(name, index, value)
+ReuPoke16(name, index, value)
+OverlayCall(name)
 IF expr [THEN]
   ...
 FI
@@ -51,6 +60,8 @@ Semantics:
 - `PrintIE` prints the decimal value of an integer expression and a newline
 - `PrintR` prints the decimal form of a REAL expression with no newline
 - `PrintRE` prints the decimal form of a REAL expression and a newline
+- `ReuPoke8` / `ReuPoke16` write into a declared REU byte array
+- `OverlayCall` executes a named overlay block
 - `IF` executes its body when the expression is non-zero
 
 The parser already tolerates nested `IF ... FI`, but the implementation is still
@@ -71,6 +82,7 @@ Supported expression forms:
 - hex literals, for example `$1A2B`
 - REAL literals, for example `1.0`, `3.14`, `2e-3`
 - variable references
+- REU reads: `ReuPeek8(name, index)`, `ReuPeek16(name, index)`
 - conversions: `REAL(x)`, `INT(r)`
 - unary minus
 - `+`, `-`, `*`, `/`

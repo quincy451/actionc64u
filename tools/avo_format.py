@@ -16,12 +16,20 @@ class AvoFormatError(ValueError):
 
 
 @dataclass(frozen=True)
+class OverlayObject:
+    name: str
+    imports: list[str]
+    payload: bytes
+
+
+@dataclass(frozen=True)
 class AvoObject:
     module_name: str
     entry_offset: int
     exports: list[tuple[str, int]]
     imports: list[str]
     payload: bytes
+    overlays: list[OverlayObject]
     version: int = VERSION
 
 
@@ -61,6 +69,24 @@ def normalize_imports(imports: list[str]) -> list[str]:
     return sorted(normalized)
 
 
+def normalize_overlays(overlays: list[OverlayObject]) -> list[OverlayObject]:
+    normalized: list[OverlayObject] = []
+    seen: set[str] = set()
+    for overlay in overlays:
+        _validate_symbol(overlay.name)
+        if overlay.name in seen:
+            raise AvoFormatError(f"duplicate overlay name: {overlay.name}")
+        seen.add(overlay.name)
+        normalized.append(
+            OverlayObject(
+                name=overlay.name,
+                imports=normalize_imports(overlay.imports),
+                payload=overlay.payload,
+            )
+        )
+    return sorted(normalized, key=lambda item: item.name)
+
+
 def pack_avo(obj: AvoObject) -> str:
     if obj.version != VERSION:
         raise AvoFormatError(f"unsupported AVO version: {obj.version}")
@@ -74,6 +100,14 @@ def pack_avo(obj: AvoObject) -> str:
         "exports": [[name, offset] for name, offset in normalize_exports(obj.exports, len(obj.payload))],
         "imports": normalize_imports(obj.imports),
         "module": obj.module_name,
+        "overlays": [
+            {
+                "imports": overlay.imports,
+                "name": overlay.name,
+                "payload_hex": overlay.payload.hex(),
+            }
+            for overlay in normalize_overlays(obj.overlays)
+        ],
         "payload_hex": obj.payload.hex(),
         "version": obj.version,
     }
@@ -125,12 +159,39 @@ def unpack_avo(text: str) -> AvoObject:
     if not isinstance(raw_imports, list) or any(not isinstance(name, str) for name in raw_imports):
         raise AvoFormatError("imports must be a list of strings")
 
+    raw_overlays = data.get("overlays", [])
+    if not isinstance(raw_overlays, list):
+        raise AvoFormatError("overlays must be a list")
+    overlays: list[OverlayObject] = []
+    for item in raw_overlays:
+        if not isinstance(item, dict):
+            raise AvoFormatError("overlay entries must be objects")
+        name = item.get("name")
+        payload_hex = item.get("payload_hex", "")
+        imports = item.get("imports", [])
+        if not isinstance(name, str):
+            raise AvoFormatError("overlay name must be a string")
+        if not isinstance(imports, list) or any(not isinstance(symbol, str) for symbol in imports):
+            raise AvoFormatError("overlay imports must be a list of strings")
+        try:
+            overlay_payload = bytes.fromhex(payload_hex)
+        except ValueError as exc:
+            raise AvoFormatError("overlay payload_hex is not valid hex") from exc
+        overlays.append(
+            OverlayObject(
+                name=name,
+                imports=normalize_imports(imports),
+                payload=overlay_payload,
+            )
+        )
+
     return AvoObject(
         module_name=module_name,
         entry_offset=entry_offset,
         exports=normalize_exports(exports, len(payload)),
         imports=normalize_imports(raw_imports),
         payload=payload,
+        overlays=normalize_overlays(overlays),
         version=VERSION,
     )
 

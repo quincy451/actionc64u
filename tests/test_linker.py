@@ -58,6 +58,8 @@ class TestLinker(unittest.TestCase):
         self.assertNotIn("rt.f_cmp", map_text)
         self.assertNotIn("rt.i_to_f", map_text)
         self.assertNotIn("rt.print_f", map_text)
+        self.assertNotIn("rt.reu_alloc", map_text)
+        self.assertNotIn("rt.ovl_call", map_text)
 
     def test_integer_print_program_pulls_int_format_module(self) -> None:
         obj = self.compile_object("math.act", "math.avo")

@@ -1,0 +1,7 @@
+MODULE ovldemo
+OVERLAY Math
+PrintIE(42)
+ENDOVERLAY
+PROC main()
+OverlayCall(Math)
+RETURN

@@ -1,0 +1,6 @@
+MODULE realcmp
+PROC main()
+IF 1.0 < 2.0 THEN
+PrintE("ok")
+FI
+RETURN

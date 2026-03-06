@@ -66,8 +66,17 @@ Bootstrap runtime modules live under `src/runtime/modules/`:
 - `rt.print_str`
 - `rt.print_line`
 - `rt.format_int`
+- `rt.f_add`
+- `rt.f_sub`
+- `rt.f_mul`
+- `rt.f_div`
+- `rt.f_cmp`
+- `rt.i_to_f`
+- `rt.f_to_i`
+- `rt.print_f`
 
 For the current host reference compiler, `PrintI` / `PrintIE` are still lowered
-to compile-time string output in the payload, but the compiler retains logical
-imports for the integer-formatting helper so the dead-strip linker flow is
-already exercised and testable.
+to compile-time string output in the payload, and the same is currently true for
+REAL arithmetic/printing. The compiler retains the logical runtime imports in
+the `.avo` object so the dead-strip linker flow is already exercised and
+testable.

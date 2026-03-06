@@ -4,8 +4,10 @@ from __future__ import annotations
 import argparse
 import ast
 from dataclasses import dataclass
+import math
 from pathlib import Path
 import re
+import struct
 import subprocess
 import sys
 from typing import Iterable
@@ -24,9 +26,20 @@ RUNTIME_FORMAT_INT = "rt.format_int"
 TYPE_BYTE = "BYTE"
 TYPE_CARD = "CARD"
 TYPE_INT = "INT"
-ASSIGNABLE_TYPES = {TYPE_BYTE, TYPE_CARD, TYPE_INT}
+TYPE_REAL = "REAL"
+ASSIGNABLE_TYPES = {TYPE_BYTE, TYPE_CARD, TYPE_INT, TYPE_REAL}
+RUNTIME_F_ADD = "rt.f_add"
+RUNTIME_F_SUB = "rt.f_sub"
+RUNTIME_F_MUL = "rt.f_mul"
+RUNTIME_F_DIV = "rt.f_div"
+RUNTIME_F_CMP = "rt.f_cmp"
+RUNTIME_I_TO_F = "rt.i_to_f"
+RUNTIME_F_TO_I = "rt.f_to_i"
+RUNTIME_PRINT_F = "rt.print_f"
 TOKEN_RE = re.compile(
-    r"\s*(?:(?P<hex>\$[0-9A-Fa-f]+)|(?P<number>\d+)|(?P<ident>[A-Za-z_][A-Za-z0-9_]*)|"
+    r"\s*(?:(?P<hex>\$[0-9A-Fa-f]+)|"
+    r"(?P<real>(?:\d+\.\d*|\.\d+)(?:[eE][+-]?\d+)?|\d+[eE][+-]?\d+)|"
+    r"(?P<number>\d+)|(?P<ident>[A-Za-z_][A-Za-z0-9_]*)|"
     r"(?P<op><>|<=|>=|[()+\-*/=<>]))"
 )
 
@@ -38,7 +51,7 @@ class CompileError(Exception):
 @dataclass(frozen=True)
 class TypedValue:
     type_name: str
-    value: int
+    value: int | float
 
 
 @dataclass(frozen=True)
@@ -46,6 +59,7 @@ class PrintAction:
     text: str
     newline: bool
     requires_int_format: bool = False
+    requires_real_format: bool = False
 
 
 @dataclass(frozen=True)
@@ -77,18 +91,26 @@ class PrintIntStmt:
 
 
 @dataclass(frozen=True)
+class PrintRealStmt:
+    line: int
+    kind: str
+    expr: "Expr"
+
+
+@dataclass(frozen=True)
 class IfStmt:
     line: int
     condition: "Expr"
     body: list["Stmt"]
 
 
-Stmt = AssignStmt | PrintStmt | PrintIntStmt | IfStmt
+Stmt = AssignStmt | PrintStmt | PrintIntStmt | PrintRealStmt | IfStmt
 
 
 @dataclass(frozen=True)
 class NumberExpr:
-    value: int
+    value: int | float
+    type_name: str
     line: int
 
 
@@ -113,7 +135,14 @@ class BinaryExpr:
     line: int
 
 
-Expr = NumberExpr | VarExpr | UnaryExpr | BinaryExpr
+@dataclass(frozen=True)
+class CastExpr:
+    target_type: str
+    operand: "Expr"
+    line: int
+
+
+Expr = NumberExpr | VarExpr | UnaryExpr | BinaryExpr | CastExpr
 
 
 @dataclass(frozen=True)
@@ -126,7 +155,7 @@ class Program:
 @dataclass
 class VarInfo:
     type_name: str
-    value: int | None = None
+    value: int | float | None = None
 
 
 def fail(line: int, message: str) -> CompileError:
@@ -216,10 +245,18 @@ class ExprParser:
                 raise fail(self.line, "expected ')' in expression")
             return expr
         if token.startswith("$"):
-            return NumberExpr(int(token[1:], 16), self.line)
+            return NumberExpr(int(token[1:], 16), TYPE_CARD, self.line)
+        if "." in token or "e" in token.lower():
+            return NumberExpr(float(token), TYPE_REAL, self.line)
         if token.isdigit():
-            return NumberExpr(int(token, 10), self.line)
+            return NumberExpr(int(token, 10), TYPE_CARD, self.line)
         if re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", token):
+            if self.peek() == "(" and token.upper() in {TYPE_REAL, TYPE_INT}:
+                self.take()
+                operand = self.parse_comparison()
+                if self.take() != ")":
+                    raise fail(self.line, f"expected ')' after {token} conversion")
+                return CastExpr(token.upper(), operand, self.line)
             return VarExpr(token, self.line)
         raise fail(self.line, f"unexpected token in expression: {token}")
 
@@ -259,6 +296,11 @@ def parse_int_stmt(line_no: int, text: str, kind: str) -> PrintIntStmt:
     return PrintIntStmt(line_no, kind, parse_expression(inner, line_no))
 
 
+def parse_real_stmt(line_no: int, text: str, kind: str) -> PrintRealStmt:
+    inner = text[text.find("(") + 1 : -1].strip()
+    return PrintRealStmt(line_no, kind, parse_expression(inner, line_no))
+
+
 def parse_statement(line_no: int, text: str, lines: list[tuple[int, str]], index: int) -> tuple[Stmt, int]:
     upper = text.upper()
     if upper.startswith("PRINT(") and text.endswith(")"):
@@ -269,6 +311,10 @@ def parse_statement(line_no: int, text: str, lines: list[tuple[int, str]], index
         return parse_int_stmt(line_no, text, "PrintI"), index + 1
     if upper.startswith("PRINTIE(") and text.endswith(")"):
         return parse_int_stmt(line_no, text, "PrintIE"), index + 1
+    if upper.startswith("PRINTR(") and text.endswith(")"):
+        return parse_real_stmt(line_no, text, "PrintR"), index + 1
+    if upper.startswith("PRINTRE(") and text.endswith(")"):
+        return parse_real_stmt(line_no, text, "PrintRE"), index + 1
     if upper.startswith("IF "):
         condition_text = text[3:].strip()
         if condition_text.upper().endswith(" THEN"):
@@ -345,9 +391,33 @@ def ensure_unsigned(value: int, line: int, op: str) -> None:
         raise fail(line, f"unsigned result became negative during '{op}'")
 
 
-def eval_expr(expr: Expr, symbols: dict[str, VarInfo], line_hint: int) -> TypedValue:
+def quantize_real(value: float, line: int) -> float:
+    try:
+        rounded = struct.unpack("<f", struct.pack("<f", float(value)))[0]
+    except OverflowError as exc:
+        raise fail(line, "REAL32 overflow") from exc
+    if not math.isfinite(rounded):
+        raise fail(line, "REAL32 overflow")
+    return rounded
+
+
+def to_real(value: TypedValue, line: int, used_runtime_imports: set[str]) -> TypedValue:
+    if value.type_name == TYPE_REAL:
+        return TypedValue(TYPE_REAL, quantize_real(float(value.value), line))
+    used_runtime_imports.add(RUNTIME_I_TO_F)
+    return TypedValue(TYPE_REAL, quantize_real(float(value.value), line))
+
+
+def eval_expr(
+    expr: Expr,
+    symbols: dict[str, VarInfo],
+    line_hint: int,
+    used_runtime_imports: set[str],
+) -> TypedValue:
     if isinstance(expr, NumberExpr):
-        return TypedValue(TYPE_CARD, expr.value)
+        if expr.type_name == TYPE_REAL:
+            return TypedValue(TYPE_REAL, quantize_real(float(expr.value), line_hint))
+        return TypedValue(expr.type_name, expr.value)
     if isinstance(expr, VarExpr):
         info = symbols.get(expr.name)
         if info is None:
@@ -355,30 +425,84 @@ def eval_expr(expr: Expr, symbols: dict[str, VarInfo], line_hint: int) -> TypedV
         if info.value is None:
             raise fail(line_hint, f"variable '{expr.name}' used before assignment")
         return TypedValue(info.type_name, info.value)
+    if isinstance(expr, CastExpr):
+        operand = eval_expr(expr.operand, symbols, line_hint, used_runtime_imports)
+        if expr.target_type == TYPE_REAL:
+            return to_real(operand, line_hint, used_runtime_imports)
+        if expr.target_type == TYPE_INT:
+            if operand.type_name == TYPE_REAL:
+                used_runtime_imports.add(RUNTIME_F_TO_I)
+                truncated = math.trunc(operand.value)
+                if not -0x8000 <= truncated <= 0x7FFF:
+                    raise fail(line_hint, f"value {truncated} does not fit in INT")
+                return TypedValue(TYPE_INT, truncated)
+            coerced = coerce_to_type(TYPE_INT, operand, line_hint, used_runtime_imports)
+            return TypedValue(TYPE_INT, coerced)
+        raise fail(line_hint, f"unsupported conversion {expr.target_type}(...)")
     if isinstance(expr, UnaryExpr):
-        operand = eval_expr(expr.operand, symbols, line_hint)
-        value = -operand.value
-        result_type = TYPE_INT if operand.type_name == TYPE_INT else TYPE_INT
-        return TypedValue(result_type, value)
+        operand = eval_expr(expr.operand, symbols, line_hint, used_runtime_imports)
+        if operand.type_name == TYPE_REAL:
+            used_runtime_imports.add(RUNTIME_F_SUB)
+            return TypedValue(TYPE_REAL, quantize_real(-float(operand.value), line_hint))
+        value = -int(operand.value)
+        return TypedValue(TYPE_INT, value)
     if isinstance(expr, BinaryExpr):
-        left = eval_expr(expr.left, symbols, line_hint)
-        right = eval_expr(expr.right, symbols, line_hint)
+        left = eval_expr(expr.left, symbols, line_hint, used_runtime_imports)
+        right = eval_expr(expr.right, symbols, line_hint, used_runtime_imports)
         op = expr.op
+        if TYPE_REAL in {left.type_name, right.type_name}:
+            left_real = to_real(left, line_hint, used_runtime_imports)
+            right_real = to_real(right, line_hint, used_runtime_imports)
+            lhs = float(left_real.value)
+            rhs = float(right_real.value)
+
+            if op == "+":
+                used_runtime_imports.add(RUNTIME_F_ADD)
+                return TypedValue(TYPE_REAL, quantize_real(lhs + rhs, line_hint))
+            if op == "-":
+                used_runtime_imports.add(RUNTIME_F_SUB)
+                return TypedValue(TYPE_REAL, quantize_real(lhs - rhs, line_hint))
+            if op == "*":
+                used_runtime_imports.add(RUNTIME_F_MUL)
+                return TypedValue(TYPE_REAL, quantize_real(lhs * rhs, line_hint))
+            if op == "/":
+                if rhs == 0.0:
+                    raise fail(line_hint, "division by zero")
+                used_runtime_imports.add(RUNTIME_F_DIV)
+                return TypedValue(TYPE_REAL, quantize_real(lhs / rhs, line_hint))
+
+            used_runtime_imports.add(RUNTIME_F_CMP)
+            if op == "=":
+                result = lhs == rhs
+            elif op == "<>":
+                result = lhs != rhs
+            elif op == "<":
+                result = lhs < rhs
+            elif op == "<=":
+                result = lhs <= rhs
+            elif op == ">":
+                result = lhs > rhs
+            elif op == ">=":
+                result = lhs >= rhs
+            else:
+                raise fail(line_hint, f"unsupported operator '{op}'")
+            return TypedValue(TYPE_CARD, 1 if result else 0)
+
         if op in {"+", "-", "*", "/"}:
             if op == "+":
-                value = left.value + right.value
+                value = int(left.value) + int(right.value)
             elif op == "-":
-                value = left.value - right.value
+                value = int(left.value) - int(right.value)
             elif op == "*":
-                value = left.value * right.value
+                value = int(left.value) * int(right.value)
             else:
-                if right.value == 0:
+                if int(right.value) == 0:
                     raise fail(line_hint, "division by zero")
                 result_type = arithmetic_type(left.type_name, right.type_name)
                 if result_type == TYPE_INT:
-                    value = int(left.value / right.value)
+                    value = int(int(left.value) / int(right.value))
                 else:
-                    value = left.value // right.value
+                    value = int(left.value) // int(right.value)
             if op == "-":
                 result_type = TYPE_INT if TYPE_INT in {left.type_name, right.type_name} or value < 0 else TYPE_CARD
             else:
@@ -408,8 +532,12 @@ def eval_expr(expr: Expr, symbols: dict[str, VarInfo], line_hint: int) -> TypedV
     raise fail(line_hint, "unsupported expression")
 
 
-def coerce_to_type(target_type: str, value: TypedValue, line: int) -> int:
+def coerce_to_type(target_type: str, value: TypedValue, line: int, used_runtime_imports: set[str]) -> int | float:
     raw = value.value
+    if target_type == TYPE_REAL:
+        return float(to_real(value, line, used_runtime_imports).value)
+    if value.type_name == TYPE_REAL:
+        raise fail(line, f"cannot assign REAL to {target_type} without explicit INT(...)")
     if target_type == TYPE_BYTE:
         if not 0 <= raw <= 0xFF:
             raise fail(line, f"value {raw} does not fit in BYTE")
@@ -431,7 +559,14 @@ def format_integer(value: TypedValue) -> str:
     return str(value.value)
 
 
-def execute_program(program: Program) -> list[PrintAction]:
+def format_real(value: float) -> str:
+    text = format(value, ".9g")
+    if "e" not in text.lower() and "." not in text:
+        text += ".0"
+    return text
+
+
+def execute_program(program: Program) -> tuple[list[PrintAction], set[str]]:
     symbols: dict[str, VarInfo] = {}
     for decl in program.decls:
         for name in decl.names:
@@ -440,6 +575,7 @@ def execute_program(program: Program) -> list[PrintAction]:
             symbols[name] = VarInfo(decl.type_name)
 
     actions: list[PrintAction] = []
+    used_runtime_imports: set[str] = set()
 
     def exec_block(statements: list[Stmt]) -> None:
         for stmt in statements:
@@ -447,14 +583,16 @@ def execute_program(program: Program) -> list[PrintAction]:
                 info = symbols.get(stmt.name)
                 if info is None:
                     raise fail(stmt.line, f"unknown variable '{stmt.name}'")
-                value = eval_expr(stmt.expr, symbols, stmt.line)
-                info.value = coerce_to_type(info.type_name, value, stmt.line)
+                value = eval_expr(stmt.expr, symbols, stmt.line, used_runtime_imports)
+                info.value = coerce_to_type(info.type_name, value, stmt.line, used_runtime_imports)
                 continue
             if isinstance(stmt, PrintStmt):
                 actions.append(PrintAction(stmt.value, stmt.kind == "PrintE"))
                 continue
             if isinstance(stmt, PrintIntStmt):
-                value = eval_expr(stmt.expr, symbols, stmt.line)
+                value = eval_expr(stmt.expr, symbols, stmt.line, used_runtime_imports)
+                if value.type_name == TYPE_REAL:
+                    raise fail(stmt.line, "PrintI requires an integer expression; use INT(...) explicitly")
                 actions.append(
                     PrintAction(
                         format_integer(value),
@@ -463,15 +601,26 @@ def execute_program(program: Program) -> list[PrintAction]:
                     )
                 )
                 continue
+            if isinstance(stmt, PrintRealStmt):
+                value = eval_expr(stmt.expr, symbols, stmt.line, used_runtime_imports)
+                real_value = to_real(value, stmt.line, used_runtime_imports)
+                actions.append(
+                    PrintAction(
+                        format_real(float(real_value.value)),
+                        stmt.kind == "PrintRE",
+                        requires_real_format=True,
+                    )
+                )
+                continue
             if isinstance(stmt, IfStmt):
-                cond = eval_expr(stmt.condition, symbols, stmt.line)
+                cond = eval_expr(stmt.condition, symbols, stmt.line, used_runtime_imports)
                 if cond.value != 0:
                     exec_block(stmt.body)
                 continue
             raise fail(stmt.line, "unsupported statement kind")
 
     exec_block(program.statements)
-    return actions
+    return actions, used_runtime_imports
 
 
 def encode_u16(value: int) -> bytes:
@@ -541,12 +690,14 @@ def module_name_for(program: Program, input_path: Path) -> str:
     return program.module_name or input_path.stem
 
 
-def collect_imports(actions: Iterable[PrintAction]) -> list[str]:
-    imports: set[str] = set()
+def collect_imports(actions: Iterable[PrintAction], runtime_imports: set[str]) -> list[str]:
+    imports: set[str] = set(runtime_imports)
     for action in actions:
         imports.add(RUNTIME_PRINT_LINE if action.newline else RUNTIME_PRINT)
         if action.requires_int_format:
             imports.add(RUNTIME_FORMAT_INT)
+        if action.requires_real_format:
+            imports.add(RUNTIME_PRINT_F)
     return sorted(imports)
 
 
@@ -603,9 +754,9 @@ def main(argv: list[str] | None = None) -> int:
     try:
         source_text = input_path.read_text(encoding="ascii")
         program = parse_program(source_text)
-        actions = execute_program(program)
+        actions, runtime_imports = execute_program(program)
         payload = emit_payload(actions)
-        imports = collect_imports(actions)
+        imports = collect_imports(actions, runtime_imports)
         write_avo(
             object_path,
             AvoObject(

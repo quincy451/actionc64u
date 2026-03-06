@@ -34,3 +34,4 @@ Release disk image (C64 CP/M-65) with tools + examples + automated verification.
 - 2026-03-06: Added a minimal Action-like compiler for Print/PrintE, plus a VM ABI doc and compiler-to-.avm smoke test path.
 - 2026-03-06: Expanded the host reference compiler with BYTE/CARD/INT declarations, expressions, IF, and integer printing, plus compile-time output tests for `math.act` and `if.act`.
 - 2026-03-06: Added the text-based `.avo` object format, a deterministic dead-strip linker with map output, and linkable bootstrap runtime modules for print helpers and integer formatting.
+- 2026-03-06: Added REAL32 syntax/semantics, logical float runtime modules, and host-side REAL compile/link/output tests while keeping float-free programs dead-stripped.

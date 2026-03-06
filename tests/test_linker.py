@@ -54,6 +54,10 @@ class TestLinker(unittest.TestCase):
         self.assertIn("rt.print_line", map_text)
         self.assertIn("rt.print_str", map_text)
         self.assertNotIn("rt.format_int", map_text)
+        self.assertNotIn("rt.f_add", map_text)
+        self.assertNotIn("rt.f_cmp", map_text)
+        self.assertNotIn("rt.i_to_f", map_text)
+        self.assertNotIn("rt.print_f", map_text)
 
     def test_integer_print_program_pulls_int_format_module(self) -> None:
         obj = self.compile_object("math.act", "math.avo")

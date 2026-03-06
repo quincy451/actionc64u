@@ -27,6 +27,7 @@ class TestRepoLayout(unittest.TestCase):
             "docs/real32.md",
             "docs/reu.md",
             "docs/overlays.md",
+            "docs/vice.md",
             "src/compiler",
             "src/vm",
             "src/vm/vmhello/vmhello.asm",
@@ -62,6 +63,7 @@ class TestRepoLayout(unittest.TestCase):
             "tools/actionc64u_link.py",
             "tools/avo_format.py",
             "tools/avm_pack.py",
+            "tools/vice_harness.py",
             "tools/env_check.sh",
             "tools/setup_wsl.sh",
             "tools/path_probe.py",
@@ -92,6 +94,7 @@ class TestRepoLayout(unittest.TestCase):
             "tests/test_linker.py",
             "tests/test_real.py",
             "tests/test_reu_overlay.py",
+            "tests/test_vice_smoke.py",
         ]
 
         missing = [path for path in required if not (root / path).exists()]

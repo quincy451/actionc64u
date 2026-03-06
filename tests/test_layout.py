@@ -45,6 +45,8 @@ class TestRepoLayout(unittest.TestCase):
             "tools",
             "examples",
             "examples/hello.act",
+            "examples/if.act",
+            "examples/math.act",
             "examples/hello.avm",
             "examples/hello.avm.txt",
             "tests",
@@ -53,6 +55,7 @@ class TestRepoLayout(unittest.TestCase):
             "tests/test_vmhello.py",
             "tests/test_vmrun_file.py",
             "tests/test_compile_and_run.py",
+            "tests/test_compile_features.py",
         ]
 
         missing = [path for path in required if not (root / path).exists()]

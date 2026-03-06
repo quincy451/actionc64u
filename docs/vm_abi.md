@@ -42,9 +42,15 @@ before execution.
 - effect: terminate the current payload/program cleanly
 - return: does not return to the caller
 
+## Integer Printing
+
+For the current host-side reference compiler, `PrintI(expr)` and `PrintIE(expr)`
+are lowered at compile time into ordinary `Print` / `PrintE` string operations.
+That keeps the VM ABI stable while the CP/M-65 runner is still blocked.
+
 ## Minimal Compiler Pattern
 
-For each string-print statement, the compiler emits:
+For each emitted print action, the compiler writes:
 
 1. `setp16 <string_offset>`
 2. `calln <pseudo-target>`

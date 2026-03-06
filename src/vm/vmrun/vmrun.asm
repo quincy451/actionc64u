@@ -8,6 +8,8 @@
 ;        $ff00 = Print
 ;        $ff10 = PrintE
 ;        $ff20 = Exit
+;      PrintI / PrintIE currently lower to ordinary string prints at compile
+;      time, so there is no separate integer-print intrinsic yet.
 ;   5. enter AcheronVM at payload + entry_offset
 ;
 ; This source is staged while the AcheronVM + CP/M-65 link recipe is still

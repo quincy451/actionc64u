@@ -1,0 +1,8 @@
+MODULE ifdemo
+PROC main()
+CARD x
+x = 1
+IF x = 1 THEN
+PrintE("ok")
+FI
+RETURN

@@ -32,3 +32,4 @@ Release disk image (C64 CP/M-65) with tools + examples + automated verification.
 - 2026-03-06: Added AcheronVM planning docs, a staged vmhello proof source, and blockers-aware build/test plumbing for the VM backend.
 - 2026-03-06: Defined the versioned `.avm` file format, added a host packer, and staged the file-based vm.com runner/test path.
 - 2026-03-06: Added a minimal Action-like compiler for Print/PrintE, plus a VM ABI doc and compiler-to-.avm smoke test path.
+- 2026-03-06: Expanded the host reference compiler with BYTE/CARD/INT declarations, expressions, IF, and integer printing, plus compile-time output tests for `math.act` and `if.act`.

@@ -1,0 +1,73 @@
+# ActionC64U Linker And Object Format
+
+## Goals
+
+- Keep the bootstrap linker deterministic and easy to inspect.
+- Preserve the final runnable artifact as a single `.avm`.
+- Support dead-strip inclusion of only the runtime modules the program imports.
+
+## `.avo` Object Format
+
+Current object files use a small text container so they are easy to diff and
+inspect during bootstrap work.
+
+Structure:
+
+```text
+AVO1
+{"entry_offset":0,"exports":[["main",0]],"imports":["rt.print_line"],"module":"hello","payload_hex":"...", "version":1}
+```
+
+Rules:
+
+- line 1 is the fixed magic/header: `AVO1`
+- line 2 is compact JSON encoded as ASCII
+- `version`: object format version, currently `1`
+- `module`: logical module name
+- `entry_offset`: byte offset into the payload where this object's entry begins
+- `exports`: ordered list of `[symbol_name, offset]`
+- `imports`: ordered list of imported symbol names
+- `payload_hex`: code+data payload bytes encoded as lowercase hex
+
+This is intentionally not ELF and does not attempt relocation yet. The linker
+simply concatenates object payloads in a deterministic order and records the
+resulting symbol map.
+
+## Symbol Resolution
+
+- the main object is always included first
+- imported symbols are resolved against `.avo` files found in the supplied
+  runtime module directories
+- when a module is included, its imports are added to the worklist
+- duplicate exports are link errors
+- unresolved imports are link errors
+- module inclusion order is deterministic: imports are resolved in sorted symbol
+  order, with the main object fixed at the front
+
+## Final `.avm`
+
+The linked output remains:
+
+- AVM header (`AVM1`)
+- entry offset
+- linked payload bytes
+
+The linker also emits a sidecar map file:
+
+- `<program>.map.txt`
+- lists included modules
+- lists final export addresses
+- lists resolved imports
+
+## Current Runtime Modules
+
+Bootstrap runtime modules live under `src/runtime/modules/`:
+
+- `rt.print_str`
+- `rt.print_line`
+- `rt.format_int`
+
+For the current host reference compiler, `PrintI` / `PrintIE` are still lowered
+to compile-time string output in the payload, but the compiler retains logical
+imports for the integer-formatting helper so the dead-strip linker flow is
+already exercised and testable.

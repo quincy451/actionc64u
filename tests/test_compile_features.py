@@ -29,6 +29,7 @@ class TestCompileFeatures(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
         self.assertTrue(output.is_file())
+        self.assertTrue(output.with_suffix(".avo").is_file())
         blob = output.read_bytes()
         self.assertGreaterEqual(len(blob), HEADER_SIZE)
         self.assertEqual(blob[:4], MAGIC)

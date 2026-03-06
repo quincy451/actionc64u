@@ -8,14 +8,18 @@ from pathlib import Path
 import re
 import subprocess
 import sys
-import tempfile
 from typing import Iterable
+
+from avo_format import AvoObject, AvoFormatError, write_avo
 
 OPCODE_CALLN = 0x49
 OPCODE_SETP16 = 0x61
 INTR_PRINT = 0xFF00
 INTR_PRINTE = 0xFF10
 INTR_EXIT = 0xFF20
+RUNTIME_PRINT = "rt.print_str"
+RUNTIME_PRINT_LINE = "rt.print_line"
+RUNTIME_FORMAT_INT = "rt.format_int"
 
 TYPE_BYTE = "BYTE"
 TYPE_CARD = "CARD"
@@ -41,6 +45,7 @@ class TypedValue:
 class PrintAction:
     text: str
     newline: bool
+    requires_int_format: bool = False
 
 
 @dataclass(frozen=True)
@@ -450,7 +455,13 @@ def execute_program(program: Program) -> list[PrintAction]:
                 continue
             if isinstance(stmt, PrintIntStmt):
                 value = eval_expr(stmt.expr, symbols, stmt.line)
-                actions.append(PrintAction(format_integer(value), stmt.kind == "PrintIE"))
+                actions.append(
+                    PrintAction(
+                        format_integer(value),
+                        stmt.kind == "PrintIE",
+                        requires_int_format=True,
+                    )
+                )
                 continue
             if isinstance(stmt, IfStmt):
                 cond = eval_expr(stmt.condition, symbols, stmt.line)
@@ -496,61 +507,65 @@ def emit_payload(actions: Iterable[PrintAction]) -> bytes:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Compile a minimal Action-like source file into ActionC64U .avm")
+    parser = argparse.ArgumentParser(
+        description="Compile a minimal Action-like source file into ActionC64U .avo or .avm"
+    )
     parser.add_argument("input", help="input .act file")
-    parser.add_argument("-o", "--output", required=True, help="output .avm file")
-    parser.add_argument("--entry-offset", type=int, default=0, help="entry offset for the generated payload")
+    parser.add_argument("-o", "--output", help="output .avo or .avm file")
+    parser.add_argument("--object-output", help="explicit .avo output path when --emit-avm is used")
+    parser.add_argument("--emit-avm", action="store_true", help="run the linker after emitting the main .avo")
+    parser.add_argument(
+        "--runtime-dir",
+        action="append",
+        default=[],
+        help="runtime module directory for linker resolution (default: src/runtime/modules)",
+    )
+    parser.add_argument("--entry-offset", type=int, default=0, help="entry offset for the generated main payload")
     return parser
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = build_parser()
-    args = parser.parse_args(argv)
+def repo_root() -> Path:
+    return Path(__file__).resolve().parents[1]
 
-    input_path = Path(args.input)
-    output_path = Path(args.output)
-    if not input_path.is_file():
-        parser.error(f"input file not found: {input_path}")
-    output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    try:
-        source_text = input_path.read_text(encoding="ascii")
-        program = parse_program(source_text)
-        actions = execute_program(program)
-        payload = emit_payload(actions)
-    except (CompileError, UnicodeDecodeError, UnicodeEncodeError) as exc:
-        print(exc, file=sys.stderr)
-        return 1
+def default_runtime_dirs() -> list[Path]:
+    return [repo_root() / "src" / "runtime" / "modules"]
 
-    avm_pack = Path(__file__).resolve().with_name("avm_pack.py")
-    with tempfile.NamedTemporaryFile(
-        mode="wb",
-        suffix=".payload",
-        prefix=f"{output_path.stem}-",
-        dir=output_path.parent,
-        delete=False,
-    ) as handle:
-        handle.write(payload)
-        payload_path = Path(handle.name)
 
-    try:
-        result = subprocess.run(
-            [
-                sys.executable,
-                str(avm_pack),
-                str(payload_path),
-                "--entry-offset",
-                str(args.entry_offset),
-                "--output",
-                str(output_path),
-            ],
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-    finally:
-        payload_path.unlink(missing_ok=True)
+def default_output_path(input_path: Path, emit_avm: bool) -> Path:
+    suffix = ".avm" if emit_avm else ".avo"
+    return repo_root() / "build" / f"{input_path.stem}{suffix}"
 
+
+def module_name_for(program: Program, input_path: Path) -> str:
+    return program.module_name or input_path.stem
+
+
+def collect_imports(actions: Iterable[PrintAction]) -> list[str]:
+    imports: set[str] = set()
+    for action in actions:
+        imports.add(RUNTIME_PRINT_LINE if action.newline else RUNTIME_PRINT)
+        if action.requires_int_format:
+            imports.add(RUNTIME_FORMAT_INT)
+    return sorted(imports)
+
+
+def run_linker(main_object: Path, avm_output: Path, runtime_dirs: list[Path]) -> int:
+    linker = Path(__file__).resolve().with_name("actionc64u_link.py")
+    map_output = avm_output.with_suffix(".map.txt")
+    command = [
+        sys.executable,
+        str(linker),
+        str(main_object),
+        "--output",
+        str(avm_output),
+        "--map-output",
+        str(map_output),
+    ]
+    for runtime_dir in runtime_dirs:
+        command.extend(["--runtime-dir", str(runtime_dir)])
+
+    result = subprocess.run(command, text=True, capture_output=True, check=False)
     if result.returncode != 0:
         sys.stderr.write(result.stdout)
         sys.stderr.write(result.stderr)
@@ -558,6 +573,58 @@ def main(argv: list[str] | None = None) -> int:
 
     sys.stdout.write(result.stdout)
     return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    input_path = Path(args.input)
+    if not input_path.is_file():
+        parser.error(f"input file not found: {input_path}")
+
+    requested_output = Path(args.output) if args.output else None
+    emit_avm = args.emit_avm or (requested_output is not None and requested_output.suffix.lower() == ".avm")
+    output_path = requested_output or default_output_path(input_path, emit_avm)
+
+    runtime_dirs = [Path(path) for path in args.runtime_dir] if args.runtime_dir else default_runtime_dirs()
+    object_path = Path(args.object_output) if args.object_output else (
+        output_path.with_suffix(".avo") if emit_avm else output_path
+    )
+    avm_output = output_path if emit_avm else None
+
+    if emit_avm and output_path.suffix.lower() != ".avm":
+        parser.error("--emit-avm requires an .avm --output path")
+
+    object_path.parent.mkdir(parents=True, exist_ok=True)
+    if avm_output is not None:
+        avm_output.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        source_text = input_path.read_text(encoding="ascii")
+        program = parse_program(source_text)
+        actions = execute_program(program)
+        payload = emit_payload(actions)
+        imports = collect_imports(actions)
+        write_avo(
+            object_path,
+            AvoObject(
+                module_name=module_name_for(program, input_path),
+                entry_offset=args.entry_offset,
+                exports=[("main", args.entry_offset)],
+                imports=imports,
+                payload=payload,
+            ),
+        )
+    except (CompileError, UnicodeDecodeError, UnicodeEncodeError, AvoFormatError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+
+    print(f"wrote {object_path}")
+    if avm_output is None:
+        return 0
+
+    return run_linker(object_path, avm_output, runtime_dirs)
 
 
 if __name__ == "__main__":

@@ -31,6 +31,7 @@ class TestCompileAndRun(unittest.TestCase):
         compile_output = compile_result.stdout + compile_result.stderr
         self.assertEqual(compile_result.returncode, 0, msg=compile_output)
         self.assertTrue(self.output.is_file())
+        self.assertTrue(self.output.with_suffix(".avo").is_file())
 
         blob = self.output.read_bytes()
         self.assertGreaterEqual(len(blob), 10)

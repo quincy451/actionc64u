@@ -88,6 +88,7 @@ Current reference-compiler rules:
 The compiler is still a host-side reference implementation:
 
 - it parses, type-checks, and evaluates the currently supported subset on the host
+- it emits a deterministic `.avo` object first, then optionally auto-links to `.avm`
 - it then lowers the resulting print actions into the minimal `.avm` payload format already used by the bootstrap VM path
 - integer printing is currently lowered to string printing at compile time rather than emitted as a separate runtime intrinsic
 

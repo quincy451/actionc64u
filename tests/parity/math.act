@@ -1,0 +1,6 @@
+MODULE math
+PROC main()
+CARD x
+x = (2 + 3) * 4
+PrintIE(x)
+RETURN

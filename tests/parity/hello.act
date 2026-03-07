@@ -1,0 +1,4 @@
+MODULE hello
+PROC main()
+PrintE("HELLO FROM ACTIONC64U")
+RETURN

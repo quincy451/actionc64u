@@ -2,18 +2,26 @@
 
 `actc.com` is the first on-target ActionC64U compiler for CP/M-65.
 
-## Prompt 13 Scope
+## Current Supported Subset
 
-The current shipped subset is intentionally tiny:
+The current shipped subset matches the integer bootstrap implemented by the host
+reference compiler:
 
 - optional `MODULE <name>` header
 - `PROC main()`
+- local declarations: `BYTE`, `CARD`, `INT`
+- assignments with compile-time expression evaluation
+- arithmetic: `+`, `-`, `*`, `/`
+- comparisons: `=`, `<>`, `<`, `<=`, `>`, `>=`
+- `IF ... THEN ... FI`
 - `Print("literal")`
 - `PrintE("literal")`
+- `PrintI(expr)`
+- `PrintIE(expr)`
 - `RETURN`
 
-The compiler emits a runnable `.avm` file directly. There is no on-target
-`.avo` linker yet.
+`actc.com` still emits a runnable `.avm` file directly. There is no on-target
+`.avo` linker yet, so this remains a monolithic compiler for now.
 
 ## File Behavior
 
@@ -34,11 +42,18 @@ opcode subset used by the bootstrap compiler:
 - `calln 0xff10` (`PrintE`)
 - `calln 0xff20` (`Exit`)
 
+## Semantics
+
+The on-target compiler currently follows the same bootstrap rule as the host
+tool: it evaluates the supported integer subset at compile time and lowers the
+result to a print-only `.avm` payload. That keeps `vm.com` extremely small while
+we move the toolchain onto CP/M-65.
+
 ## Limitations
 
 - only one procedure: `main`
-- only string literal printing
-- no variables, integer expressions, or control flow yet
+- no functions, arrays, pointers, records, or directives beyond optional `MODULE`
+- no on-target object format or library linker yet
 - output files are written in 128-byte CP/M records; `vm.com` relies on the
   `AVM1` payload length instead of host file length
 
@@ -46,7 +61,7 @@ opcode subset used by the bootstrap compiler:
 
 Next steps are:
 
-- integer locals and compile-time expression evaluation
-- `IF ... FI`
-- parity tests against the host reference compiler
-- eventually moving more of the host object/link pipeline on target
+- carry more of the real ACTION! surface onto CP/M-65
+- move dead-strip object/link behavior on target
+- locate runtime modules from disk instead of baking everything into one compiler
+- eventually replace the bootstrap print-only lowering with fuller VM execution

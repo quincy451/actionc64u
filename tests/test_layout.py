@@ -98,11 +98,16 @@ class TestRepoLayout(unittest.TestCase):
             "tests/test_vmrun_file.py",
             "tests/test_compile_and_run.py",
             "tests/test_actc_on_target.py",
+            "tests/test_parity_host_vs_target.py",
             "tests/test_compile_features.py",
             "tests/test_linker.py",
             "tests/test_real.py",
             "tests/test_reu_overlay.py",
             "tests/test_vice_smoke.py",
+            "tests/parity",
+            "tests/parity/hello.act",
+            "tests/parity/math.act",
+            "tests/parity/if.act",
         ]
 
         missing = [path for path in required if not (root / path).exists()]

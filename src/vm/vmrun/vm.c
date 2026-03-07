@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "../../runtime/reu_backend.h"
+
 #define MAX_AVM_BYTES 4096
 #define AVM_HEADER_SIZE 10
 #define OPCODE_CALLN 0x49
@@ -167,6 +169,7 @@ static void print_payload_string(const uint8_t* payload, uint16_t payload_len, u
 
 int vm_run_filename(const char* filename)
 {
+    reu_backend_reset();
     read_avm_file(filename);
     uint16_t payload_len = load_u16(&avm_data[5]);
     uint16_t entry_offset = load_u16(&avm_data[7]);

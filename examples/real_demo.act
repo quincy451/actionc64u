@@ -1,0 +1,6 @@
+MODULE realdemo
+PROC main()
+REAL x
+x = (1.5 + 2.25) * 2
+PrintRE(x)
+RETURN

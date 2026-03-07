@@ -45,8 +45,16 @@ def main(argv: list[str] | None = None) -> int:
     copy_into(dest, root / "build" / "vm.com")
     for manifest in sorted((root / "src" / "tools_cpm" / "libmods").glob("*.mod")):
         copy_into(dest, manifest)
-    for example in ["hello.act", "math.act", "if.act"]:
-        copy_into(dest, root / "examples" / example)
+    for source_name, target_name in [
+        ("hello.act", None),
+        ("math.act", None),
+        ("if.act", None),
+        ("real_demo.act", "realdemo.act"),
+        ("real_cmp.act", None),
+        ("reu_demo.act", None),
+        ("ovl_demo.act", None),
+    ]:
+        copy_into(dest, root / "examples" / source_name, target_name)
 
     print(f"staged files in {dest}")
     return 0

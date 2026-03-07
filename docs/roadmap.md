@@ -40,3 +40,4 @@ Release disk image (C64 CP/M-65) with tools + examples + automated verification.
 - 2026-03-06: Added bootstrap `actc.com` and `vm.com` CP/M tools, repo-local llvm-mos discovery, a filesystem staging helper, and cpmemu coverage for the first on-target compile-and-run path.
 - 2026-03-06: Expanded `actc.com` to the integer bootstrap subset with locals, arithmetic, `IF`, `PrintI` / `PrintIE`, and host-vs-target parity tests under cpmemu.
 - 2026-03-06: Added actmon.com, on-target disk-backed dead-strip module manifests with map output, and cpmemu coverage for embedded COMPILE/RUN/BUILD workflows.
+- 2026-03-06: Added on-target REAL32, sparse simulated REU support, overlay tracking, backend-selection docs, and cpmemu tests for the prompt-16 feature set.

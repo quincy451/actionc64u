@@ -4,12 +4,13 @@
 
 ## Current Supported Subset
 
-The current shipped subset matches the integer bootstrap implemented by the host
-reference compiler:
+The current shipped subset matches the bootstrap on-target evaluator:
 
 - optional `MODULE <name>` header
+- optional `OVERLAY <name> ... ENDOVERLAY` blocks before `PROC main()`
 - `PROC main()`
-- local declarations: `BYTE`, `CARD`, `INT`
+- local declarations: `BYTE`, `CARD`, `INT`, `REAL`
+- far declarations: `REU BYTE ARRAY name(length)`
 - assignments with compile-time expression evaluation
 - arithmetic: `+`, `-`, `*`, `/`
 - comparisons: `=`, `<>`, `<`, `<=`, `>`, `>=`
@@ -18,6 +19,11 @@ reference compiler:
 - `PrintE("literal")`
 - `PrintI(expr)`
 - `PrintIE(expr)`
+- `PrintR(expr)`
+- `PrintRE(expr)`
+- `REAL(x)` / `INT(r)` conversions
+- `ReuPoke8`, `ReuPoke16`, `ReuPeek8`, `ReuPeek16`
+- `OverlayCall(name)`
 - `RETURN`
 
 `actc.com` still emits a runnable `.avm` file directly. There is no on-target
@@ -26,7 +32,7 @@ reference compiler:
 ## File Behavior
 
 - input: first filename argument, default `main.act`
-- output: `<stem>.avm`
+- output: `<stem>.avm` plus `<stem>.map`
 - filenames should stay lowercase 8.3 when running under `cpmemu`
 
 `actc.com` reads the source through CP/M BDOS sequential file calls and writes a
@@ -44,16 +50,18 @@ opcode subset used by the bootstrap compiler:
 
 ## Semantics
 
-The on-target compiler currently follows the same bootstrap rule as the host
-tool: it evaluates the supported integer subset at compile time and lowers the
-result to a print-only `.avm` payload. That keeps `vm.com` extremely small while
-we move the toolchain onto CP/M-65.
+The on-target compiler still follows the bootstrap rule used by the host
+reference compiler: it evaluates the currently supported subset at compile time
+and lowers the result to a print-oriented `.avm` payload. REAL arithmetic,
+simulated REU access, and overlay bodies are all resolved in the compiler today,
+while logical runtime imports are still emitted into the map/dead-strip flow.
 
 ## Limitations
 
 - only one procedure: `main`
-- no functions, arrays, pointers, records, or directives beyond optional `MODULE`
-- no on-target object format or library linker yet
+- no functions, pointers, records, or directives beyond optional `MODULE`
+- `actmon.com` embeds a prompt-15-sized compiler subset; the full prompt-16
+  feature set is currently in standalone `actc.com`
 - output files are written in 128-byte CP/M records; `vm.com` relies on the
   `AVM1` payload length instead of host file length
 

@@ -42,3 +42,7 @@ A minimal staged drive for current development contains:
 - `hello.act`
 - `math.act`
 - `if.act`
+- `realdemo.act` (`examples/real_demo.act` staged under an 8.3 alias)
+- `real_cmp.act`
+- `reu_demo.act`
+- `ovl_demo.act`

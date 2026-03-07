@@ -70,6 +70,53 @@ Current smoke validation target:
 Future program-run validation can feed additional keys after the prompt, for
 example `HELLO`.
 
+## Manual REU Validation
+
+Because this workspace currently has no built `c64*.d64` CP/M image, the REU
+validation path remains manual.
+
+Once the adjacent CP/M-65 tree produces a bootable C64 image, the intended
+verification sequence is:
+
+1. Stage a host-side working set:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+python3 tools/install_to_image.py /tmp/actionc64u-vice
+```
+
+2. Copy the staged files onto a writable C64 CP/M disk image with `c1541`:
+
+```sh
+c1541 \
+  -attach /mnt/c/test/action/cpm65-u64/images/c64cpm.d64 \
+  -write /tmp/actionc64u-vice/actc.com actc.com \
+  -write /tmp/actionc64u-vice/vm.com vm.com \
+  -write /tmp/actionc64u-vice/reu_demo.act reu_demo.act \
+  -write /tmp/actionc64u-vice/libreua.mod libreua.mod \
+  -write /tmp/actionc64u-vice/librep8.mod librep8.mod \
+  -write /tmp/actionc64u-vice/librpo8.mod librpo8.mod
+```
+
+3. Boot CP/M in VICE:
+
+```sh
+python3 tools/vice_harness.py --disk-image /mnt/c/test/action/cpm65-u64/images/c64cpm.d64
+```
+
+4. At the `A>` prompt, run:
+
+```text
+actc reu_demo.act
+vm reu_demo.avm
+```
+
+5. Confirm the screen contains:
+
+```text
+reu ok
+```
+
 ## Skip Policy
 
 Tests skip when any prerequisite is missing:

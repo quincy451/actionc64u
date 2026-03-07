@@ -29,15 +29,22 @@ def main(argv: list[str] | None = None) -> int:
     dest.mkdir(parents=True, exist_ok=True)
 
     if not args.no_build:
-        for script in [root / "tools" / "build_actc.sh", root / "tools" / "build_vmrun.sh"]:
+        for script in [
+            root / "tools" / "build_actc.sh",
+            root / "tools" / "build_vmrun.sh",
+            root / "tools" / "build_actmon.sh",
+        ]:
             result = subprocess.run([str(script)], cwd=root, text=True, capture_output=True, check=False)
             if result.returncode != 0:
                 sys.stderr.write(result.stdout)
                 sys.stderr.write(result.stderr)
                 return result.returncode
 
+    copy_into(dest, root / "build" / "actmon.com")
     copy_into(dest, root / "build" / "actc.com")
     copy_into(dest, root / "build" / "vm.com")
+    for manifest in sorted((root / "src" / "tools_cpm" / "libmods").glob("*.mod")):
+        copy_into(dest, manifest)
     for example in ["hello.act", "math.act", "if.act"]:
         copy_into(dest, root / "examples" / example)
 

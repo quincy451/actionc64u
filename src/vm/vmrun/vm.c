@@ -165,11 +165,8 @@ static void print_payload_string(const uint8_t* payload, uint16_t payload_len, u
     fatal("unterminated payload string");
 }
 
-int main(void)
+int vm_run_filename(const char* filename)
 {
-    char filename[13];
-    primary_fcb_to_name(filename, "main.avm");
-
     read_avm_file(filename);
     uint16_t payload_len = load_u16(&avm_data[5]);
     uint16_t entry_offset = load_u16(&avm_data[7]);
@@ -229,3 +226,12 @@ int main(void)
 
     return 0;
 }
+
+#ifndef VM_LIBRARY
+int main(void)
+{
+    char filename[13];
+    primary_fcb_to_name(filename, "main.avm");
+    return vm_run_filename(filename);
+}
+#endif

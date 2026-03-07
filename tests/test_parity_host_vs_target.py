@@ -14,6 +14,7 @@ class TestParityHostVsTarget(unittest.TestCase):
         self.build_vm = self.root / "tools" / "build_vmrun.sh"
         self.runner = self.root / "tools" / "cpmemu_runner.py"
         self.parity_dir = self.root / "tests" / "parity"
+        self.libmods = sorted((self.root / "src" / "tools_cpm" / "libmods").glob("*.mod"))
 
     def build_tool(self, script: Path) -> None:
         result = subprocess.run(
@@ -81,6 +82,8 @@ class TestParityHostVsTarget(unittest.TestCase):
                     drive = Path(tmpdir)
                     shutil.copy2(self.root / "build" / "actc.com", drive / "actc.com")
                     shutil.copy2(self.root / "build" / "vm.com", drive / "vm.com")
+                    for manifest in self.libmods:
+                        shutil.copy2(manifest, drive / manifest.name)
                     shutil.copy2(case, drive / "main.act")
 
                     host_avm = drive / "host.avm"

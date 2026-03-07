@@ -39,3 +39,4 @@ Release disk image (C64 CP/M-65) with tools + examples + automated verification.
 - 2026-03-06: Added a skip-aware VICE harness using the binary monitor plus a C64 CP/M boot smoke test path that activates when `x64sc` and a `c64*.d64` image are available.
 - 2026-03-06: Added bootstrap `actc.com` and `vm.com` CP/M tools, repo-local llvm-mos discovery, a filesystem staging helper, and cpmemu coverage for the first on-target compile-and-run path.
 - 2026-03-06: Expanded `actc.com` to the integer bootstrap subset with locals, arithmetic, `IF`, `PrintI` / `PrintIE`, and host-vs-target parity tests under cpmemu.
+- 2026-03-06: Added actmon.com, on-target disk-backed dead-strip module manifests with map output, and cpmemu coverage for embedded COMPILE/RUN/BUILD workflows.

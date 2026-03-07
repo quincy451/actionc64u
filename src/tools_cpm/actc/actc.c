@@ -11,6 +11,12 @@
 #define MAX_SYMBOLS 64
 #define MAX_IDENT_LEN 31
 #define MAX_TOKEN_TEXT 255
+#define MAX_MODULES 8
+#define MAX_MODULE_IMPORTS 4
+#define MAX_MODULE_PAYLOAD 96
+#define MAX_MANIFEST_BYTES 512
+#define MAX_MAP_BYTES 1024
+#define MAX_ROOT_IMPORTS 8
 #define OPCODE_CALLN 0x49
 #define OPCODE_SETP16 0x61
 #define INTR_PRINT 0xff00
@@ -45,6 +51,16 @@ typedef struct {
     ValueType type;
     int32_t value;
 } Value;
+
+typedef struct {
+    bool loaded;
+    char filename[13];
+    char module_name[MAX_IDENT_LEN + 1];
+    uint8_t import_count;
+    char imports[MAX_MODULE_IMPORTS][MAX_IDENT_LEN + 1];
+    uint8_t payload_len;
+    uint8_t payload[MAX_MODULE_PAYLOAD];
+} DiskModule;
 
 typedef enum {
     TOK_EOF,
@@ -106,6 +122,17 @@ static uint16_t text_pool_len;
 static uint8_t avm_buffer[MAX_AVM_BYTES];
 static Symbol symbols[MAX_SYMBOLS];
 static uint16_t symbol_count;
+static DiskModule modules[MAX_MODULES];
+static uint8_t module_count;
+static DiskModule* included_modules[MAX_MODULES];
+static uint8_t included_module_count;
+static uint8_t module_blob[MAX_AVM_BYTES];
+static uint16_t module_blob_len;
+static char manifest_buffer[MAX_MANIFEST_BYTES];
+static char map_buffer[MAX_MAP_BYTES];
+static char root_imports[MAX_ROOT_IMPORTS][MAX_IDENT_LEN + 1];
+static uint8_t root_import_count;
+static bool used_format_int;
 
 static const Keyword KEYWORDS[] = {
     {"MODULE", TOK_MODULE},
@@ -121,6 +148,12 @@ static const Keyword KEYWORDS[] = {
     {"BYTE", TOK_BYTE},
     {"CARD", TOK_CARD},
     {"INT", TOK_INT},
+};
+
+static const char* LIBRARY_FILES[] = {
+    "libpstr.mod",
+    "libplin.mod",
+    "libfint.mod",
 };
 
 static void print_cstr(const char* s)
@@ -237,7 +270,7 @@ static void source_filename_from_primary_fcb(char* out)
     out[pos] = 0;
 }
 
-static void output_filename_from_source(const char* source_name, char* out)
+static void replace_extension_from_source(const char* source_name, const char* extension, char* out)
 {
     uint8_t stem_len = 0;
     while (source_name[stem_len] && (source_name[stem_len] != '.') && (stem_len < 8))
@@ -246,17 +279,17 @@ static void output_filename_from_source(const char* source_name, char* out)
         stem_len++;
     }
     out[stem_len] = 0;
-    strcat(out, ".avm");
+    strcat(out, extension);
 }
 
-static void read_source_file(const char* filename)
+static void read_text_file(const char* filename, char* buffer, uint16_t capacity, const char* label)
 {
     FCB fcb;
     parse_filename(&fcb, filename);
     fcb.ex = 0;
     fcb.cr = 0;
     if (cpm_open_file(&fcb) != CPME_OK)
-        fatal("cannot open source");
+        fatal(label);
 
     uint16_t pos = 0;
     for (;;)
@@ -270,15 +303,20 @@ static void read_source_file(const char* filename)
             uint8_t ch = cpm_default_dma[i];
             if ((ch == 0) || (ch == 0x1a))
             {
-                source_buffer[pos] = 0;
+                buffer[pos] = 0;
                 return;
             }
-            if (pos + 1 >= MAX_SOURCE_BYTES)
-                fatal("source too large");
-            source_buffer[pos++] = (char)ch;
+            if (pos + 1 >= capacity)
+                fatal("text file too large");
+            buffer[pos++] = (char)ch;
         }
     }
-    source_buffer[pos] = 0;
+    buffer[pos] = 0;
+}
+
+static void read_source_file(const char* filename)
+{
+    read_text_file(filename, source_buffer, MAX_SOURCE_BYTES, "cannot open source");
 }
 
 static void preprocess_source(void)
@@ -376,7 +414,7 @@ static void emit_payload(uint16_t* out_len)
     uint16_t code_len = (uint16_t)(action_count * 6u + 3u);
     uint16_t string_base = code_len;
     uint16_t pos = AVM_HEADER_SIZE;
-    uint16_t payload_len = (uint16_t)(code_len + text_pool_len);
+    uint16_t payload_len = (uint16_t)(code_len + text_pool_len + module_blob_len);
 
     if ((uint16_t)(AVM_HEADER_SIZE + payload_len) > MAX_AVM_BYTES)
         fatal("AVM too large");
@@ -405,6 +443,7 @@ static void emit_payload(uint16_t* out_len)
     avm_buffer[pos++] = 0xff;
 
     memcpy(&avm_buffer[AVM_HEADER_SIZE + code_len], text_pool, text_pool_len);
+    memcpy(&avm_buffer[AVM_HEADER_SIZE + code_len + text_pool_len], module_blob, module_blob_len);
     *out_len = (uint16_t)(AVM_HEADER_SIZE + payload_len);
 }
 
@@ -436,6 +475,236 @@ static void write_binary_file(const char* filename, const uint8_t* data, uint16_
 
     if (cpm_close_file(&fcb) != CPME_OK)
         fatal("cannot close output");
+}
+
+static void write_text_file(const char* filename, const char* text)
+{
+    write_binary_file(filename, (const uint8_t*)text, (uint16_t)strlen(text));
+}
+
+static bool starts_with_ascii(const char* text, const char* prefix)
+{
+    while (*prefix)
+    {
+        if (upcase_ascii(*text++) != upcase_ascii(*prefix++))
+            return false;
+    }
+    return true;
+}
+
+static void copy_trimmed_ascii(char* out, uint16_t out_cap, const char* text)
+{
+    char local[MAX_MANIFEST_BYTES];
+    strncpy(local, text, sizeof(local) - 1);
+    local[sizeof(local) - 1] = 0;
+    char* trimmed = trim(local);
+    size_t len = strlen(trimmed);
+    if ((len + 1) > out_cap)
+        fatal("manifest field too long");
+    memcpy(out, trimmed, len + 1);
+}
+
+static void load_manifest_file(const char* filename)
+{
+    if (module_count >= MAX_MODULES)
+        fatal("too many library manifests");
+
+    DiskModule* module = &modules[module_count];
+    memset(module, 0, sizeof(*module));
+    strcpy(module->filename, filename);
+
+    read_text_file(filename, manifest_buffer, MAX_MANIFEST_BYTES, "cannot open library manifest");
+    char* cursor = manifest_buffer;
+
+    while (*cursor)
+    {
+        char* line_start = cursor;
+        while (*cursor && (*cursor != '\n') && (*cursor != '\r'))
+            cursor++;
+        if (*cursor == '\r')
+            *cursor++ = 0;
+        if (*cursor == '\n')
+            *cursor++ = 0;
+
+        char* comment = strchr(line_start, ';');
+        if (comment)
+            *comment = 0;
+
+        char* text = trim(line_start);
+        if (!*text)
+            continue;
+
+        if (starts_with_ascii(text, "MODULE "))
+        {
+            copy_trimmed_ascii(module->module_name, sizeof(module->module_name), text + 7);
+            continue;
+        }
+
+        if (starts_with_ascii(text, "IMPORT "))
+        {
+            if (module->import_count >= MAX_MODULE_IMPORTS)
+                fatal("too many module imports");
+            copy_trimmed_ascii(module->imports[module->import_count], sizeof(module->imports[module->import_count]), text + 7);
+            module->import_count++;
+            continue;
+        }
+
+        if (starts_with_ascii(text, "PAYLOAD "))
+        {
+            char payload_text[MAX_MODULE_PAYLOAD];
+            copy_trimmed_ascii(payload_text, sizeof(payload_text), text + 8);
+            module->payload_len = (uint8_t)(strlen(payload_text) + 1u);
+            memcpy(module->payload, payload_text, module->payload_len);
+            continue;
+        }
+
+        fatal("bad library manifest");
+    }
+
+    if (!module->module_name[0] || !module->payload_len)
+        fatal("incomplete library manifest");
+    module->loaded = true;
+    module_count++;
+}
+
+static void load_library_manifests(void)
+{
+    module_count = 0;
+    for (uint8_t i = 0; i < (sizeof(LIBRARY_FILES) / sizeof(LIBRARY_FILES[0])); i++)
+    {
+        FCB fcb;
+        parse_filename(&fcb, LIBRARY_FILES[i]);
+        fcb.ex = 0;
+        fcb.cr = 0;
+        if (cpm_open_file(&fcb) != CPME_OK)
+            continue;
+        cpm_close_file(&fcb);
+        load_manifest_file(LIBRARY_FILES[i]);
+    }
+}
+
+static void add_root_import(const char* name)
+{
+    for (uint8_t i = 0; i < root_import_count; i++)
+    {
+        if (strcmp(root_imports[i], name) == 0)
+            return;
+    }
+    if (root_import_count >= MAX_ROOT_IMPORTS)
+        fatal("too many root imports");
+    strcpy(root_imports[root_import_count], name);
+    root_import_count++;
+}
+
+static void collect_root_imports(void)
+{
+    bool uses_print = false;
+    bool uses_print_line = false;
+    root_import_count = 0;
+
+    for (uint16_t i = 0; i < action_count; i++)
+    {
+        if (actions[i].newline)
+            uses_print_line = true;
+        else
+            uses_print = true;
+    }
+
+    if (uses_print)
+        add_root_import("rt.print_str");
+    if (uses_print_line)
+        add_root_import("rt.print_line");
+    if (used_format_int)
+        add_root_import("rt.format_int");
+}
+
+static DiskModule* find_module(const char* module_name)
+{
+    for (uint8_t i = 0; i < module_count; i++)
+    {
+        if (strcmp(modules[i].module_name, module_name) == 0)
+            return &modules[i];
+    }
+    return 0;
+}
+
+static void include_module_recursive(const char* module_name)
+{
+    for (uint8_t i = 0; i < included_module_count; i++)
+    {
+        if (strcmp(included_modules[i]->module_name, module_name) == 0)
+            return;
+    }
+
+    DiskModule* module = find_module(module_name);
+    if (!module)
+        fatal("required library manifest is missing");
+    if (included_module_count >= MAX_MODULES)
+        fatal("too many included modules");
+    included_modules[included_module_count++] = module;
+
+    for (uint8_t i = 0; i < module->import_count; i++)
+        include_module_recursive(module->imports[i]);
+}
+
+static void resolve_runtime_modules(void)
+{
+    included_module_count = 0;
+    module_blob_len = 0;
+
+    load_library_manifests();
+    collect_root_imports();
+    for (uint8_t i = 0; i < root_import_count; i++)
+        include_module_recursive(root_imports[i]);
+
+    for (uint8_t i = 0; i < included_module_count; i++)
+    {
+        DiskModule* module = included_modules[i];
+        if ((uint16_t)(module_blob_len + module->payload_len) > MAX_AVM_BYTES)
+            fatal("library payload too large");
+        memcpy(&module_blob[module_blob_len], module->payload, module->payload_len);
+        module_blob_len = (uint16_t)(module_blob_len + module->payload_len);
+    }
+}
+
+static uint16_t map_append_bytes(uint16_t pos, const char* text)
+{
+    size_t len = strlen(text);
+    if ((pos + len + 1u) >= MAX_MAP_BYTES)
+        fatal("map output too large");
+    memcpy(&map_buffer[pos], text, len);
+    return (uint16_t)(pos + len);
+}
+
+static void write_map_file(const char* filename)
+{
+    uint16_t pos = 0;
+    map_buffer[0] = 0;
+
+    pos = map_append_bytes(pos, "# ACTC Map\n\nroot imports:\n");
+    for (uint8_t i = 0; i < root_import_count; i++)
+    {
+        pos = map_append_bytes(pos, "- ");
+        pos = map_append_bytes(pos, root_imports[i]);
+        pos = map_append_bytes(pos, "\n");
+    }
+
+    pos = map_append_bytes(pos, "\nincluded modules:\n");
+    for (uint8_t i = 0; i < included_module_count; i++)
+    {
+        char size_text[16];
+        format_int32(included_modules[i]->payload_len, size_text);
+        pos = map_append_bytes(pos, "- ");
+        pos = map_append_bytes(pos, included_modules[i]->module_name);
+        pos = map_append_bytes(pos, " file=");
+        pos = map_append_bytes(pos, included_modules[i]->filename);
+        pos = map_append_bytes(pos, " size=");
+        pos = map_append_bytes(pos, size_text);
+        pos = map_append_bytes(pos, "\n");
+    }
+
+    map_buffer[pos] = 0;
+    write_text_file(filename, map_buffer);
 }
 
 static Symbol* find_symbol(const char* name)
@@ -938,6 +1207,7 @@ static void execute_statement(uint16_t* index, bool executing)
         expect_eof(&lexer);
         if (executing)
         {
+            used_format_int = true;
             format_int32(value.value, formatted);
             add_action(formatted, newline);
         }
@@ -1025,6 +1295,7 @@ static void compile_program(void)
     symbol_count = 0;
     action_count = 0;
     text_pool_len = 0;
+    used_format_int = false;
 
     if ((index < line_count) && (line_is_decl_start(&lines[index]) == false))
     {
@@ -1053,25 +1324,39 @@ static void compile_program(void)
         fatal("missing RETURN");
     if (index != line_count)
         fatal_at(lines[index].line_no, "unexpected text after RETURN");
+
+    resolve_runtime_modules();
 }
 
-int main(void)
+int actc_compile_filename(const char* source_name)
 {
-    char source_name[13];
     char output_name[13];
+    char map_name[13];
     uint16_t avm_len;
 
-    source_filename_from_primary_fcb(source_name);
-    output_filename_from_source(source_name, output_name);
+    replace_extension_from_source(source_name, ".avm", output_name);
+    replace_extension_from_source(source_name, ".map", map_name);
 
     read_source_file(source_name);
     preprocess_source();
     compile_program();
     emit_payload(&avm_len);
     write_binary_file(output_name, avm_buffer, avm_len);
+    write_map_file(map_name);
 
     print_cstr("wrote ");
     print_cstr(output_name);
+    print_cstr(" and ");
+    print_cstr(map_name);
     crlf();
     return 0;
 }
+
+#ifndef ACTC_LIBRARY
+int main(void)
+{
+    char source_name[13];
+    source_filename_from_primary_fcb(source_name);
+    return actc_compile_filename(source_name);
+}
+#endif

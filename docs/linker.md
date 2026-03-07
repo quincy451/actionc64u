@@ -5,6 +5,7 @@
 - Keep the bootstrap linker deterministic and easy to inspect.
 - Preserve the final runnable artifact as a single `.avm`.
 - Support dead-strip inclusion of only the runtime modules the program imports.
+- Provide an on-target dead-strip path via `alink.com`.
 
 ## `.avo` Object Format
 
@@ -43,6 +44,25 @@ resulting symbol map.
 - unresolved imports are link errors
 - module inclusion order is deterministic: imports are resolved in sorted symbol
   order, with the main object fixed at the front
+
+## `alink.com`
+
+The repo now ships a first on-target linker:
+
+- input: `main.avo` by default
+- output: `main.avm` plus `main.map`
+- runtime search path: current CP/M directory, scanning `*.avo`
+- dead-strip scope today: module level
+
+Important current limit:
+
+- full per-user-function stripping is not possible until the compiler emits
+  separate callable bodies as separate exported/imported object sections or
+  object files
+
+So the current on-target dead-strip behavior is already correct for runtime
+library modules and any user program split into multiple `.avo` units, but not
+yet for unused functions trapped inside one monolithic user object.
 
 ## Final `.avm`
 

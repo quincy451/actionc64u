@@ -6,6 +6,7 @@ same layout works on CP/M-65 and under `cpmemu`, which only exposes lowercase
 
 ## Tool Files
 
+- `alink.com`
 - `actmon.com`
 - `actc.com`
 - `vm.com`
@@ -29,10 +30,24 @@ compiler starts from the main program's logical imports, follows manifest
 imports recursively, emits a single runnable `.avm`, and writes a sidecar
 `.map` describing exactly which modules were included.
 
+## Runtime `.avo` Objects For `alink.com`
+
+`alink.com` links `.avo` objects from the current CP/M directory and dead-strips
+unused runtime modules at module granularity. Because CP/M filenames must stay
+within lower-case 8.3, the staged runtime objects use short aliases such as:
+
+- `pstr.avo` -> `rt.print_str`
+- `plin.avo` -> `rt.print_line`
+- `fint.avo` -> `rt.format_int`
+
+The release staging path currently copies the bootstrap `alink.com` subset
+needed by the shipped print/int examples, alongside the older `.mod` manifests.
+
 ## Example Working Set
 
 A minimal staged drive for current development contains:
 
+- `alink.com`
 - `actmon.com`
 - `actc.com`
 - `vm.com`

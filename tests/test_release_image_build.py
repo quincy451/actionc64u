@@ -33,6 +33,7 @@ class TestReleaseImageBuild(unittest.TestCase):
         self.assertTrue(self.listing.is_file(), msg=output)
         listing = self.listing.read_text(encoding="ascii")
         for required in [
+            "alink.com",
             "actmon.com",
             "actc.com",
             "vm.com",

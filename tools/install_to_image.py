@@ -12,24 +12,46 @@ def repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
+def runtime_avo_aliases() -> list[tuple[str, str]]:
+    return [
+        ("rt_print_str.avo", "pstr.avo"),
+        ("rt_print_line.avo", "plin.avo"),
+        ("rt_format_int.avo", "fint.avo"),
+    ]
+
+
 def copy_into(dest: Path, source: Path, name: str | None = None) -> None:
     target = dest / (name or source.name.lower())
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, target)
 
 
+def clean_directory(dest: Path) -> None:
+    if not dest.exists():
+        return
+    for child in dest.iterdir():
+        if child.is_dir():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Stage ActionC64U CP/M tools into a filesystem directory")
     parser.add_argument("dest", help="target directory representing a CP/M drive")
     parser.add_argument("--no-build", action="store_true", help="skip rebuilding actc.com and vm.com first")
+    parser.add_argument("--clean", action="store_true", help="remove existing staged files before copying")
     args = parser.parse_args(argv)
 
     root = repo_root()
     dest = Path(args.dest)
     dest.mkdir(parents=True, exist_ok=True)
+    if args.clean:
+        clean_directory(dest)
 
     if not args.no_build:
         for script in [
+            root / "tools" / "build_alink.sh",
             root / "tools" / "build_actc.sh",
             root / "tools" / "build_vmrun.sh",
             root / "tools" / "build_actmon.sh",
@@ -40,9 +62,13 @@ def main(argv: list[str] | None = None) -> int:
                 sys.stderr.write(result.stderr)
                 return result.returncode
 
+    copy_into(dest, root / "build" / "alink.com")
     copy_into(dest, root / "build" / "actmon.com")
     copy_into(dest, root / "build" / "actc.com")
     copy_into(dest, root / "build" / "vm.com")
+    runtime_dir = root / "src" / "runtime" / "modules"
+    for source_name, alias_name in runtime_avo_aliases():
+        copy_into(dest, runtime_dir / source_name, alias_name)
     for manifest in sorted((root / "src" / "tools_cpm" / "libmods").glob("*.mod")):
         copy_into(dest, manifest)
     for source_name, target_name in [

@@ -77,7 +77,7 @@ def build_release_image(*, no_build: bool) -> tuple[Path, Path]:
     out_listing = build_dir / "actionc64u_c64.dir.txt"
 
     if not no_build:
-        run([str(root / "tools" / "install_to_image.py"), str(build_dir / "release_stage")], cwd=root)
+        run([str(root / "tools" / "install_to_image.py"), "--clean", str(build_dir / "release_stage")], cwd=root)
 
     stage_dir = build_dir / "release_stage"
     if not stage_dir.is_dir():

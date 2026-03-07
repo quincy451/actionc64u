@@ -41,8 +41,9 @@ require_command "llvm-mos is unavailable. See docs/setup_wsl.md and docs/blocker
 ./tools/build_actc.sh
 ./tools/build_vmrun.sh
 ./tools/build_actmon.sh
+./tools/build_alink.sh
 python3 -m pytest -q
-python3 ./tools/install_to_image.py ./build/release_stage --no-build
+python3 ./tools/install_to_image.py ./build/release_stage --no-build --clean
 python3 ./tools/build_release_image.py --no-build
 
 echo "Built tools, ran tests, and produced ./build/actionc64u_c64.d64"

@@ -5,6 +5,7 @@ This guide covers the current VM-first runtime surface in the repo.
 ## What You Have
 
 - `tools/avm_pack.py`: assembles `.avm.txt` source into `AVM1` files
+- `build/alink.com`: on-target dead-strip linker for `.avo` objects
 - `build/vm.com`: CP/M-65 runner for `AVM1` payloads
 - `src/runtime/reu_sim.c`: sparse simulated REU backend for `cpmemu`
 - `src/runtime/reu_hw.c`: real C64 REU backend for VICE / hardware builds
@@ -16,7 +17,19 @@ The current practical workflow is:
 3. use `cpmemu` for fast tests or `ACTIONC64U_REU_BACKEND=hw` builds for
    VICE / C64 validation
 
-## Build `vm.com`
+For `.avo` object linking on target:
+
+1. place `main.avo` plus short-name runtime `.avo` files on the CP/M drive
+2. run `alink`
+3. run the resulting `main.avm` under `vm`
+
+## Build `vm.com` And `alink.com`
+
+Linker:
+
+```bash
+./tools/build_alink.sh
+```
 
 Default simulated backend:
 
@@ -43,6 +56,19 @@ python3 tools/avm_pack.py examples/vmecho.avm.txt --text --output examples/vmech
 ```
 
 ## Run Under `cpmemu`
+
+### Link `main.avo` On Target
+
+```bash
+python3 tools/cpmemu_runner.py \
+  --cwd /path/to/cpm-drive \
+  /mnt/c/test/action/actionc64u/build/alink.com
+```
+
+This writes:
+
+- `main.avm`
+- `main.map`
 
 Batch example:
 

@@ -3,6 +3,7 @@
 ActionC64U is a clean-room Action!-style toolchain for the Commodore 64
 Ultimate CP/M-65 environment. The current alpha ships:
 
+- `alink.com`: on-target dead-strip linker for `.avo` objects
 - `actc.com`: on-target compiler
 - `vm.com`: VM runner for `.avm` payloads
 - `actmon.com`: monitor-style front end
@@ -66,9 +67,10 @@ This covers:
 
 ## Build CP/M Tools
 
-Build the three shipped CP/M executables:
+Build the shipped CP/M executables:
 
 ```sh
+./tools/build_alink.sh
 ./tools/build_actc.sh
 ./tools/build_vmrun.sh
 ./tools/build_actmon.sh

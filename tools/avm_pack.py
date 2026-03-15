@@ -29,7 +29,12 @@ OPCODE_DROP = 0x1B
 OPCODE_LT = 0x1C
 OPCODE_GT = 0x1D
 OPCODE_NATIVE = 0x2D
+OPCODE_CALL = 0x45
+OPCODE_JUMP = 0x46
+OPCODE_RET = 0x48
 OPCODE_CALLN = 0x49
+OPCODE_CLRP = 0x5C
+OPCODE_SETP8 = 0x5D
 OPCODE_SETP16 = 0x61
 
 INTRINSICS = {
@@ -57,6 +62,8 @@ INTRINSICS = {
 
 ZERO_ARG_OPS = {
     "native": OPCODE_NATIVE,
+    "clrp": OPCODE_CLRP,
+    "ret": OPCODE_RET,
     "add": OPCODE_ADD,
     "sub": OPCODE_SUB,
     "eq": OPCODE_EQ,
@@ -71,10 +78,13 @@ BYTE_OPS = {
     "push8": OPCODE_PUSH8,
     "store": OPCODE_STORE,
     "load": OPCODE_LOAD,
+    "setp8": OPCODE_SETP8,
 }
 
 WORD_OPS = {
     "push16": OPCODE_PUSH16,
+    "call": OPCODE_CALL,
+    "jump": OPCODE_JUMP,
     "setp16": OPCODE_SETP16,
     "calln": OPCODE_CALLN,
     "jz": OPCODE_JZ,

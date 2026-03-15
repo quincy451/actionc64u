@@ -56,8 +56,9 @@ They are exported into `ACTION.DNP` root and `BIN/`.
   from the mounted Action workspace, prints the `AVM1` header fields, and
   returns to the prompt.
 - `AVMRUN.PRG` executes a constrained flagged `AVM1` subset on top of
-  AcheronVM. The current proof payload is `UDOSHELLO.AVM`, which prints
-  `UDOS AVM OK` and returns to the prompt.
+  AcheronVM. The current proof payloads are `UDOSHELLO.AVM`, which prints
+  `UDOS AVM OK`, and `UDOSFLOW.AVM`, which proves `jump`, `call`, and `ret`
+  by printing `UDOS AVM FLOW OK` and returning to the prompt.
 
 ## Immediate Follow-On Work
 

@@ -16,12 +16,12 @@ PRG="$BUILD_DIR/AVMRUN.PRG"
 
 mkdir -p "$BUILD_DIR"
 
-if [[ ! -f "$LABELS" ]]; then
-  if [[ -f "$RELEASE_LABELS" ]]; then
-    LABELS="$RELEASE_LABELS"
-  else
-    make -C "$UDOS_DIR" resident >/dev/null
-  fi
+if [[ -n "${UDOS_LABELS:-}" ]]; then
+  LABELS="$UDOS_LABELS"
+elif [[ -f "$RELEASE_LABELS" ]]; then
+  LABELS="$RELEASE_LABELS"
+elif [[ ! -f "$LABELS" ]]; then
+  make -C "$UDOS_DIR" resident >/dev/null
 fi
 
 make -C "$ACHERON_DIR" acheron >/dev/null

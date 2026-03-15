@@ -54,6 +54,9 @@ class TestUdosWorkspaceExport(unittest.TestCase):
             self.assertEqual((bin_dir / "UDOSHELLO.AVM").read_bytes()[:4], b"AVM1")
             self.assertEqual((bin_dir / "UDOSHELLO.AVM").read_bytes()[9], 1)
             self.assertEqual((image_root / "UDOSHELLO.AVM").read_bytes()[9], 1)
+            self.assertEqual((bin_dir / "UDOSFLOW.AVM").read_bytes()[:4], b"AVM1")
+            self.assertEqual((bin_dir / "UDOSFLOW.AVM").read_bytes()[9], 1)
+            self.assertEqual((image_root / "UDOSFLOW.AVM").read_bytes()[9], 1)
 
             lib_dir = image_root / "LIB"
             bundle = (lib_dir / "LIBMODS.DAT").read_text(encoding="ascii")

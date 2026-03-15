@@ -2,6 +2,10 @@
 
 .import acheron
 .import clear_rstack
+.importzp iptr
+.importzp iptr_offset
+.importzp pptr
+.importzp rptr
 
 .export start
 
@@ -13,7 +17,12 @@ AVM_FLAG_ACHERON = 1
 FILE_BUFFER_SIZE = 2048
 
 OPCODE_NATIVE = $2D
+OPCODE_CALL = $45
+OPCODE_JUMP = $46
+OPCODE_RET = $48
 OPCODE_CALLN = $49
+OPCODE_CLRP = $5C
+OPCODE_SETP8 = $5D
 OPCODE_SETP16 = $61
 
 INTRINSIC_PRINT = $FF00
@@ -127,6 +136,7 @@ payload_ready:
     pha
     lda word_tmp
     pha
+    clc
     jmp acheron
 
 fail_with_ptr:
@@ -222,12 +232,78 @@ patch_payload_loop:
     bne :+
     jmp patch_payload_done
 :
+    cmp #OPCODE_RET
+    bne :+
+    jmp patch_zero_arg
+:
+    cmp #OPCODE_CLRP
+    bne :+
+    jmp patch_zero_arg
+:
+    cmp #OPCODE_SETP8
+    bne :+
+    jmp patch_byte_arg
+:
+    cmp #OPCODE_CALL
+    bne :+
+    jmp patch_word_arg
+:
+    cmp #OPCODE_JUMP
+    bne :+
+    jmp patch_word_arg
+:
     cmp #OPCODE_SETP16
-    beq patch_setp16
+    bne :+
+    jmp patch_setp16
+:
     cmp #OPCODE_CALLN
-    beq patch_calln
+    bne :+
+    jmp patch_calln
+:
     sec
     rts
+
+patch_zero_arg:
+    lda #$01
+    jsr advance_scan_ptr
+    jmp patch_payload_loop
+
+patch_byte_arg:
+    jsr ensure_scan_room_2
+    bcc :+
+    jmp patch_payload_fail
+:
+    lda #$02
+    jsr advance_scan_ptr
+    jmp patch_payload_loop
+
+patch_word_arg:
+    jsr ensure_scan_room_3
+    bcc :+
+    jmp patch_payload_fail
+:
+    ldy #$01
+    lda (scan_ptr),y
+    sta word_tmp
+    iny
+    lda (scan_ptr),y
+    sta word_tmp+1
+    clc
+    lda word_tmp
+    adc payload_ptr
+    sta word_tmp
+    lda word_tmp+1
+    adc payload_ptr+1
+    sta word_tmp+1
+    ldy #$01
+    lda word_tmp
+    sta (scan_ptr),y
+    iny
+    lda word_tmp+1
+    sta (scan_ptr),y
+    lda #$03
+    jsr advance_scan_ptr
+    jmp patch_payload_loop
 
 patch_setp16:
     jsr ensure_scan_room_3
@@ -359,6 +435,29 @@ ensure_scan_room_3_ok:
     clc
     rts
 
+ensure_scan_room_2:
+    clc
+    lda scan_ptr
+    adc #$02
+    sta word_tmp
+    lda scan_ptr+1
+    adc #$00
+    sta word_tmp+1
+    lda word_tmp+1
+    cmp scan_end+1
+    bcc ensure_scan_room_2_ok
+    bne ensure_scan_room_2_fail
+    lda word_tmp
+    cmp scan_end
+    bcc ensure_scan_room_2_ok
+    beq ensure_scan_room_2_ok
+ensure_scan_room_2_fail:
+    sec
+    rts
+ensure_scan_room_2_ok:
+    clc
+    rts
+
 advance_scan_ptr:
     clc
     adc scan_ptr
@@ -369,17 +468,26 @@ advance_scan_ptr:
     rts
 
 native_print:
+    jsr save_vm_state
     lda 0,x
     sta svc_retptr
     lda 1,x
     sta svc_retptr+1
     ldx #svc_retptr
     jsr svc_console_write_sc0
+    jsr restore_vm_state
     rts
 
 native_printe:
-    jsr native_print
+    jsr save_vm_state
+    lda 0,x
+    sta svc_retptr
+    lda 1,x
+    sta svc_retptr+1
+    ldx #svc_retptr
+    jsr svc_console_write_sc0
     jsr svc_console_newline
+    jsr restore_vm_state
     rts
 
 native_exit:
@@ -411,6 +519,32 @@ print_ptr:
     ldx #svc_retptr
     jmp svc_console_write_sc0
 
+save_vm_state:
+    lda iptr
+    sta saved_iptr
+    lda iptr+1
+    sta saved_iptr+1
+    lda iptr_offset
+    sta saved_iptr_offset
+    lda pptr
+    sta saved_pptr
+    lda rptr
+    sta saved_rptr
+    rts
+
+restore_vm_state:
+    lda saved_iptr
+    sta iptr
+    lda saved_iptr+1
+    sta iptr+1
+    lda saved_iptr_offset
+    sta iptr_offset
+    lda saved_pptr
+    sta pptr
+    lda saved_rptr
+    sta rptr
+    rts
+
 msg_no_file:
     .asciiz "NO FILE"
 msg_too_large:
@@ -426,3 +560,12 @@ filename_buffer:
     .res 32
 file_buffer:
     .res FILE_BUFFER_SIZE
+
+saved_iptr:
+    .res 2
+saved_iptr_offset:
+    .res 1
+saved_pptr:
+    .res 1
+saved_rptr:
+    .res 1

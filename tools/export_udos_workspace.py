@@ -73,6 +73,7 @@ def export_examples(root: Path, image_root: Path, src_dir: Path, bin_dir: Path) 
 
     packed_specs = [
         ((root / "examples" / "udos_hello.avm.txt"), "UDOSHELLO.AVM", 1),
+        ((root / "examples" / "udos_flow.avm.txt"), "UDOSFLOW.AVM", 1),
     ]
     for source, out_name, flags in packed_specs:
         built = bin_dir / out_name

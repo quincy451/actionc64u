@@ -1,0 +1,26 @@
+entry start
+
+start:
+  jump begin
+
+dead_code:
+  setp16 fail_msg
+  calln printe
+  calln exit
+
+begin:
+  call show
+  calln exit
+
+show:
+  setp16 ok_msg
+  calln printe
+  ret
+
+  native
+
+ok_msg:
+  stringz "UDOS AVM FLOW OK"
+
+fail_msg:
+  stringz "UDOS AVM FLOW FAIL"

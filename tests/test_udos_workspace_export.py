@@ -83,6 +83,8 @@ class TestUdosWorkspaceExport(unittest.TestCase):
             self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
 
             image_root = output / "IMAGES" / "ACTION.DNP"
+            self.assertTrue((image_root / "ACTDIR.PRG").is_file())
+            self.assertTrue((image_root / "BIN" / "ACTDIR.PRG").is_file())
             self.assertTrue((image_root / "ACTINFO.PRG").is_file())
             self.assertTrue((image_root / "BIN" / "ACTINFO.PRG").is_file())
             self.assertTrue((image_root / "AVMINFO.PRG").is_file())

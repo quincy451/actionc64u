@@ -11,10 +11,13 @@ FIXED_SERVICES = {
     "svc_program_get_cmdline_len": 0xCF0C,
     "svc_program_exit": 0xCF0F,
     "svc_file_load_sc0": 0xCF12,
+    "svc_dir_begin_current": 0xCF15,
+    "svc_dir_next": 0xCF18,
 }
 
 FIXED_DATA = {
     "program_cmdline_buffer": 0xCF80,
+    "dir_entry_buffer": 0xCDD0,
 }
 
 FIXED_CONSTANTS = {

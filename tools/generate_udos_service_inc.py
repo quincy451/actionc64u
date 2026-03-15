@@ -3,18 +3,18 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-SERVICES = [
-    "svc_get_abi_version",
-    "svc_console_write_sc0",
-    "svc_console_newline",
-    "svc_program_get_cmdline_ptr",
-    "svc_program_get_cmdline_len",
-    "svc_program_exit",
-]
+FIXED_SERVICES = {
+    "svc_get_abi_version": 0xCF00,
+    "svc_console_write_sc0": 0xCF03,
+    "svc_console_newline": 0xCF06,
+    "svc_program_get_cmdline_ptr": 0xCF09,
+    "svc_program_get_cmdline_len": 0xCF0C,
+    "svc_program_exit": 0xCF0F,
+}
 
-DATA_SYMBOLS = [
-    "program_cmdline_buffer",
-]
+FIXED_DATA = {
+    "program_cmdline_buffer": 0xCF80,
+}
 
 
 def load_ld65_labels(path: Path) -> dict[str, int]:
@@ -34,9 +34,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     labels = load_ld65_labels(Path(args.labels))
-    missing = [name for name in SERVICES + DATA_SYMBOLS if name not in labels]
-    if missing:
-        raise SystemExit(f"missing service labels: {', '.join(missing)}")
+    # The exported UDOS tool ABI lives at fixed preserved addresses in the
+    # launch-safe high-RAM area. We still require the labels file so the caller
+    # has built UDOS, but we do not emit the lower-RAM resident addresses here.
+    if not labels:
+        raise SystemExit("missing expected UDOS labels; build the UDOS resident image first")
 
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -45,11 +47,11 @@ def main(argv: list[str] | None = None) -> int:
         "; do not edit by hand",
         "",
     ]
-    for name in SERVICES:
-        lines.append(f"{name} = ${labels[name]:04X}")
+    for name, addr in FIXED_SERVICES.items():
+        lines.append(f"{name} = ${addr:04X}")
     lines.append("")
-    for name in DATA_SYMBOLS:
-        lines.append(f"{name} = ${labels[name]:04X}")
+    for name, addr in FIXED_DATA.items():
+        lines.append(f"{name} = ${addr:04X}")
     lines.append("")
     out.write_text("\n".join(lines), encoding="ascii")
     return 0

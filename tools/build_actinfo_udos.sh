@@ -7,12 +7,21 @@ BUILD_DIR="$ROOT_DIR/build/udos_tools"
 SRC="$ROOT_DIR/src/tools_udos/actinfo/actinfo.asm"
 CFG="$ROOT_DIR/src/tools_udos/actinfo/actinfo.cfg"
 LABELS="$UDOS_DIR/build/udos-resident.labels"
+RELEASE_LABELS="$UDOS_DIR/build/release/udos-resident.labels"
 INC="$BUILD_DIR/udos_services.inc"
 OBJ="$BUILD_DIR/actinfo.o"
 BIN="$BUILD_DIR/actinfo.bin"
 PRG="$BUILD_DIR/ACTINFO.PRG"
 
 mkdir -p "$BUILD_DIR"
+
+if [[ ! -f "$LABELS" ]]; then
+  if [[ -f "$RELEASE_LABELS" ]]; then
+    LABELS="$RELEASE_LABELS"
+  else
+    make -C "$UDOS_DIR" resident >/dev/null
+  fi
+fi
 
 python3 "$ROOT_DIR/tools/generate_udos_service_inc.py" --labels "$LABELS" --output "$INC"
 

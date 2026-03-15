@@ -45,6 +45,7 @@ The first UDOS-native external Action-side tool proofs now exist:
 
 - `ACTDIR.PRG`
 - `ACTINFO.PRG`
+- `ACTWRITE.PRG`
 - `AVMINFO.PRG`
 - `AVMRUN.PRG`
 
@@ -55,6 +56,8 @@ They are exported into `ACTION.DNP` root and `BIN/`.
 - `ACTINFO.PRG` launches from the UDOS shell, prints through the preserved
   launch-safe UDOS external-tool ABI, and returns to the prompt through the
   UDOS-aware external program return trampoline.
+- `ACTWRITE.PRG` writes a text file into the current mounted directory through
+  the preserved UDOS file-save ABI and returns to the prompt.
 - `AVMINFO.PRG` uses the preserved UDOS file-load service to read `HELLO.AVM`
   from the mounted Action workspace, prints the `AVM1` header fields, and
   returns to the prompt.

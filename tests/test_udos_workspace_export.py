@@ -87,6 +87,8 @@ class TestUdosWorkspaceExport(unittest.TestCase):
             self.assertTrue((image_root / "BIN" / "ACTDIR.PRG").is_file())
             self.assertTrue((image_root / "ACTINFO.PRG").is_file())
             self.assertTrue((image_root / "BIN" / "ACTINFO.PRG").is_file())
+            self.assertTrue((image_root / "ACTWRITE.PRG").is_file())
+            self.assertTrue((image_root / "BIN" / "ACTWRITE.PRG").is_file())
             self.assertTrue((image_root / "AVMINFO.PRG").is_file())
             self.assertTrue((image_root / "BIN" / "AVMINFO.PRG").is_file())
             self.assertTrue((image_root / "AVMRUN.PRG").is_file())

@@ -13,6 +13,7 @@ FIXED_SERVICES = {
     "svc_file_load_sc0": 0xCF12,
     "svc_dir_begin_current": 0xCF15,
     "svc_dir_next": 0xCF18,
+    "svc_file_save_sc0": 0xCF1B,
 }
 
 FIXED_DATA = {

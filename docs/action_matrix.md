@@ -18,6 +18,7 @@ Legend:
 | `ALINK` dead-strip linker | Yes | No | No | Yes | Current linker exists only as a legacy bootstrap reference. |
 | `ACTDIR` tool proof | No | Yes | Yes | N/A | Enumerates the current mounted directory through the preserved UDOS directory ABI and returns to the prompt. |
 | `ACTINFO` tool proof | No | Yes | Yes | N/A | First UDOS-native external Action-side tool proof. It launches from `ACTION.DNP`, prints through the preserved launch-safe UDOS ABI, and returns to the UDOS prompt. |
+| `ACTWRITE` tool proof | No | Yes | Yes | N/A | Writes a text file into the current mounted directory through the preserved UDOS file-save ABI and returns to the prompt. |
 | `AVMINFO` tool proof | No | Yes | Yes | N/A | Loads an `.AVM` file through the preserved UDOS file-load service, prints header fields, and returns to the UDOS prompt. |
 | `VM` `AVM1` runner | Yes | Yes | Partial | Yes | `AVMRUN.PRG` now runs a flagged Acheron-backed `AVM1` subset from the mounted Action workspace. Current proof surface is intentionally small but real: `setp16`, `calln`, `native`, `stringz`, `jump`, `call`, and `ret`. |
 | `ACTMON` front end | Yes | No | No | No | Historical bootstrap front end only. UDOS already owns the shell role. |
@@ -37,6 +38,7 @@ Legend:
 | Run `AVM1` payloads | Yes | Yes | Partial | Yes | UDOS now has a real `AVMRUN.PRG` proof for flagged Acheron-backed payloads such as `UDOSHELLO.AVM` and `UDOSFLOW.AVM`. The full historical bootstrap opcode surface is not considered compatible and is not claimed here. |
 | Launch UDOS-native external Action tools | No | Yes | Yes | Yes | `ACTINFO.PRG` proves external-tool launch/return through the preserved launch-safe UDOS ABI. |
 | Enumerate directories through UDOS ABI | No | Yes | Yes | Yes | `ACTDIR.PRG` proves current-directory enumeration from a UDOS-native external tool. |
+| Save tool-side files through UDOS ABI | No | Yes | Yes | Yes | `ACTWRITE.PRG` proves current-directory file creation/update from a UDOS-native external tool. |
 | Load tool-side files through UDOS ABI | No | Yes | Yes | Yes | `AVMINFO.PRG` proves mounted-workspace file loading from a UDOS-native external tool. |
 | REAL / REU / overlay language reference | Yes | Partial | No | Yes | Semantics exist in legacy/reference form; exported guides and examples are available under UDOS. |
 | File I/O runtime examples | Yes | Yes | No | Yes | `FILECOPY.AVM` is exported, but no UDOS-native runner exists yet. |

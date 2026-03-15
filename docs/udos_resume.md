@@ -45,6 +45,8 @@ The first UDOS-native external Action-side tool proofs now exist:
 
 - `ACTDIR.PRG`
 - `ACTINFO.PRG`
+- `ACTMKDIR.PRG`
+- `ACTRMDIR.PRG`
 - `ACTWRITE.PRG`
 - `AVMINFO.PRG`
 - `AVMRUN.PRG`
@@ -56,6 +58,10 @@ They are exported into `ACTION.DNP` root and `BIN/`.
 - `ACTINFO.PRG` launches from the UDOS shell, prints through the preserved
   launch-safe UDOS external-tool ABI, and returns to the prompt through the
   UDOS-aware external program return trampoline.
+- `ACTMKDIR.PRG` creates a directory in the current mounted workspace through
+  the preserved UDOS directory-mutation ABI and returns to the prompt.
+- `ACTRMDIR.PRG` removes an empty directory in the current mounted workspace
+  through the preserved UDOS directory-mutation ABI and returns to the prompt.
 - `ACTWRITE.PRG` writes a text file into the current mounted directory through
   the preserved UDOS file-save ABI and returns to the prompt.
 - `AVMINFO.PRG` uses the preserved UDOS file-load service to read `HELLO.AVM`
@@ -69,8 +75,8 @@ They are exported into `ACTION.DNP` root and `BIN/`.
 ## Immediate Follow-On Work
 
 1. expand `AVMRUN.PRG` beyond the current flagged Acheron-backed proof subset
-2. expand the preserved UDOS external-tool ABI beyond
-   console/cmdline/exit/file-load into directory and write-side services
+2. expand the preserved UDOS external-tool ABI beyond the current
+   console/cmdline/exit/read/write/directory proofs into richer workspace services
 3. define the broader UDOS program ABI expected by Action tools
 4. port compiler, linker, editor, and debugger behavior onto UDOS-native tools
 

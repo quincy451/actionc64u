@@ -14,6 +14,8 @@ FIXED_SERVICES = {
     "svc_dir_begin_current": 0xCF15,
     "svc_dir_next": 0xCF18,
     "svc_file_save_sc0": 0xCF1B,
+    "svc_dir_make_sc0": 0xCF1E,
+    "svc_dir_remove_sc0": 0xCF21,
 }
 
 FIXED_DATA = {
@@ -26,6 +28,12 @@ FIXED_CONSTANTS = {
     "tool_file_status_ok": 1,
     "tool_file_status_too_large": 2,
     "tool_file_status_nofile": 3,
+    "tool_dir_status_fail": 0,
+    "tool_dir_status_ok": 1,
+    "tool_dir_status_exists": 2,
+    "tool_dir_status_nofile": 3,
+    "tool_dir_status_not_empty": 4,
+    "tool_dir_status_busy": 5,
 }
 
 

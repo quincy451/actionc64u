@@ -169,6 +169,7 @@ Key docs:
 - [docs/overlays.md](/mnt/c/test/action/actionc64u/docs/overlays.md)
 - [docs/disk_layout.md](/mnt/c/test/action/actionc64u/docs/disk_layout.md)
 - [docs/release.md](/mnt/c/test/action/actionc64u/docs/release.md)
+- [docs/action_matrix.md](/mnt/c/test/action/actionc64u/docs/action_matrix.md)
 - [docs/udos_resume.md](/mnt/c/test/action/actionc64u/docs/udos_resume.md)
 - [docs/blockers.md](/mnt/c/test/action/actionc64u/docs/blockers.md)
 - [docs/prompt_chain.md](/mnt/c/test/action/actionc64u/docs/prompt_chain.md)

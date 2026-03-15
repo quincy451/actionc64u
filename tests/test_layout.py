@@ -15,6 +15,7 @@ class TestRepoLayout(unittest.TestCase):
             "docs/setup_wsl.md",
             "docs/roadmap.md",
             "docs/release.md",
+            "docs/action_matrix.md",
             "docs/udos_resume.md",
             "docs/architecture.md",
             "docs/cpmemu.md",

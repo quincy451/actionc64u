@@ -56,3 +56,7 @@ Today, the exported workspace is useful for:
 - reading the operator and language guides from inside UDOS
 - browsing sample Action and AVM assets from the shell
 - staging reference runtime data for later UDOS-native tools
+
+Progress tracking for this repo now lives in:
+
+- [docs/action_matrix.md](/mnt/c/test/action/actionc64u/docs/action_matrix.md)

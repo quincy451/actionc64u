@@ -18,6 +18,7 @@ FIXED_SERVICES = {
     "svc_dir_remove_sc0": 0xCF21,
     "svc_file_delete_sc0": 0xCF24,
     "svc_file_rename_sc0": 0xCF27,
+    "svc_file_copy_sc0": 0xCF2A,
 }
 
 FIXED_DATA = {

@@ -18,6 +18,7 @@ Legend:
 | `ALINK` dead-strip linker | Yes | No | No | Yes | Current linker exists only as a legacy bootstrap reference. |
 | `ACTDIR` tool proof | No | Yes | Yes | N/A | Enumerates the current mounted directory through the preserved UDOS directory ABI and returns to the prompt. |
 | `ACTINFO` tool proof | No | Yes | Yes | N/A | First UDOS-native external Action-side tool proof. It launches from `ACTION.DNP`, prints through the preserved launch-safe UDOS ABI, and returns to the UDOS prompt. |
+| `ACTCOPY` tool proof | No | Yes | Yes | N/A | Copies a file in the current mounted workspace through the preserved UDOS file-copy ABI; success is validated by the shell reading the copied file after return. |
 | `ACTDEL` tool proof | No | Yes | Yes | N/A | Deletes a file in the current mounted workspace through the preserved UDOS file-delete ABI and returns to the prompt. |
 | `ACTMKDIR` tool proof | No | Yes | Yes | N/A | Creates a directory in the current mounted workspace through the preserved UDOS directory-mutation ABI and returns to the prompt. |
 | `ACTMOVE` tool proof | No | Yes | Yes | N/A | Renames a file in the current mounted workspace through the preserved UDOS file-rename ABI; success is validated by the shell reading the renamed file after return. |
@@ -43,6 +44,7 @@ Legend:
 | Launch UDOS-native external Action tools | No | Yes | Yes | Yes | `ACTINFO.PRG` proves external-tool launch/return through the preserved launch-safe UDOS ABI. |
 | Enumerate directories through UDOS ABI | No | Yes | Yes | Yes | `ACTDIR.PRG` proves current-directory enumeration from a UDOS-native external tool. |
 | Make/remove directories through UDOS ABI | No | Yes | Yes | Yes | `ACTMKDIR.PRG` and `ACTRMDIR.PRG` prove current-directory directory creation/removal from a UDOS-native external tool. |
+| Copy files through UDOS ABI | No | Yes | Yes | Yes | `ACTCOPY.PRG` proves current-directory file copy from a UDOS-native external tool, with shell-side readback validating the copied file content after return. |
 | Delete files through UDOS ABI | No | Yes | Yes | Yes | `ACTDEL.PRG` proves current-directory file deletion from a UDOS-native external tool. |
 | Rename files through UDOS ABI | No | Yes | Yes | Yes | `ACTMOVE.PRG` proves current-directory file rename from a UDOS-native external tool, with shell-side readback validating the renamed file content after return. |
 | Save tool-side files through UDOS ABI | No | Yes | Yes | Yes | `ACTWRITE.PRG` proves current-directory file creation/update from a UDOS-native external tool. |
@@ -57,7 +59,7 @@ Legend:
 
 1. expand `AVMRUN.PRG` from the current flagged Acheron subset into a broader executable `AVM1` surface
 2. expand the preserved UDOS external-tool ABI beyond the current console/cmdline/exit/read/write/delete/directory proofs into richer workspace services
-3. use that ABI to move from `ACTINFO`, `ACTDEL`, `ACTMKDIR`, `ACTMOVE`, `ACTRMDIR`, `ACTWRITE`, `AVMINFO`, and `AVMRUN` into a broader Action-side tool surface
+3. use that ABI to move from `ACTCOPY`, `ACTINFO`, `ACTDEL`, `ACTMKDIR`, `ACTMOVE`, `ACTRMDIR`, `ACTWRITE`, `AVMINFO`, and `AVMRUN` into a broader Action-side tool surface
 4. then port linker and compiler behavior onto UDOS-native tools
 
 ## Relationship To UDOS Utilities

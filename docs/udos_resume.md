@@ -45,6 +45,7 @@ The first UDOS-native external Action-side tool proofs now exist:
 
 - `ACTDIR.PRG`
 - `ACTINFO.PRG`
+- `ACTCOPY.PRG`
 - `ACTDEL.PRG`
 - `ACTMKDIR.PRG`
 - `ACTMOVE.PRG`
@@ -60,6 +61,9 @@ They are exported into `ACTION.DNP` root and `BIN/`.
 - `ACTINFO.PRG` launches from the UDOS shell, prints through the preserved
   launch-safe UDOS external-tool ABI, and returns to the prompt through the
   UDOS-aware external program return trampoline.
+- `ACTCOPY.PRG` copies a file in the current mounted workspace through the
+  preserved UDOS file-copy ABI. Success is validated by shell-side readback of
+  the copied file after return.
 - `ACTDEL.PRG` deletes a file in the current mounted workspace through the
   preserved UDOS file-delete ABI and returns to the prompt.
 - `ACTMKDIR.PRG` creates a directory in the current mounted workspace through

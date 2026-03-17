@@ -45,6 +45,7 @@ The first UDOS-native external Action-side tool proofs now exist:
 
 - `ACTDIR.PRG`
 - `ACTFLOW.BAT`
+- `ACTNEW.BAT`
 - `ACTINFO.PRG`
 - `ACTCOPY.PRG`
 - `ACTDEL.PRG`
@@ -62,6 +63,10 @@ They are exported into `ACTION.DNP` root and `BIN/`.
 - `ACTFLOW.BAT` is the first composite workspace flow proof. It exercises the
   preserved UDOS file write/copy/move/delete services through the existing
   Action-side proof tools, prints `ACTFLOW OK`, and returns to the prompt.
+- `ACTNEW.BAT` is the first project skeleton workflow proof. It composes
+  stable UDOS shell `MD`/`CD`/`COPY` commands with root-absolute template files to
+  create `SRC/`, `BIN/`, `OBJ/`, `README.TXT`, and `MAIN.ACT`, prints
+  `ACTNEW OK`, and leaves the shell in the new project directory.
 - `ACTINFO.PRG` launches from the UDOS shell, prints through the preserved
   launch-safe UDOS external-tool ABI, and returns to the prompt through the
   UDOS-aware external program return trampoline.
@@ -78,7 +83,8 @@ They are exported into `ACTION.DNP` root and `BIN/`.
 - `ACTRMDIR.PRG` removes an empty directory in the current mounted workspace
   through the preserved UDOS directory-mutation ABI and returns to the prompt.
 - `ACTWRITE.PRG` writes a text file into the current mounted directory through
-  the preserved UDOS file-save ABI and returns to the prompt.
+  the preserved UDOS file-save ABI and now supports small template modes used
+  by `ACTNEW.BAT`.
 - `AVMINFO.PRG` uses the preserved UDOS file-load service to read `HELLO.AVM`
   from the mounted Action workspace, validates the `AVM1` header, prints
   `AVM OK`, and returns to the prompt.

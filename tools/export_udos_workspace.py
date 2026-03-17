@@ -135,6 +135,9 @@ def export_udos_tools(root: Path, image_root: Path, bin_dir: Path) -> None:
         built = Path(result.stdout.strip().splitlines()[-1])
         shutil.copy2(built, bin_dir / out_name)
         shutil.copy2(built, image_root / out_name)
+        if out_name == "ACTWRITE.PRG":
+            shutil.copy2(built, bin_dir / "W.PRG")
+            shutil.copy2(built, image_root / "W.PRG")
 
     (image_root / "ACTFLOW.BAT").write_text(
         "\n".join(
@@ -144,6 +147,36 @@ def export_udos_tools(root: Path, image_root: Path, bin_dir: Path) -> None:
                 "ACTMOVE COPY.TXT NEXT.TXT",
                 "ACTDEL NEXT.TXT",
                 "ECHO ACTFLOW OK",
+                "",
+            ]
+        ),
+        encoding="ascii",
+    )
+    (image_root / "PROJECT.TXT").write_text(
+        (
+            "ACTION PROJECT READY\n"
+            "\n"
+            "SRC contains Action source.\n"
+            "BIN contains build outputs.\n"
+            "OBJ contains intermediate artifacts.\n"
+        ),
+        encoding="ascii",
+    )
+    (image_root / "MAIN.ACT").write_text(
+        "PROC MAIN()\nENDPROC\n",
+        encoding="ascii",
+    )
+    (image_root / "ACTNEW.BAT").write_text(
+        "\n".join(
+            [
+                "MD %1",
+                "CD %1",
+                "MD SRC",
+                "MD BIN",
+                "MD OBJ",
+                "COPY /PROJECT.TXT README.TXT",
+                "COPY /MAIN.ACT SRC/MAIN.ACT",
+                "ECHO ACTNEW OK",
                 "",
             ]
         ),

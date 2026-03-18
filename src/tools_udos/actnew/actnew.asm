@@ -67,6 +67,25 @@ have_args:
     ldy #>msg_mkdir_fail
     jmp fail_with_ptr
 :
+    lda #<project_marker
+    sta save_params+0
+    lda #>project_marker
+    sta save_params+1
+    lda #<marker_text
+    sta save_params+2
+    lda #>marker_text
+    sta save_params+3
+    lda #tool_file_status_fail
+    sta save_params+4
+    ldx #save_params
+    jsr svc_file_save_sc0
+    lda save_params+4
+    cmp #tool_file_status_ok
+    beq :+
+    lda #<msg_save_fail
+    ldy #>msg_save_fail
+    jmp fail_with_ptr
+:
     lda #<project_readme
     sta save_params+0
     lda #>project_readme
@@ -211,6 +230,17 @@ build_paths:
     sta src_ptr
     lda #>project_root
     sta src_ptr+1
+    lda #<project_marker
+    sta dst_ptr
+    lda #>project_marker
+    sta dst_ptr+1
+    lda #<suffix_marker
+    ldy #>suffix_marker
+    jsr build_path_from_suffix
+    lda #<project_root
+    sta src_ptr
+    lda #>project_root
+    sta src_ptr+1
     lda #<project_main
     sta dst_ptr
     lda #>project_main
@@ -295,8 +325,13 @@ suffix_obj:
     .asciiz "/OBJ"
 suffix_readme:
     .asciiz "/README.TXT"
+suffix_marker:
+    .asciiz "/ACTION.PROJ"
 suffix_main:
     .asciiz "/SRC/MAIN.ACT"
+
+marker_text:
+    .byte "ACTION PROJECT", 13, 0
 
 readme_text:
     .byte "ACTION PROJECT READY", 13
@@ -316,6 +351,8 @@ project_src:
 project_bin:
     .res 40
 project_obj:
+    .res 40
+project_marker:
     .res 40
 project_readme:
     .res 40

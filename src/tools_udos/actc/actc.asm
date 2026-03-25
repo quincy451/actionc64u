@@ -68,6 +68,7 @@ start:
 source_loaded:
     jsr parse_module_header_or_fail
     jsr collect_proc_exports_or_fail
+    jsr collect_local_calls
     jsr build_object_target_path
     jsr probe_target_save_mode_or_fail
     jsr detect_runtime_imports
@@ -291,6 +292,93 @@ collect_proc_exports_or_fail_done_check:
 collect_proc_exports_or_fail_done:
     rts
 
+collect_local_calls:
+    lda #$00
+    sta call_count_data
+    sta call_list_started
+    ldx #$00
+collect_local_calls_clear_loop:
+    cpx #8
+    beq collect_local_calls_begin
+    sta call_seen_flags,x
+    inx
+    bne collect_local_calls_clear_loop
+collect_local_calls_begin:
+    lda #$FF
+    sta current_proc_index_data
+    lda #<source_buffer
+    sta scan_ptr
+    lda #>source_buffer
+    sta scan_ptr+1
+collect_local_calls_loop:
+    ldy #$00
+    lda (scan_ptr),y
+    bne collect_local_calls_have_char
+    jmp collect_local_calls_done
+collect_local_calls_have_char:
+    cmp #10
+    beq collect_local_calls_advance_blank
+    cmp #13
+    beq collect_local_calls_advance_blank
+    jsr skip_source_spaces
+    ldy #$00
+    lda (scan_ptr),y
+    bne collect_local_calls_after_space_check
+    jmp collect_local_calls_done
+collect_local_calls_after_space_check:
+    lda #<pattern_proc
+    sta const_ptr
+    lda #>pattern_proc
+    sta const_ptr+1
+    jsr pattern_matches_scan_ptr
+    bcc collect_local_calls_proc_decl
+    lda current_proc_index_data
+    cmp #$FF
+    beq collect_local_calls_skip_line
+    jsr copy_symbol_from_scan_ptr
+    bcs collect_local_calls_skip_line
+    cmp #'('
+    bne collect_local_calls_skip_line
+    jsr find_export_index_from_declared
+    bcs collect_local_calls_skip_line
+    cpx current_proc_index_data
+    beq collect_local_calls_skip_line
+    lda call_seen_flags,x
+    bne collect_local_calls_skip_line
+    lda #$01
+    sta call_seen_flags,x
+    ldy call_count_data
+    cpy #8
+    bcc :+
+    lda #<msg_bad_call
+    ldy #>msg_bad_call
+    jmp fail_with_ptr
+:   txa
+    sta call_indices,y
+    inc call_count_data
+collect_local_calls_skip_line:
+    jsr skip_source_line
+    jmp collect_local_calls_loop
+collect_local_calls_proc_decl:
+    jsr advance_scan_ptr_by_const_ptr
+    jsr skip_source_spaces
+    jsr copy_symbol_from_scan_ptr
+    bcs collect_local_calls_bad_proc
+    jsr find_export_index_from_declared
+    bcs collect_local_calls_bad_proc
+    stx current_proc_index_data
+    jsr skip_source_line
+    jmp collect_local_calls_loop
+collect_local_calls_advance_blank:
+    jsr advance_scan_ptr
+    jmp collect_local_calls_loop
+collect_local_calls_bad_proc:
+    lda #<msg_bad_proc
+    ldy #>msg_bad_proc
+    jmp fail_with_ptr
+collect_local_calls_done:
+    rts
+
 skip_source_line:
     ldy #$00
 skip_source_line_loop:
@@ -377,6 +465,71 @@ set_export_ptr_from_x_loop:
     dex
     bne set_export_ptr_from_x_loop
 set_export_ptr_from_x_done:
+    rts
+
+copy_symbol_from_scan_ptr:
+    ldy #$00
+copy_symbol_from_scan_ptr_loop:
+    lda (scan_ptr),y
+    beq copy_symbol_from_scan_ptr_done
+    jsr uppercase_ascii
+    cmp #'A'
+    bcc copy_symbol_from_scan_ptr_done
+    cmp #'Z'+1
+    bcc copy_symbol_from_scan_ptr_store
+    cmp #'0'
+    bcc copy_symbol_from_scan_ptr_symbol
+    cmp #'9'+1
+    bcc copy_symbol_from_scan_ptr_store
+copy_symbol_from_scan_ptr_symbol:
+    cmp #'_'
+    bne copy_symbol_from_scan_ptr_done
+copy_symbol_from_scan_ptr_store:
+    sta declared_module_name,y
+    iny
+    cpy #24
+    bcc copy_symbol_from_scan_ptr_loop
+    lda #<msg_bad_proc
+    ldy #>msg_bad_proc
+    jmp fail_with_ptr
+copy_symbol_from_scan_ptr_done:
+    cpy #$00
+    beq copy_symbol_from_scan_ptr_fail
+    pha
+    lda #$00
+    sta declared_module_name,y
+    pla
+    clc
+    rts
+copy_symbol_from_scan_ptr_fail:
+    sec
+    rts
+
+find_export_index_from_declared:
+    ldx #$00
+find_export_index_from_declared_loop:
+    cpx export_count_data
+    beq find_export_index_from_declared_fail
+    stx hex_work
+    jsr set_export_ptr_from_x
+    ldx hex_work
+    ldy #$00
+find_export_index_from_declared_compare_loop:
+    lda (export_ptr),y
+    cmp declared_module_name,y
+    bne find_export_index_from_declared_next
+    lda declared_module_name,y
+    beq find_export_index_from_declared_done
+    iny
+    bne find_export_index_from_declared_compare_loop
+find_export_index_from_declared_next:
+    inx
+    bne find_export_index_from_declared_loop
+find_export_index_from_declared_fail:
+    sec
+    rts
+find_export_index_from_declared_done:
+    clc
     rts
 
 detect_runtime_imports:
@@ -582,18 +735,25 @@ build_avo_content:
     lda #>avo_prefix_2
     sta const_ptr+1
     jsr append_const_ptr
-    jsr append_import_list
+    jsr append_call_list
 
     lda #<avo_prefix_3
     sta const_ptr
     lda #>avo_prefix_3
     sta const_ptr+1
     jsr append_const_ptr
-    jsr append_module_symbol_lower
+    jsr append_import_list
 
     lda #<avo_prefix_4
     sta const_ptr
     lda #>avo_prefix_4
+    sta const_ptr+1
+    jsr append_const_ptr
+    jsr append_module_symbol_lower
+
+    lda #<avo_prefix_5
+    sta const_ptr
+    lda #>avo_prefix_5
     sta const_ptr+1
     jsr append_const_ptr
     jsr append_module_symbol_hex_lower
@@ -756,6 +916,41 @@ append_export_list_symbol_done:
 append_export_list_done:
     rts
 
+append_call_list:
+    lda #$00
+    sta export_index
+    sta call_list_started
+append_call_list_loop:
+    ldx export_index
+    cpx call_count_data
+    beq append_call_list_done
+    lda call_list_started
+    beq :+
+    lda #','
+    jsr append_char
+:   lda #'"'
+    jsr append_char
+    ldy export_index
+    ldx call_indices,y
+    jsr set_export_ptr_from_x
+    ldy #$00
+append_call_list_symbol_loop:
+    lda (export_ptr),y
+    beq append_call_list_symbol_done
+    jsr lowercase_ascii
+    jsr append_char
+    iny
+    bne append_call_list_symbol_loop
+append_call_list_symbol_done:
+    lda #'"'
+    jsr append_char
+    lda #$01
+    sta call_list_started
+    inc export_index
+    jmp append_call_list_loop
+append_call_list_done:
+    rts
+
 append_module_symbol_lower:
     ldy #$00
 append_module_symbol_lower_loop:
@@ -878,6 +1073,8 @@ msg_bad_module:
     .asciiz "BAD MODULE"
 msg_bad_proc:
     .asciiz "BAD PROC"
+msg_bad_call:
+    .asciiz "BAD CALL"
 msg_save_fail:
     .asciiz "SAVE FAIL"
 msg_created:
@@ -949,10 +1146,12 @@ import_rt_reu_poke8:
 avo_prefix_1:
     .byte "AVO1",10,"{",34,"entry_offset",34,":0,",34,"exports",34,":[",0
 avo_prefix_2:
-    .byte "],",34,"imports",34,":[",0
+    .byte "],",34,"calls",34,":[",0
 avo_prefix_3:
-    .byte "],",34,"module",34,":",34,0
+    .byte "],",34,"imports",34,":[",0
 avo_prefix_4:
+    .byte "],",34,"module",34,":",34,0
+avo_prefix_5:
     .byte 34,",",34,"payload_hex",34,":",34,0
 avo_suffix:
     .byte 34,",",34,"version",34,":1}",10,0
@@ -973,5 +1172,15 @@ manifest_buffer:
     .res MANIFEST_LIMIT+1
 export_count_data:
     .res 1
+call_count_data:
+    .res 1
+current_proc_index_data:
+    .res 1
+call_list_started:
+    .res 1
 export_names:
     .res 200
+call_seen_flags:
+    .res 8
+call_indices:
+    .res 8

@@ -79,10 +79,11 @@ They are exported into `ACTION.DNP` root and `BIN/`.
   proof validates `ACTION.PROJ`, requires a tracked module entry, verifies the
   corresponding `SRC/<NAME>.ACT` source exists, checks that the source
   `MODULE` header matches the requested module name, extracts top-level
-  `PROC` exports, scans the loaded source text for the current runtime-call
-  marker set, and emits a deterministic `OBJ/<NAME>.AVO` text object stub
-  with `AVO1`, module/export/import metadata, and a placeholder payload. The
-  focused headless VICE proof is
+  `PROC` exports, extracts flat local inter-proc calls, scans the loaded
+  source text for the current runtime-call marker set, and emits a
+  deterministic `OBJ/<NAME>.AVO` text object stub with `AVO1`,
+  module/export/call/import metadata, and a placeholder payload. The focused
+  headless VICE proof is
   green through `make vice-action-actc`, with host-side verification of the
   generated object file because `OBJ/UDOSDIR.TXT` is not yet refreshed
   reliably enough for a stable shell-side `TYPE OBJ/...` proof. The current

@@ -113,9 +113,17 @@ def export_examples(root: Path, image_root: Path, src_dir: Path, bin_dir: Path) 
 def export_udos_tools(root: Path, image_root: Path, bin_dir: Path) -> None:
     tool_specs = [
         ("build_actadd_udos.sh", "ACTADD.PRG"),
+        ("build_act2save_udos.sh", "ACT2SAVE.PRG"),
+        ("build_actc_udos.sh", "ACTC.PRG"),
+        ("build_alink_udos.sh", "ALINK.PRG"),
+        ("build_actchk_udos.sh", "ACTCHK.PRG"),
         ("build_actdir_udos.sh", "ACTDIR.PRG"),
+        ("build_actmon_udos.sh", "ACTMON.PRG"),
+        ("build_actfile_udos.sh", "ACTFILE.PRG"),
         ("build_actinfo_udos.sh", "ACTINFO.PRG"),
         ("build_actnew_udos.sh", "ACTNEW.PRG"),
+        ("build_actsrc_udos.sh", "ACTSRC.PRG"),
+        ("build_actwork_udos.sh", "ACTWORK.PRG"),
         ("build_actcopy_udos.sh", "ACTCOPY.PRG"),
         ("build_actdel_udos.sh", "ACTDEL.PRG"),
         ("build_actmkdir_udos.sh", "ACTMKDIR.PRG"),
@@ -168,6 +176,10 @@ def export_udos_tools(root: Path, image_root: Path, bin_dir: Path) -> None:
         "PROC MAIN()\nENDPROC\n",
         encoding="ascii",
     )
+    (image_root / "APROJ.TXT").write_text(
+        "ACTION PROJECT\nMAIN.ACT\n",
+        encoding="ascii",
+    )
     (image_root / "ACTNEW.BAT").write_text(
         "\n".join(
             [
@@ -176,6 +188,7 @@ def export_udos_tools(root: Path, image_root: Path, bin_dir: Path) -> None:
                 "MD SRC",
                 "MD BIN",
                 "MD OBJ",
+                "COPY /APROJ.TXT ACTION.PROJ",
                 "COPY /PROJECT.TXT README.TXT",
                 "COPY /MAIN.ACT SRC/MAIN.ACT",
                 "ECHO ACTNEW OK",
@@ -188,9 +201,12 @@ def export_udos_tools(root: Path, image_root: Path, bin_dir: Path) -> None:
 
 def export_libs(root: Path, lib_dir: Path) -> None:
     libmods = root / "src" / "tools_cpm" / "libmods"
+    runtime_modules = root / "src" / "runtime" / "modules"
     (lib_dir / "LIBMODS.DAT").write_text(build_manifest_bundle(libmods), encoding="ascii")
     for manifest in sorted(libmods.glob("*.mod")):
         shutil.copy2(manifest, lib_dir / manifest.name.upper())
+    for obj in sorted(runtime_modules.glob("*.avo")):
+        shutil.copy2(obj, lib_dir / obj.name.upper())
 
 
 def main(argv: list[str] | None = None) -> int:

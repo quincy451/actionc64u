@@ -48,6 +48,9 @@ hex_work:
 list_started:
     .res 1
 
+export_index = list_started
+export_ptr = src_ptr
+
 .code
 
 start:
@@ -64,6 +67,7 @@ start:
     jmp fail_with_ptr
 source_loaded:
     jsr parse_module_header_or_fail
+    jsr collect_proc_exports_or_fail
     jsr build_object_target_path
     jsr probe_target_save_mode_or_fail
     jsr detect_runtime_imports
@@ -244,6 +248,137 @@ compare_declared_module_or_fail_bad:
 compare_declared_module_or_fail_done:
     rts
 
+collect_proc_exports_or_fail:
+    lda #$00
+    sta export_count_data
+    lda #<source_buffer
+    sta scan_ptr
+    lda #>source_buffer
+    sta scan_ptr+1
+collect_proc_exports_or_fail_loop:
+    ldy #$00
+    lda (scan_ptr),y
+    beq collect_proc_exports_or_fail_done_check
+    cmp #10
+    beq collect_proc_exports_or_fail_advance_blank
+    cmp #13
+    beq collect_proc_exports_or_fail_advance_blank
+    jsr skip_source_spaces
+    ldy #$00
+    lda (scan_ptr),y
+    beq collect_proc_exports_or_fail_done_check
+    lda #<pattern_proc
+    sta const_ptr
+    lda #>pattern_proc
+    sta const_ptr+1
+    jsr pattern_matches_scan_ptr
+    bcs collect_proc_exports_or_fail_skip_line
+    jsr advance_scan_ptr_by_const_ptr
+    jsr skip_source_spaces
+    jsr store_proc_export_from_scan_ptr_or_fail
+collect_proc_exports_or_fail_skip_line:
+    jsr skip_source_line
+    jmp collect_proc_exports_or_fail_loop
+collect_proc_exports_or_fail_advance_blank:
+    jsr advance_scan_ptr
+    jmp collect_proc_exports_or_fail_loop
+collect_proc_exports_or_fail_done_check:
+    lda export_count_data
+    bne collect_proc_exports_or_fail_done
+    lda #<msg_no_proc
+    ldy #>msg_no_proc
+    jmp fail_with_ptr
+collect_proc_exports_or_fail_done:
+    rts
+
+skip_source_line:
+    ldy #$00
+skip_source_line_loop:
+    lda (scan_ptr),y
+    beq skip_source_line_done
+    cmp #10
+    beq skip_source_line_done
+    cmp #13
+    beq skip_source_line_done
+    jsr advance_scan_ptr
+    jmp skip_source_line_loop
+skip_source_line_done:
+    rts
+
+store_proc_export_from_scan_ptr_or_fail:
+    lda export_count_data
+    cmp #8
+    bcc :+
+    lda #<msg_bad_proc
+    ldy #>msg_bad_proc
+    jmp fail_with_ptr
+:   ldx export_count_data
+    jsr set_export_ptr_from_x
+    ldy #$00
+store_proc_export_from_scan_ptr_or_fail_loop:
+    lda (scan_ptr),y
+    beq store_proc_export_from_scan_ptr_or_fail_done
+    cmp #'('
+    beq store_proc_export_from_scan_ptr_or_fail_done
+    cmp #'='
+    beq store_proc_export_from_scan_ptr_or_fail_done
+    cmp #' '
+    beq store_proc_export_from_scan_ptr_or_fail_done
+    cmp #9
+    beq store_proc_export_from_scan_ptr_or_fail_done
+    cmp #10
+    beq store_proc_export_from_scan_ptr_or_fail_done
+    cmp #13
+    beq store_proc_export_from_scan_ptr_or_fail_done
+    jsr uppercase_ascii
+    cmp #'A'
+    bcc store_proc_export_from_scan_ptr_or_fail_bad
+    cmp #'Z'+1
+    bcc store_proc_export_from_scan_ptr_or_fail_store
+    cmp #'0'
+    bcc store_proc_export_from_scan_ptr_or_fail_symbol
+    cmp #'9'+1
+    bcc store_proc_export_from_scan_ptr_or_fail_store
+store_proc_export_from_scan_ptr_or_fail_symbol:
+    cmp #'_'
+    bne store_proc_export_from_scan_ptr_or_fail_bad
+store_proc_export_from_scan_ptr_or_fail_store:
+    sta (export_ptr),y
+    iny
+    cpy #24
+    bcc store_proc_export_from_scan_ptr_or_fail_loop
+store_proc_export_from_scan_ptr_or_fail_bad:
+    lda #<msg_bad_proc
+    ldy #>msg_bad_proc
+    jmp fail_with_ptr
+store_proc_export_from_scan_ptr_or_fail_done:
+    cpy #$00
+    beq store_proc_export_from_scan_ptr_or_fail_bad
+    lda #$00
+    sta (export_ptr),y
+    inc export_count_data
+    rts
+
+set_export_ptr_from_x:
+    lda #<export_names
+    sta export_ptr
+    lda #>export_names
+    sta export_ptr+1
+set_export_ptr_from_x_loop:
+    cpx #$00
+    beq set_export_ptr_from_x_done
+    clc
+    lda export_ptr
+    adc #25
+    sta export_ptr
+    lda export_ptr+1
+    adc #$00
+    sta export_ptr+1
+    dex
+    bne set_export_ptr_from_x_loop
+set_export_ptr_from_x_done:
+    rts
+
 detect_runtime_imports:
     lda #$00
     sta import_flags_lo
@@ -400,6 +535,17 @@ pattern_matches_scan_ptr_ok:
     clc
     rts
 
+advance_scan_ptr_by_const_ptr:
+    ldy #$00
+advance_scan_ptr_by_const_ptr_loop:
+    lda (const_ptr),y
+    beq advance_scan_ptr_by_const_ptr_done
+    jsr advance_scan_ptr
+    iny
+    bne advance_scan_ptr_by_const_ptr_loop
+advance_scan_ptr_by_const_ptr_done:
+    rts
+
 uppercase_ascii:
     cmp #'a'
     bcc uppercase_ascii_done
@@ -429,7 +575,7 @@ build_avo_content:
     lda #>avo_prefix_1
     sta const_ptr+1
     jsr append_const_ptr
-    jsr append_module_symbol_lower
+    jsr append_export_list
 
     lda #<avo_prefix_2
     sta const_ptr
@@ -571,6 +717,45 @@ append_import_name:
     sta list_started
     rts
 
+append_export_list:
+    lda #$00
+    sta export_index
+append_export_list_loop:
+    ldx export_index
+    cpx export_count_data
+    beq append_export_list_done
+    lda export_index
+    beq :+
+    lda #','
+    jsr append_char
+:   lda #'['
+    jsr append_char
+    lda #'"'
+    jsr append_char
+    ldx export_index
+    jsr set_export_ptr_from_x
+    ldy #$00
+append_export_list_symbol_loop:
+    lda (export_ptr),y
+    beq append_export_list_symbol_done
+    jsr lowercase_ascii
+    jsr append_char
+    iny
+    bne append_export_list_symbol_loop
+append_export_list_symbol_done:
+    lda #'"'
+    jsr append_char
+    lda #','
+    jsr append_char
+    lda #'0'
+    jsr append_char
+    lda #']'
+    jsr append_char
+    inc export_index
+    jmp append_export_list_loop
+append_export_list_done:
+    rts
+
 append_module_symbol_lower:
     ldy #$00
 append_module_symbol_lower_loop:
@@ -691,12 +876,16 @@ msg_load_fail:
     .asciiz "LOAD FAIL"
 msg_bad_module:
     .asciiz "BAD MODULE"
+msg_bad_proc:
+    .asciiz "BAD PROC"
 msg_save_fail:
     .asciiz "SAVE FAIL"
 msg_created:
     .asciiz "CREATED"
 msg_updated:
     .asciiz "UPDATED"
+msg_no_proc:
+    .asciiz "NO PROC"
 msg_ok:
     .asciiz "ACTC OK"
 
@@ -707,6 +896,8 @@ project_marker:
 
 pattern_module:
     .asciiz "MODULE"
+pattern_proc:
+    .asciiz "PROC"
 pattern_print:
     .asciiz "PRINT("
 pattern_printe:
@@ -756,9 +947,9 @@ import_rt_reu_poke8:
     .asciiz "rt.reu_poke8"
 
 avo_prefix_1:
-    .byte "AVO1",10,"{",34,"entry_offset",34,":0,",34,"exports",34,":[[",34,0
+    .byte "AVO1",10,"{",34,"entry_offset",34,":0,",34,"exports",34,":[",0
 avo_prefix_2:
-    .byte 34,",0]],",34,"imports",34,":[",0
+    .byte "],",34,"imports",34,":[",0
 avo_prefix_3:
     .byte "],",34,"module",34,":",34,0
 avo_prefix_4:
@@ -777,6 +968,10 @@ target_path:
 source_buffer:
     .res SOURCE_LIMIT+1
 content_buffer:
-    .res 448
+    .res 640
 manifest_buffer:
     .res MANIFEST_LIMIT+1
+export_count_data:
+    .res 1
+export_names:
+    .res 200

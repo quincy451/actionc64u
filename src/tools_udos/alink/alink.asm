@@ -48,6 +48,10 @@ save_mode:
 truncated_flag:
     .res 1
 
+export_count = truncated_flag
+export_index = save_mode
+export_ptr = current_bit_lo
+
 .code
 
 start:
@@ -57,6 +61,7 @@ start:
     jsr require_manifest_entry_tracked
     jsr build_object_target_path
     jsr load_object_or_fail
+    jsr parse_exports_or_fail
     jsr parse_imports_or_fail
     jsr resolve_import_closure
     jsr build_map_target_path
@@ -166,6 +171,120 @@ load_object_bad:
     ldy #>msg_bad_avo
     jmp fail_with_ptr
 load_object_done:
+    rts
+
+parse_exports_or_fail:
+    lda #$00
+    sta export_count
+    lda #<marker_imports
+    sta const_ptr
+    lda #>marker_imports
+    sta const_ptr+1
+    jsr find_pattern_at_const_ptr
+    bcc :+
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+:   lda scan_ptr
+    sta src_ptr
+    lda scan_ptr+1
+    sta src_ptr+1
+
+    lda #<marker_exports
+    sta const_ptr
+    lda #>marker_exports
+    sta const_ptr+1
+    jsr find_pattern_at_const_ptr
+    bcc :+
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+:   jsr advance_scan_ptr_by_const_ptr
+
+parse_exports_loop:
+    lda scan_ptr+1
+    cmp src_ptr+1
+    bne :+
+    lda scan_ptr
+    cmp src_ptr
+    beq parse_exports_done_check
+:   ldy #$00
+    lda (scan_ptr),y
+    beq parse_exports_bad
+    cmp #'"'
+    beq parse_export_symbol
+    jsr advance_scan_ptr
+    jmp parse_exports_loop
+
+parse_export_symbol:
+    jsr advance_scan_ptr
+    jsr copy_export_symbol_or_fail
+    jmp parse_exports_loop
+
+parse_exports_done_check:
+    lda export_count
+    bne parse_exports_done
+parse_exports_bad:
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+parse_exports_done:
+    rts
+
+copy_export_symbol_or_fail:
+    lda export_count
+    cmp #8
+    bcc :+
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+:   ldx export_count
+    jsr set_export_ptr_from_x
+    ldy #$00
+copy_export_symbol_or_fail_loop:
+    lda (scan_ptr),y
+    beq parse_exports_bad
+    cmp #'"'
+    beq copy_export_symbol_or_fail_done
+    sta (export_ptr),y
+    iny
+    cpy #24
+    bcc copy_export_symbol_or_fail_loop
+    jmp parse_exports_bad
+copy_export_symbol_or_fail_done:
+    cpy #$00
+    beq parse_exports_bad
+    lda #$00
+    sta (export_ptr),y
+copy_export_symbol_or_fail_advance_loop:
+    cpy #$00
+    beq copy_export_symbol_or_fail_advanced
+    jsr advance_scan_ptr
+    dey
+    bne copy_export_symbol_or_fail_advance_loop
+copy_export_symbol_or_fail_advanced:
+    jsr advance_scan_ptr
+    inc export_count
+    rts
+
+set_export_ptr_from_x:
+    lda #<export_names
+    sta export_ptr
+    lda #>export_names
+    sta export_ptr+1
+set_export_ptr_from_x_loop:
+    cpx #$00
+    beq set_export_ptr_from_x_done
+    clc
+    lda export_ptr
+    adc #25
+    sta export_ptr
+    lda export_ptr+1
+    adc #$00
+    sta export_ptr+1
+    dex
+    bne set_export_ptr_from_x_loop
+set_export_ptr_from_x_done:
     rts
 
 parse_imports_or_fail:
@@ -461,13 +580,7 @@ build_map_content:
     sta const_ptr+1
     jsr append_const_ptr
 
-    lda #<map_include_prefix
-    sta const_ptr
-    lda #>map_include_prefix
-    sta const_ptr+1
-    jsr append_const_ptr
-    jsr append_module_symbol_lower
-    jsr append_newline
+    jsr append_export_lines
     jsr append_import_include_lines
     jsr append_main_resolve_lines
     lda main_flags_lo
@@ -617,6 +730,34 @@ append_main_resolve_prefix:
     jsr append_module_symbol_lower
     lda #' '
     jmp append_char
+
+append_export_lines:
+    lda #$00
+    sta export_index
+append_export_lines_loop:
+    ldx export_index
+    cpx export_count
+    beq append_export_lines_done
+    lda #<map_export_prefix
+    sta const_ptr
+    lda #>map_export_prefix
+    sta const_ptr+1
+    jsr append_const_ptr
+    ldx export_index
+    jsr set_export_ptr_from_x
+    ldy #$00
+append_export_lines_symbol_loop:
+    lda (export_ptr),y
+    beq append_export_lines_symbol_done
+    jsr append_char
+    iny
+    bne append_export_lines_symbol_loop
+append_export_lines_symbol_done:
+    jsr append_newline
+    inc export_index
+    jmp append_export_lines_loop
+append_export_lines_done:
+    rts
 
 append_module_symbol_lower:
     ldy #$00
@@ -899,6 +1040,8 @@ project_marker:
 
 marker_imports:
     .byte 34,"imports",34,":[",0
+marker_exports:
+    .byte 34,"exports",34,":[",0
 
 import_rt_format_int:
     .asciiz "rt.format_int"
@@ -931,6 +1074,8 @@ map_object_suffix:
     .byte ".AVO",10,0
 map_include_prefix:
     .byte "INCLUDE ",0
+map_export_prefix:
+    .byte "EXPORT ",0
 map_resolve_prefix:
     .byte "RESOLVE ",0
 
@@ -945,6 +1090,8 @@ symbol_buffer:
 source_buffer:
     .res SOURCE_LIMIT+1
 content_buffer:
-    .res 384
+    .res 512
 manifest_buffer:
     .res MANIFEST_LIMIT+1
+export_names:
+    .res 200

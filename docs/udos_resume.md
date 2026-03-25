@@ -78,22 +78,24 @@ They are exported into `ACTION.DNP` root and `BIN/`.
 - `ACTC.PRG` is the first UDOS-native compiler front-end slice. The current
   proof validates `ACTION.PROJ`, requires a tracked module entry, verifies the
   corresponding `SRC/<NAME>.ACT` source exists, checks that the source
-  `MODULE` header matches the requested module name, scans the loaded source
-  text for the current runtime-call marker set, and emits a deterministic
-  `OBJ/<NAME>.AVO` text object stub with `AVO1`, module/export/import
-  metadata, and a placeholder payload. The focused headless VICE proof is
+  `MODULE` header matches the requested module name, extracts top-level
+  `PROC` exports, scans the loaded source text for the current runtime-call
+  marker set, and emits a deterministic `OBJ/<NAME>.AVO` text object stub
+  with `AVO1`, module/export/import metadata, and a placeholder payload. The
+  focused headless VICE proof is
   green through `make vice-action-actc`, with host-side verification of the
   generated object file because `OBJ/UDOSDIR.TXT` is not yet refreshed
   reliably enough for a stable shell-side `TYPE OBJ/...` proof. The current
   import list is inferred from simple source-pattern scanning, not a full
   parser or code generator.
 - `ALINK.PRG` is now the first UDOS-native linker slice. The current proof
-  loads a deterministic `OBJ/<NAME>.AVO` object stub, parses the import list,
-  resolves the current small runtime closure, and emits `BIN/<NAME>.MAP` on
-  the host fs tree. The focused headless VICE proof is green through
-  `make vice-action-alink`, with host-side verification of the generated map
-  file because the current linker slice is still a planning/map emitter, not a
-  full object merger or final AVM linker.
+  loads a deterministic `OBJ/<NAME>.AVO` object stub, parses its export and
+  import metadata, resolves the current small runtime closure, and emits
+  `BIN/<NAME>.MAP` on the host fs tree. The current map proof now includes
+  export lines plus the current resolve plan. The focused headless VICE proof
+  is green through `make vice-action-alink`, with host-side verification of
+  the generated map file because the current linker slice is still a
+  planning/map emitter, not a full object merger or final AVM linker.
 - `ACTFLOW.BAT` is the first composite workspace flow proof. It exercises the
   preserved UDOS file write/copy/move/delete services through the existing
   Action-side proof tools, prints `ACTFLOW OK`, and returns to the prompt.

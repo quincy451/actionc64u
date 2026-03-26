@@ -59,8 +59,8 @@ start:
     jsr parse_payload_bytes_or_fail
     jsr build_live_set
     jsr resolve_import_closure
-    jsr build_map_target_path
-    jsr build_map_content
+    jsr build_avm_text_target_path
+    jsr build_avm_text_content_or_fail
     jsr save_content_buffer_to_target
     bcc save_ok
     lda #<msg_save_fail
@@ -781,292 +781,110 @@ advance_scan_ptr_by_const_ptr_loop:
 advance_scan_ptr_by_const_ptr_done:
     rts
 
-build_map_content:
+build_avm_text_content_or_fail:
     lda #<content_buffer
     sta content_ptr
     lda #>content_buffer
     sta content_ptr+1
-
-    lda #<map_header
+    lda #<avm_txt_entry_prefix
     sta const_ptr
-    lda #>map_header
+    lda #>avm_txt_entry_prefix
     sta const_ptr+1
     jsr append_const_ptr
-    jsr append_module_symbol_lower
-    jsr append_newline
-
-    jsr append_export_lines
-    jsr append_call_lines
-    jsr append_live_lines
-    jsr append_entry_line
-    jsr append_image_line
-    jsr append_import_include_lines
-    jsr append_main_resolve_lines
+    lda #<marker_entry_offset
+    sta const_ptr
+    lda #>marker_entry_offset
+    sta const_ptr+1
+    jsr find_pattern_at_const_ptr
+    bcc :+
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+:   jsr advance_scan_ptr_by_const_ptr
     lda #$00
-    jmp append_char
-
-append_import_include_lines:
-    ldx #$00
-append_import_include_lines_loop:
-    cpx #IMPORT_TABLE_COUNT
-    beq append_import_include_lines_done
-    jsr import_selected_from_x
-    beq append_import_include_lines_next
-    stx compare_char
-    lda #<map_include_prefix
-    sta const_ptr
-    lda #>map_include_prefix
-    sta const_ptr+1
-    jsr append_const_ptr
-    ldx compare_char
-    jsr set_import_ptr_from_x
-    jsr append_const_ptr
-    jsr append_newline
-    ldx compare_char
-append_import_include_lines_next:
-    inx
-    bne append_import_include_lines_loop
-append_import_include_lines_done:
-    rts
-
-append_main_resolve_lines:
-    ldx #$00
-append_main_resolve_lines_loop:
-    cpx #IMPORT_TABLE_COUNT
-    beq append_main_resolve_lines_done
-    jsr import_selected_from_x
-    beq append_main_resolve_lines_next
-    stx compare_char
-    jsr append_main_resolve_prefix
-    ldx compare_char
-    jsr set_import_ptr_from_x
-    jsr append_const_ptr
-    jsr append_newline
-    ldx compare_char
-append_main_resolve_lines_next:
-    inx
-    bne append_main_resolve_lines_loop
-append_main_resolve_lines_done:
-    rts
-
-append_main_resolve_prefix:
-    lda #<map_resolve_prefix
-    sta const_ptr
-    lda #>map_resolve_prefix
-    sta const_ptr+1
-    jsr append_const_ptr
-    jsr append_module_symbol_lower
-    lda #' '
-    jmp append_char
-
-append_export_lines:
-    lda #$00
-    sta export_index
-append_export_lines_loop:
-    ldx export_index
-    cpx export_count
-    beq append_export_lines_done
-    lda #<map_export_prefix
-    sta const_ptr
-    lda #>map_export_prefix
-    sta const_ptr+1
-    jsr append_const_ptr
-    ldx export_index
-    jsr set_export_ptr_from_x
-    ldy #$00
-append_export_lines_symbol_loop:
-    lda (export_ptr),y
-    beq append_export_lines_symbol_done
-    jsr append_char
-    iny
-    bne append_export_lines_symbol_loop
-append_export_lines_symbol_done:
-    lda #' '
-    jsr append_char
-    ldx export_index
-    lda export_offsets,x
-    jsr append_decimal_a
-    jsr append_newline
-    inc export_index
-    jmp append_export_lines_loop
-append_export_lines_done:
-    rts
-
-append_call_lines:
-    lda #$00
-    sta export_index
-append_call_lines_export_loop:
-    ldx export_index
-    cpx export_count
-    beq append_call_lines_done
-    lda call_edge_masks,x
-    sta edge_mask
-    ldy #$00
-append_call_lines_target_loop:
-    cpy export_count
-    beq append_call_lines_next_export
-    lda edge_mask
-    and bit_masks,y
-    beq append_call_lines_next_target
-    tya
     sta compare_char
-    lda #<map_call_prefix
+build_avm_text_entry_loop:
+    ldy #$00
+    lda (scan_ptr),y
+    bne :+
+    jmp build_avm_text_bad
+: 
+    cmp #','
+    beq build_avm_text_entry_done
+    jsr append_char
+    lda #$01
+    sta compare_char
+    jsr advance_scan_ptr
+    jmp build_avm_text_entry_loop
+build_avm_text_entry_done:
+    lda compare_char
+    bne :+
+    jmp build_avm_text_bad
+:
+    jsr append_newline
+    lda #<avm_txt_db_prefix
     sta const_ptr
-    lda #>map_call_prefix
+    lda #>avm_txt_db_prefix
     sta const_ptr+1
     jsr append_const_ptr
-    ldx export_index
-    jsr set_export_ptr_from_x
-    jsr append_export_ptr_lower
-    lda #' '
-    jsr append_char
-    lda compare_char
-    tax
-    jsr set_export_ptr_from_x
-    jsr append_export_ptr_lower
-    ldy compare_char
-    jsr append_newline
-append_call_lines_next_target:
-    iny
-    bne append_call_lines_target_loop
-append_call_lines_next_export:
-    inc export_index
-    jmp append_call_lines_export_loop
-append_call_lines_done:
-    rts
-
-append_live_lines:
+    lda #<marker_payload_hex
+    sta const_ptr
+    lda #>marker_payload_hex
+    sta const_ptr+1
+    jsr find_pattern_at_const_ptr
+    bcc :+
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+:   jsr advance_scan_ptr_by_const_ptr
     lda #$00
-    sta export_index
-append_live_lines_loop:
-    ldx export_index
-    cpx export_count
-    beq append_live_lines_done
-    lda live_flags,x
-    beq append_live_lines_next
-    lda #<map_live_prefix
-    sta const_ptr
-    lda #>map_live_prefix
-    sta const_ptr+1
-    jsr append_const_ptr
-    ldx export_index
-    jsr set_export_ptr_from_x
+    sta compare_char
+build_avm_text_payload_loop:
     ldy #$00
-append_live_lines_symbol_loop:
-    lda (export_ptr),y
-    beq append_live_lines_symbol_done
+    lda (scan_ptr),y
+    bne :+
+    jmp build_avm_text_bad
+:
+    cmp #'"'
+    beq build_avm_text_payload_done_check
+    lda #'$'
     jsr append_char
-    iny
-    bne append_live_lines_symbol_loop
-append_live_lines_symbol_done:
-    jsr append_newline
-append_live_lines_next:
-    inc export_index
-    jmp append_live_lines_loop
-append_live_lines_done:
-    rts
-
-append_entry_line:
-    lda #<map_entry_prefix
-    sta const_ptr
-    lda #>map_entry_prefix
-    sta const_ptr+1
-    jsr append_const_ptr
-    jsr append_module_symbol_lower
-    jmp append_newline
-
-append_image_line:
-    lda #<map_image_prefix
-    sta const_ptr
-    lda #>map_image_prefix
-    sta const_ptr+1
-    jsr append_const_ptr
-    jsr append_payload_bytes_decimal
-    jmp append_newline
-
-append_payload_bytes_decimal:
-    lda payload_bytes_data
-    jmp append_decimal_a
-
-append_decimal_a:
-    ldx #$00
-    cmp #200
-    bcc append_decimal_a_check_100
-    sec
-    sbc #200
-    ldx #'2'
-    bne append_decimal_a_emit_hundreds
-append_decimal_a_check_100:
-    cmp #100
-    bcc append_decimal_a_tens
-    sec
-    sbc #100
-    ldx #'1'
-append_decimal_a_emit_hundreds:
-    stx compare_char
-    pha
-    txa
+    lda (scan_ptr),y
     jsr append_char
-    pla
-append_decimal_a_tens:
-    ldx #'0'
-append_decimal_a_tens_loop:
-    cmp #10
-    bcc append_decimal_a_tens_done
-    sec
-    sbc #10
-    inx
-    jmp append_decimal_a_tens_loop
-append_decimal_a_tens_done:
-    sta current_bit_lo
-    txa
-    cmp #'0'
-    bne append_decimal_a_emit_tens
+    jsr advance_scan_ptr
+    ldy #$00
+    lda (scan_ptr),y
+    bne :+
+    jmp build_avm_text_bad
+:
+    cmp #'"'
+    bne :+
+    jmp build_avm_text_bad
+:
+    jsr append_char
+    lda #$01
+    sta compare_char
+    jsr advance_scan_ptr
+    ldy #$00
+    lda (scan_ptr),y
+    cmp #'"'
+    beq build_avm_text_payload_done
+    lda #','
+    jsr append_char
+    jmp build_avm_text_payload_loop
+build_avm_text_payload_done_check:
     lda compare_char
-    beq append_decimal_a_units
-    txa
-append_decimal_a_emit_tens:
-    jsr append_char
-append_decimal_a_units:
-    lda current_bit_lo
-    clc
-    adc #'0'
+    bne :+
+    jmp build_avm_text_bad
+:
+build_avm_text_payload_done:
+    jsr append_newline
+    lda #$00
     jmp append_char
-
-append_module_symbol_lower:
-    ldy #$00
-append_module_symbol_lower_loop:
-    lda module_name,y
-    beq append_module_symbol_lower_done
-    jsr lowercase_ascii
-    jsr append_char
-    iny
-    bne append_module_symbol_lower_loop
-append_module_symbol_lower_done:
-    rts
-
-append_module_name_raw:
-    ldy #$00
-append_module_name_raw_loop:
-    lda module_name,y
-    beq append_module_name_raw_done
-    jsr append_char
-    iny
-    bne append_module_name_raw_loop
-append_module_name_raw_done:
-    rts
-
-append_export_ptr_lower:
-    ldy #$00
-append_export_ptr_lower_loop:
-    lda (export_ptr),y
-    beq append_export_ptr_lower_done
-    jsr lowercase_ascii
-    jsr append_char
-    iny
-    bne append_export_ptr_lower_loop
-append_export_ptr_lower_done:
-    rts
+build_avm_text_bad:
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
 
 append_const_ptr:
     ldy #$00
@@ -1114,6 +932,7 @@ build_module_stub_content:
 .include "../common/action_project_load_guard.inc"
 .include "../common/action_project_entry.inc"
 .include "../common/action_project_entry_guard.inc"
+.include "../common/action_project_avm_text_path.inc"
 .include "../common/action_project_object_path.inc"
 .include "../common/action_project_map_path.inc"
 .include "../common/action_project_path.inc"
@@ -1178,8 +997,12 @@ marker_exports:
     .byte 34,"exports",34,":[",0
 marker_calls:
     .byte 34,"calls",34,":[",0
+marker_entry_offset:
+    .byte 34,"entry_offset",34,":",0
 marker_payload_bytes:
     .byte 34,"payload_bytes",34,":",0
+marker_payload_hex:
+    .byte 34,"payload_hex",34,":",34,0
 
 import_rt_format_int:
     .asciiz "rt.format_int"
@@ -1222,6 +1045,10 @@ map_image_prefix:
     .byte "IMAGE ",0
 map_resolve_prefix:
     .byte "RESOLVE ",0
+avm_txt_entry_prefix:
+    .byte "entry ",0
+avm_txt_db_prefix:
+    .byte "db ",0
 
 module_name:
     .res 25

@@ -95,12 +95,13 @@ They are exported into `ACTION.DNP` root and `BIN/`.
   loads a deterministic `OBJ/<NAME>.AVO` object stub, parses its export, call,
   import, and payload metadata, seeds the local live set from the module entry proc
   instead of assuming export slot `0`, propagates the pair-call graph,
-  resolves the current small runtime closure, and emits `BIN/<NAME>.MAP` on
-  the host fs tree. The current map proof now includes
-  export-offset, call, live, entry, aggregate image-size, include, and resolve lines. The focused headless VICE
-  proof is green through `make vice-action-alink`, with host-side verification
-  of the generated map file because the current linker slice is still a
-  planning/map emitter, not a full object merger or final AVM linker.
+  resolves the current small runtime closure, and emits `BIN/<NAME>.AVM.TXT`
+  on the host fs tree as a compact final-image text skeleton: `entry <offset>`
+  plus `db $..` payload bytes. The focused headless VICE proof is green
+  through `make vice-action-alink`, with host-side verification that
+  `avm_pack.py --text --flags 1` packs the emitted text into the exact
+  expected `AVM1` bytes. It is still not a full object merger or direct
+  on-target binary emitter.
 - `ACTFLOW.BAT` is the first composite workspace flow proof. It exercises the
   preserved UDOS file write/copy/move/delete services through the existing
   Action-side proof tools, prints `ACTFLOW OK`, and returns to the prompt.

@@ -38,12 +38,11 @@ save_mode:
     .res 1
 truncated_flag:
     .res 1
-edge_mask:
-    .res 1
 
 export_count = truncated_flag
 export_index = save_mode
 export_ptr = current_bit_lo
+body_ptr = src_ptr
 
 .code
 
@@ -55,6 +54,7 @@ start:
     jsr build_object_target_path
     jsr load_object_or_fail
     jsr parse_exports_or_fail
+    jsr parse_body_ops_or_fail
     jsr parse_imports_or_fail
     jsr parse_payload_bytes_or_fail
     jsr build_live_set
@@ -171,9 +171,9 @@ load_object_done:
 parse_exports_or_fail:
     lda #$00
     sta export_count
-    lda #<marker_calls
+    lda #<marker_body_ops
     sta const_ptr
-    lda #>marker_calls
+    lda #>marker_body_ops
     sta const_ptr+1
     jsr find_pattern_at_const_ptr
     bcc parse_exports_limit_ready
@@ -308,6 +308,26 @@ set_export_ptr_from_x_loop:
 set_export_ptr_from_x_done:
     rts
 
+set_body_ptr_from_x:
+    lda #<body_ops_data
+    sta body_ptr
+    lda #>body_ops_data
+    sta body_ptr+1
+set_body_ptr_from_x_loop:
+    cpx #$00
+    beq set_body_ptr_from_x_done
+    clc
+    lda body_ptr
+    adc #16
+    sta body_ptr
+    lda body_ptr+1
+    adc #$00
+    sta body_ptr+1
+    dex
+    bne set_body_ptr_from_x_loop
+set_body_ptr_from_x_done:
+    rts
+
 parse_imports_or_fail:
     lda #$00
     sta main_flags_lo
@@ -371,6 +391,86 @@ parse_import_symbol_advanced:
     jsr advance_scan_ptr
     jmp parse_imports_loop
 parse_imports_done:
+    rts
+
+parse_body_ops_or_fail:
+    lda #<marker_body_ops
+    sta const_ptr
+    lda #>marker_body_ops
+    sta const_ptr+1
+    jsr find_pattern_at_const_ptr
+    bcc :+
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+:   jsr advance_scan_ptr_by_const_ptr
+    lda #$00
+    sta export_index
+parse_body_ops_loop:
+    jsr skip_import_delimiters
+    ldy #$00
+    lda (scan_ptr),y
+    cmp #']'
+    beq parse_body_ops_done_check
+    cmp #'"'
+    beq parse_body_ops_string
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+parse_body_ops_string:
+    lda export_index
+    cmp export_count
+    bcc :+
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+:   jsr advance_scan_ptr
+    ldx export_index
+    jsr set_body_ptr_from_x
+    ldy #$00
+parse_body_ops_string_loop:
+    lda (scan_ptr),y
+    beq parse_body_ops_bad
+    cmp #'"'
+    beq parse_body_ops_string_done
+    cmp #'c'
+    beq parse_body_ops_store
+    cmp #'r'
+    beq parse_body_ops_store
+    cmp #'0'
+    bcc parse_body_ops_bad
+    cmp #'7'+1
+    bcs parse_body_ops_bad
+parse_body_ops_store:
+    sta (body_ptr),y
+    iny
+    cpy #15
+    bcc parse_body_ops_string_loop
+parse_body_ops_bad:
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+parse_body_ops_string_done:
+    lda #$00
+    sta (body_ptr),y
+parse_body_ops_advance_loop:
+    cpy #$00
+    beq parse_body_ops_advanced
+    jsr advance_scan_ptr
+    dey
+    bne parse_body_ops_advance_loop
+parse_body_ops_advanced:
+    jsr advance_scan_ptr
+    inc export_index
+    jmp parse_body_ops_loop
+parse_body_ops_done_check:
+    lda export_index
+    cmp export_count
+    beq parse_body_ops_done
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+parse_body_ops_done:
     rts
 
 parse_payload_bytes_or_fail:
@@ -450,45 +550,44 @@ build_live_set_seed:
 : 
     lda #$01
     sta live_flags,x
-    lda #<marker_calls
-    sta const_ptr
-    lda #>marker_calls
-    sta const_ptr+1
-    jsr find_pattern_at_const_ptr
-    bcc :+
-    jmp build_live_set_done
-:   jsr advance_scan_ptr_by_const_ptr
-build_live_set_loop:
-    jsr skip_call_pair_delimiters
-    ldy #$00
-    lda (scan_ptr),y
-    cmp #']'
+    ldx #$00
+build_live_set_edge_export_loop:
+    cpx export_count
     beq build_live_set_propagate
-    cmp #'['
-    bne build_live_set_bad
-    jsr advance_scan_ptr
-    jsr skip_call_pair_delimiters
-    jsr parse_quoted_symbol_or_fail
-    jsr find_export_index_from_symbol_buffer
-    bcs build_live_set_bad
-    stx edge_mask
-    jsr skip_call_pair_delimiters
-    jsr parse_quoted_symbol_or_fail
-    jsr find_export_index_from_symbol_buffer
-    bcs build_live_set_bad
-    txa
-    tay
-    lda bit_masks,y
-    ldy edge_mask
-    ora call_edge_masks,y
-    sta call_edge_masks,y
-    jsr skip_call_pair_delimiters
+    stx compare_char
+    jsr set_body_ptr_from_x
     ldy #$00
-    lda (scan_ptr),y
-    cmp #']'
-    bne build_live_set_bad
-    jsr advance_scan_ptr
-    jmp build_live_set_loop
+build_live_set_edge_body_loop:
+    lda (body_ptr),y
+    beq build_live_set_edge_next_export
+    cmp #'c'
+    beq build_live_set_edge_call
+    cmp #'r'
+    beq build_live_set_edge_ret
+    jmp build_live_set_bad
+build_live_set_edge_call:
+    iny
+    lda (body_ptr),y
+    cmp #'0'
+    bcc build_live_set_bad
+    cmp #'7'+1
+    bcs build_live_set_bad
+    sec
+    sbc #'0'
+    tax
+    lda bit_masks,x
+    ldx compare_char
+    ora call_edge_masks,x
+    sta call_edge_masks,x
+    iny
+    bne build_live_set_edge_body_loop
+build_live_set_edge_ret:
+    iny
+    bne build_live_set_edge_body_loop
+build_live_set_edge_next_export:
+    ldx compare_char
+    inx
+    bne build_live_set_edge_export_loop
 
 build_live_set_propagate:
     lda #$00
@@ -583,58 +682,6 @@ skip_import_delimiters_advance:
     jsr advance_scan_ptr
     jmp skip_import_delimiters_loop
 
-skip_call_pair_delimiters:
-    ldy #$00
-skip_call_pair_delimiters_loop:
-    lda (scan_ptr),y
-    cmp #' '
-    beq skip_call_pair_delimiters_advance
-    cmp #','
-    beq skip_call_pair_delimiters_advance
-    cmp #10
-    beq skip_call_pair_delimiters_advance
-    cmp #13
-    beq skip_call_pair_delimiters_advance
-    rts
-skip_call_pair_delimiters_advance:
-    jsr advance_scan_ptr
-    jmp skip_call_pair_delimiters_loop
-
-parse_quoted_symbol_or_fail:
-    ldy #$00
-    lda (scan_ptr),y
-    cmp #'"'
-    bne parse_quoted_symbol_or_fail_bad
-    jsr advance_scan_ptr
-    ldy #$00
-parse_quoted_symbol_or_fail_loop:
-    lda (scan_ptr),y
-    beq parse_quoted_symbol_or_fail_bad
-    cmp #'"'
-    beq parse_quoted_symbol_or_fail_done
-    sta symbol_buffer,y
-    iny
-    cpy #24
-    bcc parse_quoted_symbol_or_fail_loop
-parse_quoted_symbol_or_fail_bad:
-    lda #<msg_bad_avo
-    ldy #>msg_bad_avo
-    jmp fail_with_ptr
-parse_quoted_symbol_or_fail_done:
-    cpy #$00
-    beq parse_quoted_symbol_or_fail_bad
-    lda #$00
-    sta symbol_buffer,y
-parse_quoted_symbol_or_fail_advance_loop:
-    cpy #$00
-    beq parse_quoted_symbol_or_fail_advanced
-    jsr advance_scan_ptr
-    dey
-    bne parse_quoted_symbol_or_fail_advance_loop
-parse_quoted_symbol_or_fail_advanced:
-    jsr advance_scan_ptr
-    rts
-
 map_symbol_buffer_or_fail:
     lda #$00
     sta current_bit_lo
@@ -670,33 +717,6 @@ map_symbol_unresolved:
     lda #<msg_unresolved
     ldy #>msg_unresolved
     jmp fail_with_ptr
-
-find_export_index_from_symbol_buffer:
-    ldx #$00
-find_export_index_from_symbol_buffer_loop:
-    cpx export_count
-    beq find_export_index_from_symbol_buffer_fail
-    stx compare_char
-    jsr set_export_ptr_from_x
-    ldx compare_char
-    ldy #$00
-find_export_index_from_symbol_buffer_compare_loop:
-    lda (export_ptr),y
-    cmp symbol_buffer,y
-    bne find_export_index_from_symbol_buffer_next
-    lda symbol_buffer,y
-    beq find_export_index_from_symbol_buffer_done
-    iny
-    bne find_export_index_from_symbol_buffer_compare_loop
-find_export_index_from_symbol_buffer_next:
-    inx
-    bne find_export_index_from_symbol_buffer_loop
-find_export_index_from_symbol_buffer_fail:
-    sec
-    rts
-find_export_index_from_symbol_buffer_done:
-    clc
-    rts
 
 set_import_ptr_from_x:
     lda import_name_ptr_lo,x
@@ -813,7 +833,6 @@ build_avm_text_proc_scan_loop:
     jsr append_export_label_from_x
     ldx export_index
     jsr append_live_call_lines_for_export_x
-    jsr append_ret_line
     clc
     lda main_flags_hi
     adc proc_sizes,x
@@ -880,18 +899,28 @@ append_export_ptr_lower_done:
     rts
 
 append_live_call_lines_for_export_x:
-    stx export_index
-    lda call_edge_masks,x
-    sta edge_mask
+    jsr set_body_ptr_from_x
     ldy #$00
 append_live_call_lines_for_export_x_loop:
-    cpy export_count
+    lda (body_ptr),y
     beq append_live_call_lines_for_export_x_done
-    lda edge_mask
-    and bit_masks,y
-    beq append_live_call_lines_for_export_x_next
-    lda live_flags,y
-    beq append_live_call_lines_for_export_x_next
+    cmp #'c'
+    beq append_live_call_lines_for_export_x_call
+    cmp #'r'
+    beq append_live_call_lines_for_export_x_ret
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+append_live_call_lines_for_export_x_call:
+    iny
+    lda (body_ptr),y
+    cmp #'0'
+    bcc append_live_call_lines_for_export_x_bad
+    cmp #'7'+1
+    bcs append_live_call_lines_for_export_x_bad
+    sec
+    sbc #'0'
+    sta current_bit_hi
     tya
     sta compare_char
     lda #<avm_txt_call_prefix
@@ -899,15 +928,24 @@ append_live_call_lines_for_export_x_loop:
     lda #>avm_txt_call_prefix
     sta const_ptr+1
     jsr append_const_ptr
-    ldx compare_char
+    ldx current_bit_hi
     jsr set_export_ptr_from_x
     jsr append_export_ptr_lower
     jsr append_newline
     ldy compare_char
-    ldx export_index
-append_live_call_lines_for_export_x_next:
     iny
     bne append_live_call_lines_for_export_x_loop
+append_live_call_lines_for_export_x_ret:
+    tya
+    sta compare_char
+    jsr append_ret_line
+    ldy compare_char
+    iny
+    bne append_live_call_lines_for_export_x_loop
+append_live_call_lines_for_export_x_bad:
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
 append_live_call_lines_for_export_x_done:
     rts
 
@@ -1027,8 +1065,8 @@ marker_imports:
     .byte 34,"imports",34,":[",0
 marker_exports:
     .byte 34,"exports",34,":[",0
-marker_calls:
-    .byte 34,"calls",34,":[",0
+marker_body_ops:
+    .byte 34,"body_ops",34,":[",0
 marker_payload_bytes:
     .byte 34,"payload_bytes",34,":",0
 
@@ -1080,6 +1118,8 @@ manifest_buffer:
     .res MANIFEST_LIMIT+1
 export_names:
     .res 200
+body_ops_data:
+    .res 128
 live_flags:
     .res 8
 call_edge_masks:

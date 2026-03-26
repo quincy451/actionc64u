@@ -289,7 +289,6 @@ collect_proc_exports_or_fail_done:
 collect_local_calls:
     lda #$00
     sta call_count_data
-    sta call_list_started
     lda #$FF
     sta current_proc_index_data
     lda #<source_buffer
@@ -705,7 +704,7 @@ build_avo_content:
     lda #>avo_prefix_2
     sta const_ptr+1
     jsr append_const_ptr
-    jsr append_call_list
+    jsr append_body_ops_list
 
     lda #<avo_prefix_3
     sta const_ptr
@@ -834,63 +833,43 @@ append_export_list_symbol_done:
 append_export_list_done:
     rts
 
-append_call_list:
+append_body_ops_list:
     lda #$00
-    sta export_index
-    sta call_list_started
-append_call_list_loop:
-    ldx export_index
-    cpx call_count_data
-    beq append_call_list_done
-    lda call_list_started
+    sta proc_index
+append_body_ops_list_proc_loop:
+    ldx proc_index
+    cpx export_count_data
+    beq append_body_ops_list_done
+    lda proc_index
     beq :+
     lda #','
     jsr append_char
-:   lda #'['
+:   lda #'"'
     jsr append_char
-    lda #'"'
-    jsr append_char
-    ldy export_index
+    ldy #$00
+append_body_ops_list_call_loop:
+    cpy call_count_data
+    beq append_body_ops_list_ret
     lda call_from_indices,y
-    tax
-    jsr set_export_ptr_from_x
-    ldy #$00
-append_call_list_symbol_loop:
-    lda (export_ptr),y
-    beq append_call_list_symbol_done
-    jsr lowercase_ascii
+    cmp proc_index
+    bne append_body_ops_list_next_call
+    lda #'c'
     jsr append_char
-    iny
-    bne append_call_list_symbol_loop
-append_call_list_symbol_done:
-    lda #'"'
-    jsr append_char
-    lda #','
-    jsr append_char
-    lda #'"'
-    jsr append_char
-    ldy export_index
     lda call_to_indices,y
-    tax
-    jsr set_export_ptr_from_x
-    ldy #$00
-append_call_list_callee_loop:
-    lda (export_ptr),y
-    beq append_call_list_callee_done
-    jsr lowercase_ascii
+    clc
+    adc #'0'
     jsr append_char
+append_body_ops_list_next_call:
     iny
-    bne append_call_list_callee_loop
-append_call_list_callee_done:
+    bne append_body_ops_list_call_loop
+append_body_ops_list_ret:
+    lda #'r'
+    jsr append_char
     lda #'"'
     jsr append_char
-    lda #']'
-    jsr append_char
-    lda #$01
-    sta call_list_started
-    inc export_index
-    jmp append_call_list_loop
-append_call_list_done:
+    inc proc_index
+    jmp append_body_ops_list_proc_loop
+append_body_ops_list_done:
     rts
 
 append_payload_hex:
@@ -1112,7 +1091,7 @@ import_rt_print_str:
 avo_prefix_1:
     .byte "AVO1",10,"{",34,"entry_offset",34,":0,",34,"exports",34,":[",0
 avo_prefix_2:
-    .byte "],",34,"calls",34,":[",0
+    .byte "],",34,"body_ops",34,":[",0
 avo_prefix_3:
     .byte "],",34,"imports",34,":[",0
 avo_prefix_4:
@@ -1143,8 +1122,6 @@ export_count_data:
 call_count_data:
     .res 1
 current_proc_index_data:
-    .res 1
-call_list_started:
     .res 1
 export_names:
     .res 200

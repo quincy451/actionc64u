@@ -79,13 +79,14 @@ They are exported into `ACTION.DNP` root and `BIN/`.
   proof validates `ACTION.PROJ`, requires a tracked module entry, verifies the
   corresponding `SRC/<NAME>.ACT` source exists, checks that the source
   `MODULE` header matches the requested module name, extracts top-level
-  `PROC` exports, extracts pair-form local inter-proc calls, scans the loaded
-  source text for the current runtime-call marker set, and emits a
+  `PROC` exports, scans the loaded source text for the current runtime-call
+  marker set, and emits a
   deterministic `OBJ/<NAME>.AVO` text object stub with `AVO1`,
   module/export/call/import metadata where each export carries compiled offset
-  and size, plus a minimal local control-flow
+  and size, plus compiler-emitted `body_ops` and a minimal local control-flow
   `payload_hex` skeleton (`CALL` local proc, `RET`) plus explicit
-  `payload_bytes`. The focused
+  `payload_bytes`. The older flat local `calls` list is no longer emitted
+  because local body semantics now live in `body_ops`. The focused
   headless VICE proof is
   green through `make vice-action-actc`, with host-side verification of the
   generated object file because `OBJ/UDOSDIR.TXT` is not yet refreshed
@@ -93,15 +94,15 @@ They are exported into `ACTION.DNP` root and `BIN/`.
   import list is inferred from simple source-pattern scanning, not a full
   parser or code generator.
 - `ALINK.PRG` is now the first UDOS-native linker slice. The current proof
-  loads a deterministic `OBJ/<NAME>.AVO` object stub, parses its export, call,
+  loads a deterministic `OBJ/<NAME>.AVO` object stub, parses its export, body,
   import, and payload metadata, uses compiler-emitted export offset/size
   triplets instead of inferring procedure spans from the payload shape, seeds
   the local live set from the module entry proc instead of assuming export slot
-  `0`, propagates the pair-call graph,
+  `0`, propagates the local body-op call graph,
   resolves the current small runtime closure, and emits `BIN/<NAME>.AVM.TXT`
   on the host fs tree as symbolic AVM text: `entry main`, emitted labels,
-  `call`, and `ret` directives reconstructed from linker metadata instead of
-  copied `payload_hex`. The focused headless VICE proof is green through
+  `call`, and `ret` directives reconstructed from `body_ops` instead of copied
+  `payload_hex`. The focused headless VICE proof is green through
   `make vice-action-alink`, with host-side verification that
   `avm_pack.py --text --flags 1` packs the emitted text into the exact
   expected `AVM1` bytes and that an unused local export is stripped from the

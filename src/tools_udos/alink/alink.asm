@@ -8,15 +8,6 @@ SOURCE_LIMIT = 511
 IMPORT_PRINT_STR  = $01
 IMPORT_PRINT_LINE = $02
 IMPORT_FORMAT_INT = $04
-IMPORT_PRINT_F    = $08
-IMPORT_REU_ALLOC  = $10
-IMPORT_REU_PEEK8  = $20
-IMPORT_REU_PEEK16 = $40
-IMPORT_REU_POKE8  = $80
-
-IMPORT_REU_POKE16 = $01
-IMPORT_OVL_LOAD   = $02
-IMPORT_OVL_CALL   = $04
 
 .segment "ZPTEMP": zeropage
 svc_retptr:
@@ -46,6 +37,8 @@ main_flags_hi:
 save_mode:
     .res 1
 truncated_flag:
+    .res 1
+edge_mask:
     .res 1
 
 export_count = truncated_flag
@@ -305,8 +298,6 @@ parse_imports_or_fail:
     sta const_ptr+1
     jsr find_pattern_at_const_ptr
     bcc :+
-    lda #$11
-    sta $03FC
     lda #<msg_bad_avo
     ldy #>msg_bad_avo
     jmp fail_with_ptr
@@ -369,62 +360,93 @@ build_live_set_clear_loop:
     cpx #8
     beq build_live_set_seed
     sta live_flags,x
+    sta call_edge_masks,x
     inx
     bne build_live_set_clear_loop
 build_live_set_seed:
     lda export_count
-    beq build_live_set_done
-    lda #$01
+    bne :+
+    jmp build_live_set_done
+:   lda #$01
     sta live_flags+0
     lda #<marker_calls
     sta const_ptr
     lda #>marker_calls
     sta const_ptr+1
     jsr find_pattern_at_const_ptr
-    bcs build_live_set_done
-    jsr advance_scan_ptr_by_const_ptr
+    bcc :+
+    jmp build_live_set_done
+:   jsr advance_scan_ptr_by_const_ptr
 build_live_set_loop:
-    jsr skip_import_delimiters
+    jsr skip_call_pair_delimiters
     ldy #$00
     lda (scan_ptr),y
     cmp #']'
-    beq build_live_set_done
-    cmp #'"'
+    beq build_live_set_propagate
+    cmp #'['
     bne build_live_set_bad
     jsr advance_scan_ptr
+    jsr skip_call_pair_delimiters
+    jsr parse_quoted_symbol_or_fail
+    jsr find_export_index_from_symbol_buffer
+    bcs build_live_set_bad
+    stx edge_mask
+    jsr skip_call_pair_delimiters
+    jsr parse_quoted_symbol_or_fail
+    jsr find_export_index_from_symbol_buffer
+    bcs build_live_set_bad
+    txa
+    tay
+    lda bit_masks,y
+    ldy edge_mask
+    ora call_edge_masks,y
+    sta call_edge_masks,y
+    jsr skip_call_pair_delimiters
     ldy #$00
-build_live_set_symbol_loop:
     lda (scan_ptr),y
-    beq build_live_set_bad
-    cmp #'"'
-    beq build_live_set_symbol_done
-    sta symbol_buffer,y
+    cmp #']'
+    bne build_live_set_bad
+    jsr advance_scan_ptr
+    jmp build_live_set_loop
+
+build_live_set_propagate:
+    lda #$00
+    sta compare_char
+    ldx #$00
+build_live_set_propagate_export_loop:
+    cpx export_count
+    beq build_live_set_propagate_check
+    lda live_flags,x
+    beq build_live_set_propagate_next_export
+    lda call_edge_masks,x
+    sta current_bit_lo
+    ldy #$00
+build_live_set_propagate_target_loop:
+    cpy export_count
+    beq build_live_set_propagate_next_export
+    lda current_bit_lo
+    and bit_masks,y
+    beq build_live_set_propagate_next_target
+    lda live_flags,y
+    bne build_live_set_propagate_next_target
+    lda #$01
+    sta live_flags,y
+    sta compare_char
+build_live_set_propagate_next_target:
     iny
-    cpy #24
-    bcc build_live_set_symbol_loop
+    bne build_live_set_propagate_target_loop
+build_live_set_propagate_next_export:
+    inx
+    bne build_live_set_propagate_export_loop
+build_live_set_propagate_check:
+    lda compare_char
+    bne build_live_set_propagate
+build_live_set_done:
+    rts
 build_live_set_bad:
     lda #<msg_bad_avo
     ldy #>msg_bad_avo
     jmp fail_with_ptr
-build_live_set_symbol_done:
-    lda #$00
-    sta symbol_buffer,y
-build_live_set_symbol_advance_loop:
-    cpy #$00
-    beq build_live_set_symbol_advanced
-    jsr advance_scan_ptr
-    dey
-    bne build_live_set_symbol_advance_loop
-build_live_set_symbol_advanced:
-    jsr find_export_index_from_symbol_buffer
-    bcs build_live_set_skip_mark
-    lda #$01
-    sta live_flags,x
-build_live_set_skip_mark:
-    jsr advance_scan_ptr
-    jmp build_live_set_loop
-build_live_set_done:
-    rts
 
 resolve_import_closure:
     lda main_flags_lo
@@ -452,6 +474,58 @@ skip_import_delimiters_advance:
     jsr advance_scan_ptr
     jmp skip_import_delimiters_loop
 
+skip_call_pair_delimiters:
+    ldy #$00
+skip_call_pair_delimiters_loop:
+    lda (scan_ptr),y
+    cmp #' '
+    beq skip_call_pair_delimiters_advance
+    cmp #','
+    beq skip_call_pair_delimiters_advance
+    cmp #10
+    beq skip_call_pair_delimiters_advance
+    cmp #13
+    beq skip_call_pair_delimiters_advance
+    rts
+skip_call_pair_delimiters_advance:
+    jsr advance_scan_ptr
+    jmp skip_call_pair_delimiters_loop
+
+parse_quoted_symbol_or_fail:
+    ldy #$00
+    lda (scan_ptr),y
+    cmp #'"'
+    bne parse_quoted_symbol_or_fail_bad
+    jsr advance_scan_ptr
+    ldy #$00
+parse_quoted_symbol_or_fail_loop:
+    lda (scan_ptr),y
+    beq parse_quoted_symbol_or_fail_bad
+    cmp #'"'
+    beq parse_quoted_symbol_or_fail_done
+    sta symbol_buffer,y
+    iny
+    cpy #24
+    bcc parse_quoted_symbol_or_fail_loop
+parse_quoted_symbol_or_fail_bad:
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+parse_quoted_symbol_or_fail_done:
+    cpy #$00
+    beq parse_quoted_symbol_or_fail_bad
+    lda #$00
+    sta symbol_buffer,y
+parse_quoted_symbol_or_fail_advance_loop:
+    cpy #$00
+    beq parse_quoted_symbol_or_fail_advanced
+    jsr advance_scan_ptr
+    dey
+    bne parse_quoted_symbol_or_fail_advance_loop
+parse_quoted_symbol_or_fail_advanced:
+    jsr advance_scan_ptr
+    rts
+
 map_symbol_buffer_or_fail:
     lda #$00
     sta current_bit_lo
@@ -463,33 +537,6 @@ map_symbol_buffer_or_fail:
     jsr symbol_buffer_matches_const_ptr
     bcs :+
     lda #IMPORT_FORMAT_INT
-    sta current_bit_lo
-    rts
-:   lda #<import_rt_ovl_call
-    sta const_ptr
-    lda #>import_rt_ovl_call
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
-    bcs :+
-    lda #IMPORT_OVL_CALL
-    sta current_bit_hi
-    rts
-:   lda #<import_rt_ovl_load
-    sta const_ptr
-    lda #>import_rt_ovl_load
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
-    bcs :+
-    lda #IMPORT_OVL_LOAD
-    sta current_bit_hi
-    rts
-:   lda #<import_rt_print_f
-    sta const_ptr
-    lda #>import_rt_print_f
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
-    bcs :+
-    lda #IMPORT_PRINT_F
     sta current_bit_lo
     rts
 :   lda #<import_rt_print_line
@@ -506,53 +553,8 @@ map_symbol_buffer_or_fail:
     lda #>import_rt_print_str
     sta const_ptr+1
     jsr symbol_buffer_matches_const_ptr
-    bcs :+
-    lda #IMPORT_PRINT_STR
-    sta current_bit_lo
-    rts
-:   lda #<import_rt_reu_alloc
-    sta const_ptr
-    lda #>import_rt_reu_alloc
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
-    bcs :+
-    lda #IMPORT_REU_ALLOC
-    sta current_bit_lo
-    rts
-:   lda #<import_rt_reu_peek16
-    sta const_ptr
-    lda #>import_rt_reu_peek16
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
-    bcs :+
-    lda #IMPORT_REU_PEEK16
-    sta current_bit_lo
-    rts
-:   lda #<import_rt_reu_peek8
-    sta const_ptr
-    lda #>import_rt_reu_peek8
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
-    bcs :+
-    lda #IMPORT_REU_PEEK8
-    sta current_bit_lo
-    rts
-:   lda #<import_rt_reu_poke16
-    sta const_ptr
-    lda #>import_rt_reu_poke16
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
-    bcs :+
-    lda #IMPORT_REU_POKE16
-    sta current_bit_hi
-    rts
-:   lda #<import_rt_reu_poke8
-    sta const_ptr
-    lda #>import_rt_reu_poke8
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
     bcs map_symbol_unresolved
-    lda #IMPORT_REU_POKE8
+    lda #IMPORT_PRINT_STR
     sta current_bit_lo
     rts
 map_symbol_unresolved:
@@ -794,44 +796,45 @@ append_export_lines_done:
     rts
 
 append_call_lines:
-    lda #<marker_calls
-    sta const_ptr
-    lda #>marker_calls
-    sta const_ptr+1
-    jsr find_pattern_at_const_ptr
-    bcs append_call_lines_done
-    jsr advance_scan_ptr_by_const_ptr
-append_call_lines_loop:
-    jsr skip_import_delimiters
-    ldy #$00
-    lda (scan_ptr),y
-    cmp #']'
+    lda #$00
+    sta export_index
+append_call_lines_export_loop:
+    ldx export_index
+    cpx export_count
     beq append_call_lines_done
-    cmp #'"'
-    bne append_call_lines_done
-    jsr advance_scan_ptr
+    lda call_edge_masks,x
+    sta edge_mask
+    ldy #$00
+append_call_lines_target_loop:
+    cpy export_count
+    beq append_call_lines_next_export
+    lda edge_mask
+    and bit_masks,y
+    beq append_call_lines_next_target
+    tya
+    sta compare_char
     lda #<map_call_prefix
     sta const_ptr
     lda #>map_call_prefix
     sta const_ptr+1
     jsr append_const_ptr
-    jsr append_module_symbol_lower
+    ldx export_index
+    jsr set_export_ptr_from_x
+    jsr append_export_ptr_lower
     lda #' '
     jsr append_char
-append_call_lines_symbol_loop:
-    ldy #$00
-    lda (scan_ptr),y
-    beq append_call_lines_done
-    cmp #'"'
-    beq append_call_lines_symbol_done
-    jsr lowercase_ascii
-    jsr append_char
-    jsr advance_scan_ptr
-    jmp append_call_lines_symbol_loop
-append_call_lines_symbol_done:
+    lda compare_char
+    tax
+    jsr set_export_ptr_from_x
+    jsr append_export_ptr_lower
+    ldy compare_char
     jsr append_newline
-    jsr advance_scan_ptr
-    jmp append_call_lines_loop
+append_call_lines_next_target:
+    iny
+    bne append_call_lines_target_loop
+append_call_lines_next_export:
+    inc export_index
+    jmp append_call_lines_export_loop
 append_call_lines_done:
     rts
 
@@ -887,6 +890,18 @@ append_module_name_raw_loop:
     iny
     bne append_module_name_raw_loop
 append_module_name_raw_done:
+    rts
+
+append_export_ptr_lower:
+    ldy #$00
+append_export_ptr_lower_loop:
+    lda (export_ptr),y
+    beq append_export_ptr_lower_done
+    jsr lowercase_ascii
+    jsr append_char
+    iny
+    bne append_export_ptr_lower_loop
+append_export_ptr_lower_done:
     rts
 
 append_const_ptr:
@@ -1002,77 +1017,28 @@ marker_calls:
 
 import_rt_format_int:
     .asciiz "rt.format_int"
-import_rt_ovl_call:
-    .asciiz "rt.ovl_call"
-import_rt_ovl_load:
-    .asciiz "rt.ovl_load"
-import_rt_print_f:
-    .asciiz "rt.print_f"
 import_rt_print_line:
     .asciiz "rt.print_line"
 import_rt_print_str:
     .asciiz "rt.print_str"
-import_rt_reu_alloc:
-    .asciiz "rt.reu_alloc"
-import_rt_reu_peek16:
-    .asciiz "rt.reu_peek16"
-import_rt_reu_peek8:
-    .asciiz "rt.reu_peek8"
-import_rt_reu_poke16:
-    .asciiz "rt.reu_poke16"
-import_rt_reu_poke8:
-    .asciiz "rt.reu_poke8"
-
-IMPORT_TABLE_COUNT = 11
+IMPORT_TABLE_COUNT = 3
 
 import_bits_lo:
     .byte IMPORT_FORMAT_INT
-    .byte $00
-    .byte $00
-    .byte IMPORT_PRINT_F
     .byte IMPORT_PRINT_LINE
     .byte IMPORT_PRINT_STR
-    .byte IMPORT_REU_ALLOC
-    .byte IMPORT_REU_PEEK16
-    .byte IMPORT_REU_PEEK8
-    .byte $00
-    .byte IMPORT_REU_POKE8
 import_bits_hi:
     .byte $00
-    .byte IMPORT_OVL_CALL
-    .byte IMPORT_OVL_LOAD
     .byte $00
-    .byte $00
-    .byte $00
-    .byte $00
-    .byte $00
-    .byte $00
-    .byte IMPORT_REU_POKE16
     .byte $00
 import_name_ptr_lo:
     .byte <import_rt_format_int
-    .byte <import_rt_ovl_call
-    .byte <import_rt_ovl_load
-    .byte <import_rt_print_f
     .byte <import_rt_print_line
     .byte <import_rt_print_str
-    .byte <import_rt_reu_alloc
-    .byte <import_rt_reu_peek16
-    .byte <import_rt_reu_peek8
-    .byte <import_rt_reu_poke16
-    .byte <import_rt_reu_poke8
 import_name_ptr_hi:
     .byte >import_rt_format_int
-    .byte >import_rt_ovl_call
-    .byte >import_rt_ovl_load
-    .byte >import_rt_print_f
     .byte >import_rt_print_line
     .byte >import_rt_print_str
-    .byte >import_rt_reu_alloc
-    .byte >import_rt_reu_peek16
-    .byte >import_rt_reu_peek8
-    .byte >import_rt_reu_poke16
-    .byte >import_rt_reu_poke8
 
 map_header:
     .byte "ALINK1",10,"MODULE ",0
@@ -1109,3 +1075,8 @@ export_names:
     .res 200
 live_flags:
     .res 8
+call_edge_masks:
+    .res 8
+
+bit_masks:
+    .byte $01,$02,$04,$08,$10,$20,$40,$80

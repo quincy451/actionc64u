@@ -56,6 +56,7 @@ start:
     jsr load_object_or_fail
     jsr parse_exports_or_fail
     jsr parse_imports_or_fail
+    jsr parse_payload_bytes_or_fail
     jsr build_live_set
     jsr resolve_import_closure
     jsr build_map_target_path
@@ -350,6 +351,59 @@ parse_import_symbol_advanced:
     jsr advance_scan_ptr
     jmp parse_imports_loop
 parse_imports_done:
+    rts
+
+parse_payload_bytes_or_fail:
+    lda #<marker_payload_bytes
+    sta const_ptr
+    lda #>marker_payload_bytes
+    sta const_ptr+1
+    jsr find_pattern_at_const_ptr
+    bcc :+
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+:   jsr advance_scan_ptr_by_const_ptr
+    lda #$00
+    sta payload_bytes_data
+    sta compare_char
+parse_payload_bytes_loop:
+    ldy #$00
+    lda (scan_ptr),y
+    cmp #'0'
+    bcc parse_payload_bytes_done_check
+    cmp #'9'+1
+    bcs parse_payload_bytes_done_check
+    sec
+    sbc #'0'
+    pha
+    lda payload_bytes_data
+    sta current_bit_lo
+    asl a
+    sta current_bit_hi
+    asl a
+    asl a
+    clc
+    adc current_bit_hi
+    bcs parse_payload_bytes_bad
+    sta payload_bytes_data
+    pla
+    clc
+    adc payload_bytes_data
+    bcs parse_payload_bytes_bad
+    sta payload_bytes_data
+    lda #$01
+    sta compare_char
+    jsr advance_scan_ptr
+    jmp parse_payload_bytes_loop
+parse_payload_bytes_done_check:
+    lda compare_char
+    bne parse_payload_bytes_done
+parse_payload_bytes_bad:
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+parse_payload_bytes_done:
     rts
 
 build_live_set:
@@ -723,24 +777,13 @@ build_map_content:
     sta const_ptr+1
     jsr append_const_ptr
     jsr append_module_symbol_lower
-
-    lda #<map_object_prefix
-    sta const_ptr
-    lda #>map_object_prefix
-    sta const_ptr+1
-    jsr append_const_ptr
-    jsr append_module_name_raw
-    lda #<map_object_suffix
-    sta const_ptr
-    lda #>map_object_suffix
-    sta const_ptr+1
-    jsr append_const_ptr
+    jsr append_newline
 
     jsr append_export_lines
     jsr append_call_lines
     jsr append_live_lines
     jsr append_entry_line
-    jsr append_payload_line_or_fail
+    jsr append_image_line
     jsr append_import_include_lines
     jsr append_main_resolve_lines
     lda #$00
@@ -911,37 +954,60 @@ append_entry_line:
     jsr append_module_symbol_lower
     jmp append_newline
 
-append_payload_line_or_fail:
-    lda #<marker_payload_hex
+append_image_line:
+    lda #<map_image_prefix
     sta const_ptr
-    lda #>marker_payload_hex
-    sta const_ptr+1
-    jsr find_pattern_at_const_ptr
-    bcc :+
-    lda #<msg_bad_avo
-    ldy #>msg_bad_avo
-    jmp fail_with_ptr
-:   jsr advance_scan_ptr_by_const_ptr
-    lda #<map_payload_prefix
-    sta const_ptr
-    lda #>map_payload_prefix
+    lda #>map_image_prefix
     sta const_ptr+1
     jsr append_const_ptr
-append_payload_line_or_fail_loop:
-    ldy #$00
-    lda (scan_ptr),y
-    beq append_payload_line_or_fail_bad
-    cmp #'"'
-    beq append_payload_line_or_fail_done
-    jsr append_char
-    jsr advance_scan_ptr
-    jmp append_payload_line_or_fail_loop
-append_payload_line_or_fail_done:
+    jsr append_payload_bytes_decimal
     jmp append_newline
-append_payload_line_or_fail_bad:
-    lda #<msg_bad_avo
-    ldy #>msg_bad_avo
-    jmp fail_with_ptr
+
+append_payload_bytes_decimal:
+    lda payload_bytes_data
+    ldx #$00
+    cmp #200
+    bcc append_payload_bytes_check_100
+    sec
+    sbc #200
+    ldx #'2'
+    bne append_payload_bytes_emit_hundreds
+append_payload_bytes_check_100:
+    cmp #100
+    bcc append_payload_bytes_tens
+    sec
+    sbc #100
+    ldx #'1'
+append_payload_bytes_emit_hundreds:
+    stx compare_char
+    pha
+    txa
+    jsr append_char
+    pla
+append_payload_bytes_tens:
+    ldx #'0'
+append_payload_bytes_tens_loop:
+    cmp #10
+    bcc append_payload_bytes_tens_done
+    sec
+    sbc #10
+    inx
+    jmp append_payload_bytes_tens_loop
+append_payload_bytes_tens_done:
+    sta current_bit_lo
+    txa
+    cmp #'0'
+    bne append_payload_bytes_emit_tens
+    lda compare_char
+    beq append_payload_bytes_units
+    txa
+append_payload_bytes_emit_tens:
+    jsr append_char
+append_payload_bytes_units:
+    lda current_bit_lo
+    clc
+    adc #'0'
+    jmp append_char
 
 append_module_symbol_lower:
     ldy #$00
@@ -1088,8 +1154,8 @@ marker_exports:
     .byte 34,"exports",34,":[",0
 marker_calls:
     .byte 34,"calls",34,":[",0
-marker_payload_hex:
-    .byte 34,"payload_hex",34,":",34,0
+marker_payload_bytes:
+    .byte 34,"payload_bytes",34,":",0
 
 import_rt_format_int:
     .asciiz "rt.format_int"
@@ -1118,10 +1184,6 @@ import_name_ptr_hi:
 
 map_header:
     .byte "ALINK1",10,"MODULE ",0
-map_object_prefix:
-    .byte 10,"OBJECT OBJ/",0
-map_object_suffix:
-    .byte ".AVO",10,0
 map_include_prefix:
     .byte "INCLUDE ",0
 map_export_prefix:
@@ -1132,8 +1194,8 @@ map_live_prefix:
     .byte "LIVE ",0
 map_entry_prefix:
     .byte "ENTRY ",0
-map_payload_prefix:
-    .byte "PAYLOAD ",0
+map_image_prefix:
+    .byte "IMAGE ",0
 map_resolve_prefix:
     .byte "RESOLVE ",0
 
@@ -1157,6 +1219,8 @@ live_flags:
     .res 8
 call_edge_masks:
     .res 8
+payload_bytes_data:
+    .res 1
 
 bit_masks:
     .byte $01,$02,$04,$08,$10,$20,$40,$80

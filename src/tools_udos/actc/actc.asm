@@ -8,15 +8,6 @@ SOURCE_LIMIT = 255
 IMPORT_PRINT_STR  = $01
 IMPORT_PRINT_LINE = $02
 IMPORT_FORMAT_INT = $04
-IMPORT_PRINT_F    = $08
-IMPORT_REU_ALLOC  = $10
-IMPORT_REU_PEEK8  = $20
-IMPORT_REU_PEEK16 = $40
-IMPORT_REU_POKE8  = $80
-
-IMPORT_REU_POKE16 = $01
-IMPORT_OVL_LOAD   = $02
-IMPORT_OVL_CALL   = $04
 
 .segment "ZPTEMP": zeropage
 svc_retptr:
@@ -34,8 +25,6 @@ content_ptr:
 const_ptr:
     .res 2
 import_flags_lo:
-    .res 1
-import_flags_hi:
     .res 1
 truncated_flag:
     .res 1
@@ -296,14 +285,6 @@ collect_local_calls:
     lda #$00
     sta call_count_data
     sta call_list_started
-    ldx #$00
-collect_local_calls_clear_loop:
-    cpx #8
-    beq collect_local_calls_begin
-    sta call_seen_flags,x
-    inx
-    bne collect_local_calls_clear_loop
-collect_local_calls_begin:
     lda #$FF
     sta current_proc_index_data
     lda #<source_buffer
@@ -343,18 +324,19 @@ collect_local_calls_after_space_check:
     bcs collect_local_calls_skip_line
     cpx current_proc_index_data
     beq collect_local_calls_skip_line
-    lda call_seen_flags,x
-    bne collect_local_calls_skip_line
-    lda #$01
-    sta call_seen_flags,x
+    stx hex_work
+    jsr call_pair_already_recorded
+    bcs collect_local_calls_skip_line
     ldy call_count_data
     cpy #8
     bcc :+
     lda #<msg_bad_call
     ldy #>msg_bad_call
     jmp fail_with_ptr
-:   txa
-    sta call_indices,y
+:   lda current_proc_index_data
+    sta call_from_indices,y
+    lda hex_work
+    sta call_to_indices,y
     inc call_count_data
 collect_local_calls_skip_line:
     jsr skip_source_line
@@ -377,6 +359,27 @@ collect_local_calls_bad_proc:
     ldy #>msg_bad_proc
     jmp fail_with_ptr
 collect_local_calls_done:
+    rts
+
+call_pair_already_recorded:
+    ldy #$00
+call_pair_already_recorded_loop:
+    cpy call_count_data
+    beq call_pair_already_recorded_new
+    lda call_from_indices,y
+    cmp current_proc_index_data
+    bne call_pair_already_recorded_next
+    lda call_to_indices,y
+    cmp hex_work
+    beq call_pair_already_recorded_found
+call_pair_already_recorded_next:
+    iny
+    bne call_pair_already_recorded_loop
+call_pair_already_recorded_new:
+    clc
+    rts
+call_pair_already_recorded_found:
+    sec
     rts
 
 skip_source_line:
@@ -535,7 +538,6 @@ find_export_index_from_declared_done:
 detect_runtime_imports:
     lda #$00
     sta import_flags_lo
-    sta import_flags_hi
 
     lda #<pattern_print
     sta const_ptr
@@ -573,80 +575,7 @@ detect_runtime_imports:
     lda import_flags_lo
     ora #IMPORT_FORMAT_INT|IMPORT_PRINT_LINE
     sta import_flags_lo
-:   lda #<pattern_printr
-    sta const_ptr
-    lda #>pattern_printr
-    sta const_ptr+1
-    jsr find_pattern_at_const_ptr
-    bcs :+
-    lda import_flags_lo
-    ora #IMPORT_PRINT_F|IMPORT_PRINT_STR
-    sta import_flags_lo
-:   lda #<pattern_printre
-    sta const_ptr
-    lda #>pattern_printre
-    sta const_ptr+1
-    jsr find_pattern_at_const_ptr
-    bcs :+
-    lda import_flags_lo
-    ora #IMPORT_PRINT_F|IMPORT_PRINT_LINE
-    sta import_flags_lo
-:   lda #<pattern_reu_alloc
-    sta const_ptr
-    lda #>pattern_reu_alloc
-    sta const_ptr+1
-    jsr find_pattern_at_const_ptr
-    bcs :+
-    lda import_flags_lo
-    ora #IMPORT_REU_ALLOC
-    sta import_flags_lo
-:   lda #<pattern_reupeek8
-    sta const_ptr
-    lda #>pattern_reupeek8
-    sta const_ptr+1
-    jsr find_pattern_at_const_ptr
-    bcs :+
-    lda import_flags_lo
-    ora #IMPORT_REU_PEEK8
-    sta import_flags_lo
-:   lda #<pattern_reupeek16
-    sta const_ptr
-    lda #>pattern_reupeek16
-    sta const_ptr+1
-    jsr find_pattern_at_const_ptr
-    bcs :+
-    lda import_flags_lo
-    ora #IMPORT_REU_PEEK16
-    sta import_flags_lo
-:   lda #<pattern_reupoke8
-    sta const_ptr
-    lda #>pattern_reupoke8
-    sta const_ptr+1
-    jsr find_pattern_at_const_ptr
-    bcs :+
-    lda import_flags_lo
-    ora #IMPORT_REU_POKE8
-    sta import_flags_lo
-:   lda #<pattern_reupoke16
-    sta const_ptr
-    lda #>pattern_reupoke16
-    sta const_ptr+1
-    jsr find_pattern_at_const_ptr
-    bcs :+
-    lda import_flags_hi
-    ora #IMPORT_REU_POKE16
-    sta import_flags_hi
-:   lda #<pattern_overlaycall
-    sta const_ptr
-    lda #>pattern_overlaycall
-    sta const_ptr+1
-    jsr find_pattern_at_const_ptr
-    bcs detect_runtime_imports_done
-    lda import_flags_hi
-    ora #IMPORT_OVL_CALL|IMPORT_OVL_LOAD
-    sta import_flags_hi
-detect_runtime_imports_done:
-    rts
+:   rts
 
 find_pattern_at_const_ptr:
     lda #<source_buffer
@@ -781,30 +710,6 @@ append_import_list:
     lda #>import_rt_format_int
     sta const_ptr+1
     jsr append_import_name
-:   lda import_flags_hi
-    and #IMPORT_OVL_CALL
-    beq :+
-    lda #<import_rt_ovl_call
-    sta const_ptr
-    lda #>import_rt_ovl_call
-    sta const_ptr+1
-    jsr append_import_name
-:   lda import_flags_hi
-    and #IMPORT_OVL_LOAD
-    beq :+
-    lda #<import_rt_ovl_load
-    sta const_ptr
-    lda #>import_rt_ovl_load
-    sta const_ptr+1
-    jsr append_import_name
-:   lda import_flags_lo
-    and #IMPORT_PRINT_F
-    beq :+
-    lda #<import_rt_print_f
-    sta const_ptr
-    lda #>import_rt_print_f
-    sta const_ptr+1
-    jsr append_import_name
 :   lda import_flags_lo
     and #IMPORT_PRINT_LINE
     beq :+
@@ -819,46 +724,6 @@ append_import_list:
     lda #<import_rt_print_str
     sta const_ptr
     lda #>import_rt_print_str
-    sta const_ptr+1
-    jsr append_import_name
-:   lda import_flags_lo
-    and #IMPORT_REU_ALLOC
-    beq :+
-    lda #<import_rt_reu_alloc
-    sta const_ptr
-    lda #>import_rt_reu_alloc
-    sta const_ptr+1
-    jsr append_import_name
-:   lda import_flags_lo
-    and #IMPORT_REU_PEEK16
-    beq :+
-    lda #<import_rt_reu_peek16
-    sta const_ptr
-    lda #>import_rt_reu_peek16
-    sta const_ptr+1
-    jsr append_import_name
-:   lda import_flags_lo
-    and #IMPORT_REU_PEEK8
-    beq :+
-    lda #<import_rt_reu_peek8
-    sta const_ptr
-    lda #>import_rt_reu_peek8
-    sta const_ptr+1
-    jsr append_import_name
-:   lda import_flags_hi
-    and #IMPORT_REU_POKE16
-    beq :+
-    lda #<import_rt_reu_poke16
-    sta const_ptr
-    lda #>import_rt_reu_poke16
-    sta const_ptr+1
-    jsr append_import_name
-:   lda import_flags_lo
-    and #IMPORT_REU_POKE8
-    beq :+
-    lda #<import_rt_reu_poke8
-    sta const_ptr
-    lda #>import_rt_reu_poke8
     sta const_ptr+1
     jsr append_import_name
 :   rts
@@ -928,10 +793,13 @@ append_call_list_loop:
     beq :+
     lda #','
     jsr append_char
-:   lda #'"'
+:   lda #'['
+    jsr append_char
+    lda #'"'
     jsr append_char
     ldy export_index
-    ldx call_indices,y
+    lda call_from_indices,y
+    tax
     jsr set_export_ptr_from_x
     ldy #$00
 append_call_list_symbol_loop:
@@ -943,6 +811,27 @@ append_call_list_symbol_loop:
     bne append_call_list_symbol_loop
 append_call_list_symbol_done:
     lda #'"'
+    jsr append_char
+    lda #','
+    jsr append_char
+    lda #'"'
+    jsr append_char
+    ldy export_index
+    lda call_to_indices,y
+    tax
+    jsr set_export_ptr_from_x
+    ldy #$00
+append_call_list_callee_loop:
+    lda (export_ptr),y
+    beq append_call_list_callee_done
+    jsr lowercase_ascii
+    jsr append_char
+    iny
+    bne append_call_list_callee_loop
+append_call_list_callee_done:
+    lda #'"'
+    jsr append_char
+    lda #']'
     jsr append_char
     lda #$01
     sta call_list_started
@@ -1103,45 +992,13 @@ pattern_printi:
     .asciiz "PRINTI("
 pattern_printie:
     .asciiz "PRINTIE("
-pattern_printr:
-    .asciiz "PRINTR("
-pattern_printre:
-    .asciiz "PRINTRE("
-pattern_reu_alloc:
-    .asciiz "REU BYTE ARRAY"
-pattern_reupeek8:
-    .asciiz "REUPEEK8("
-pattern_reupeek16:
-    .asciiz "REUPEEK16("
-pattern_reupoke8:
-    .asciiz "REUPOKE8("
-pattern_reupoke16:
-    .asciiz "REUPOKE16("
-pattern_overlaycall:
-    .asciiz "OVERLAYCALL("
 
 import_rt_format_int:
     .asciiz "rt.format_int"
-import_rt_ovl_call:
-    .asciiz "rt.ovl_call"
-import_rt_ovl_load:
-    .asciiz "rt.ovl_load"
-import_rt_print_f:
-    .asciiz "rt.print_f"
 import_rt_print_line:
     .asciiz "rt.print_line"
 import_rt_print_str:
     .asciiz "rt.print_str"
-import_rt_reu_alloc:
-    .asciiz "rt.reu_alloc"
-import_rt_reu_peek16:
-    .asciiz "rt.reu_peek16"
-import_rt_reu_peek8:
-    .asciiz "rt.reu_peek8"
-import_rt_reu_poke16:
-    .asciiz "rt.reu_poke16"
-import_rt_reu_poke8:
-    .asciiz "rt.reu_poke8"
 
 avo_prefix_1:
     .byte "AVO1",10,"{",34,"entry_offset",34,":0,",34,"exports",34,":[",0
@@ -1180,7 +1037,7 @@ call_list_started:
     .res 1
 export_names:
     .res 200
-call_seen_flags:
+call_from_indices:
     .res 8
-call_indices:
+call_to_indices:
     .res 8

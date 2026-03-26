@@ -739,6 +739,8 @@ build_map_content:
     jsr append_export_lines
     jsr append_call_lines
     jsr append_live_lines
+    jsr append_entry_line
+    jsr append_payload_line_or_fail
     jsr append_import_include_lines
     jsr append_main_resolve_lines
     lda #$00
@@ -900,6 +902,47 @@ append_live_lines_next:
 append_live_lines_done:
     rts
 
+append_entry_line:
+    lda #<map_entry_prefix
+    sta const_ptr
+    lda #>map_entry_prefix
+    sta const_ptr+1
+    jsr append_const_ptr
+    jsr append_module_symbol_lower
+    jmp append_newline
+
+append_payload_line_or_fail:
+    lda #<marker_payload_hex
+    sta const_ptr
+    lda #>marker_payload_hex
+    sta const_ptr+1
+    jsr find_pattern_at_const_ptr
+    bcc :+
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+:   jsr advance_scan_ptr_by_const_ptr
+    lda #<map_payload_prefix
+    sta const_ptr
+    lda #>map_payload_prefix
+    sta const_ptr+1
+    jsr append_const_ptr
+append_payload_line_or_fail_loop:
+    ldy #$00
+    lda (scan_ptr),y
+    beq append_payload_line_or_fail_bad
+    cmp #'"'
+    beq append_payload_line_or_fail_done
+    jsr append_char
+    jsr advance_scan_ptr
+    jmp append_payload_line_or_fail_loop
+append_payload_line_or_fail_done:
+    jmp append_newline
+append_payload_line_or_fail_bad:
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+
 append_module_symbol_lower:
     ldy #$00
 append_module_symbol_lower_loop:
@@ -1045,6 +1088,8 @@ marker_exports:
     .byte 34,"exports",34,":[",0
 marker_calls:
     .byte 34,"calls",34,":[",0
+marker_payload_hex:
+    .byte 34,"payload_hex",34,":",34,0
 
 import_rt_format_int:
     .asciiz "rt.format_int"
@@ -1085,6 +1130,10 @@ map_call_prefix:
     .byte "CALL ",0
 map_live_prefix:
     .byte "LIVE ",0
+map_entry_prefix:
+    .byte "ENTRY ",0
+map_payload_prefix:
+    .byte "PAYLOAD ",0
 map_resolve_prefix:
     .byte "RESOLVE ",0
 

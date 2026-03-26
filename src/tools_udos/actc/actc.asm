@@ -376,6 +376,8 @@ compute_payload_layout_loop:
     beq compute_payload_layout_done
     lda payload_offset
     sta export_offsets,x
+    lda #1
+    sta proc_sizes_data,x
     ldy #$00
 compute_payload_layout_call_loop:
     cpy call_count_data
@@ -384,16 +386,16 @@ compute_payload_layout_call_loop:
     cmp proc_index
     bne compute_payload_layout_next_call
     clc
-    lda payload_offset
+    lda proc_sizes_data,x
     adc #3
-    sta payload_offset
+    sta proc_sizes_data,x
 compute_payload_layout_next_call:
     iny
     bne compute_payload_layout_call_loop
 compute_payload_layout_ret:
     clc
     lda payload_offset
-    adc #1
+    adc proc_sizes_data,x
     sta payload_offset
     inc proc_index
     jmp compute_payload_layout_loop
@@ -820,6 +822,11 @@ append_export_list_symbol_done:
     ldx export_index
     lda export_offsets,x
     jsr append_small_decimal
+    lda #','
+    jsr append_char
+    ldx export_index
+    lda proc_sizes_data,x
+    jsr append_small_decimal
     lda #']'
     jsr append_char
     inc export_index
@@ -1142,6 +1149,8 @@ call_list_started:
 export_names:
     .res 200
 export_offsets:
+    .res 8
+proc_sizes_data:
     .res 8
 call_from_indices:
     .res 8

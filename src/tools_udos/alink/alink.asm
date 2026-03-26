@@ -277,6 +277,14 @@ parse_export_offset_or_fail:
     jsr parse_decimal_byte_or_fail
     ldx export_count
     sta export_offsets,x
+    ldy #$00
+    lda (scan_ptr),y
+    cmp #','
+    bne parse_exports_bad
+    jsr advance_scan_ptr
+    jsr parse_decimal_byte_or_fail
+    ldx export_count
+    sta proc_sizes,x
     inc export_count
     rts
 
@@ -800,13 +808,20 @@ build_avm_text_proc_scan_loop:
     cmp payload_bytes_data
     beq build_avm_text_done
     jsr find_live_export_at_current_offset
-    bcs build_avm_text_proc_next
+    bcs build_avm_text_gap
     stx export_index
     jsr append_export_label_from_x
     ldx export_index
     jsr append_live_call_lines_for_export_x
     jsr append_ret_line
-build_avm_text_proc_next:
+    clc
+    lda main_flags_hi
+    adc proc_sizes,x
+    sta main_flags_hi
+    bcc build_avm_text_proc_scan_loop
+    beq build_avm_text_done
+    jmp build_avm_text_proc_scan_loop
+build_avm_text_gap:
     inc main_flags_hi
     bne build_avm_text_proc_scan_loop
 build_avm_text_done:
@@ -1070,6 +1085,8 @@ live_flags:
 call_edge_masks:
     .res 8
 export_offsets:
+    .res 8
+proc_sizes:
     .res 8
 payload_bytes_data:
     .res 1

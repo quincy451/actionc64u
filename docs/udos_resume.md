@@ -82,7 +82,8 @@ They are exported into `ACTION.DNP` root and `BIN/`.
   `PROC` exports, extracts pair-form local inter-proc calls, scans the loaded
   source text for the current runtime-call marker set, and emits a
   deterministic `OBJ/<NAME>.AVO` text object stub with `AVO1`,
-  module/export/call/import metadata plus a minimal local control-flow
+  module/export/call/import metadata where each export carries compiled offset
+  and size, plus a minimal local control-flow
   `payload_hex` skeleton (`CALL` local proc, `RET`) plus explicit
   `payload_bytes`. The focused
   headless VICE proof is
@@ -93,8 +94,10 @@ They are exported into `ACTION.DNP` root and `BIN/`.
   parser or code generator.
 - `ALINK.PRG` is now the first UDOS-native linker slice. The current proof
   loads a deterministic `OBJ/<NAME>.AVO` object stub, parses its export, call,
-  import, and payload metadata, seeds the local live set from the module entry proc
-  instead of assuming export slot `0`, propagates the pair-call graph,
+  import, and payload metadata, uses compiler-emitted export offset/size
+  triplets instead of inferring procedure spans from the payload shape, seeds
+  the local live set from the module entry proc instead of assuming export slot
+  `0`, propagates the pair-call graph,
   resolves the current small runtime closure, and emits `BIN/<NAME>.AVM.TXT`
   on the host fs tree as symbolic AVM text: `entry main`, emitted labels,
   `call`, and `ret` directives reconstructed from linker metadata instead of

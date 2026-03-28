@@ -202,6 +202,7 @@ append_external_object_from_x_or_fail:
     jsr parse_exports_or_fail
     jsr parse_body_ops_or_fail
     jsr parse_external_symbols_or_fail
+    jsr parse_ints_or_fail
     jsr require_linkable_child_body_ops_or_fail
     jsr compute_code_bytes
     jsr build_live_set
@@ -767,8 +768,6 @@ require_linkable_child_body_ops_or_fail_body_loop:
     lda (body_ptr),y
     beq require_linkable_child_body_ops_or_fail_next_export
     cmp #'s'
-    beq require_linkable_child_body_ops_or_fail_bad
-    cmp #'i'
     beq require_linkable_child_body_ops_or_fail_bad
     iny
     bne require_linkable_child_body_ops_or_fail_body_loop

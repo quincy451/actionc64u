@@ -6,10 +6,12 @@ MANIFEST_LIMIT = 191
 SOURCE_LIMIT = 255
 ALINK_TRACE = $03FC
 
-IMPORT_PRINT_STR  = $01
-IMPORT_PRINT_LINE = $02
-IMPORT_FORMAT_INT = $04
 PENDING_SYMBOL_MAX = 7
+OPCODE_PUSH16 = $11
+OPCODE_CALL = $45
+OPCODE_RET = $48
+OPCODE_CALLN = $49
+OPCODE_SETP16 = $61
 
 .segment "ZPTEMP": zeropage
 svc_retptr:
@@ -38,67 +40,35 @@ main_flags_hi:
     .res 1
 save_mode:
     .res 1
+export_index_zp:
+    .res 1
 truncated_flag:
     .res 1
 
 export_count = truncated_flag
-export_index = save_mode
-export_ptr = current_bit_lo
+export_index = export_index_zp
+export_ptr = svc_retptr
 body_ptr = src_ptr
 
 .code
 
 start:
-    lda #$10
-    sta ALINK_TRACE
-    lda #$11
-    sta ALINK_TRACE
     jsr init_module_name
-    lda #$12
-    sta ALINK_TRACE
     jsr build_manifest_entry
     jsr require_loaded_project
     jsr require_manifest_entry_tracked
-    lda #$13
-    sta ALINK_TRACE
     jsr build_object_target_path
     jsr load_object_or_fail
-    lda #$14
-    sta ALINK_TRACE
     jsr parse_exports_or_fail
-    lda #$15
-    sta ALINK_TRACE
     jsr parse_body_ops_or_fail
-    lda #$16
-    sta ALINK_TRACE
     jsr parse_external_symbols_or_fail
-    lda #$17
-    sta ALINK_TRACE
     jsr parse_strings_or_fail
-    lda #$18
-    sta ALINK_TRACE
     jsr parse_ints_or_fail
-    lda #$19
-    sta ALINK_TRACE
-    jsr parse_import_mask_or_fail
-    lda #$1A
-    sta ALINK_TRACE
     jsr compute_code_bytes
-    lda #$1B
-    sta ALINK_TRACE
     jsr build_live_set
-    lda #$1C
-    sta ALINK_TRACE
-    jsr resolve_import_closure
-    lda #$1D
-    sta ALINK_TRACE
     jsr build_avm_text_content_or_fail
     jsr build_avm_text_target_path
-    lda #$1E
-    sta ALINK_TRACE
-    jsr save_content_buffer_to_target
-    lda #$1D
-    sta ALINK_TRACE
+    jsr save_source_buffer_to_target
     bcc save_ok
     lda #<msg_save_fail
     ldy #>msg_save_fail
@@ -173,37 +143,6 @@ load_object_missing:
 load_object_loaded:
     jsr require_loaded_source_not_truncated_or_fail
     jsr require_avo1_header_or_fail
-    rts
-
-append_external_object_from_x_or_fail:
-    txa
-    pha
-    jsr save_module_name
-    pla
-    tax
-    jsr copy_pending_symbol_to_module_name_from_x
-    txa
-    pha
-    jsr build_object_target_path
-    jsr load_object_or_fail
-    jsr require_loaded_source_not_truncated_or_fail
-    jsr require_avo1_header_or_fail
-    jsr parse_exports_or_fail
-    jsr parse_body_ops_or_fail
-    jsr parse_external_symbols_or_fail
-    jsr parse_strings_or_fail
-    jsr parse_ints_or_fail
-    jsr require_linkable_child_body_ops_or_fail
-    jsr compute_code_bytes
-    jsr build_live_set
-    jsr queue_current_external_symbols_or_fail
-    lda #$00
-    sta string_use_mask
-    jsr append_current_object_live_code_only
-    jsr append_current_object_string_defs
-    jsr restore_module_name
-    pla
-    tax
     rts
 
 require_loaded_source_not_truncated_or_fail:
@@ -637,34 +576,6 @@ parse_ints_next_line:
 parse_ints_done:
     rts
 
-parse_import_mask_or_fail:
-    lda #$00
-    sta main_flags_lo
-    sta main_flags_hi
-    jsr reset_scan_ptr_after_header
-parse_import_mask_loop:
-    jsr skip_line_breaks
-    ldy #$00
-    lda (scan_ptr),y
-    beq parse_import_mask_missing
-    lda #<line_import_mask
-    sta const_ptr
-    lda #>line_import_mask
-    sta const_ptr+1
-    jsr pattern_matches_scan_ptr
-    bcs parse_import_mask_next_line
-    jsr advance_scan_ptr_by_const_ptr
-    jsr parse_decimal_byte_or_fail
-    sta main_flags_lo
-    rts
-parse_import_mask_next_line:
-    jsr skip_current_line
-    jmp parse_import_mask_loop
-parse_import_mask_missing:
-    lda #<msg_bad_avo
-    ldy #>msg_bad_avo
-    jmp fail_with_ptr
-
 reset_scan_ptr_after_header:
     lda #<(source_buffer+4)
     sta scan_ptr
@@ -744,32 +655,6 @@ parse_decimal_byte_or_fail_bad:
     lda #<msg_bad_avo
     ldy #>msg_bad_avo
     jmp fail_with_ptr
-
-require_linkable_child_body_ops_or_fail:
-    ldx #$00
-require_linkable_child_body_ops_or_fail_export_loop:
-    cpx export_count
-    beq require_linkable_child_body_ops_or_fail_done
-    txa
-    pha
-    jsr set_body_ptr_from_x
-    ldy #$00
-require_linkable_child_body_ops_or_fail_body_loop:
-    lda (body_ptr),y
-    beq require_linkable_child_body_ops_or_fail_next_export
-    iny
-    bne require_linkable_child_body_ops_or_fail_body_loop
-require_linkable_child_body_ops_or_fail_bad:
-    lda #<msg_bad_avo
-    ldy #>msg_bad_avo
-    jmp fail_with_ptr
-require_linkable_child_body_ops_or_fail_next_export:
-    pla
-    tax
-    inx
-    bne require_linkable_child_body_ops_or_fail_export_loop
-require_linkable_child_body_ops_or_fail_done:
-    rts
 
 build_live_set:
     lda #$00
@@ -895,15 +780,6 @@ find_export_index_from_module_name_done:
     clc
     rts
 
-resolve_import_closure:
-    lda main_flags_lo
-    and #IMPORT_PRINT_LINE
-    beq :+
-    lda main_flags_lo
-    ora #IMPORT_PRINT_STR
-    sta main_flags_lo
-:   rts
-
 symbol_buffer_matches_const_ptr:
     ldy #$00
 symbol_buffer_matches_const_ptr_loop:
@@ -919,26 +795,6 @@ symbol_buffer_matches_const_ptr_fail:
     rts
 symbol_buffer_matches_const_ptr_ok:
     clc
-    rts
-
-find_pattern_at_const_ptr:
-    lda #<source_buffer
-    sta scan_ptr
-    lda #>source_buffer
-    sta scan_ptr+1
-find_pattern_at_const_ptr_loop:
-    ldy #$00
-    lda (scan_ptr),y
-    beq find_pattern_at_const_ptr_fail
-    jsr pattern_matches_scan_ptr
-    bcc find_pattern_at_const_ptr_ok
-    jsr advance_scan_ptr
-    jmp find_pattern_at_const_ptr_loop
-find_pattern_at_const_ptr_ok:
-    clc
-    rts
-find_pattern_at_const_ptr_fail:
-    sec
     rts
 
 pattern_matches_scan_ptr:
@@ -972,86 +828,731 @@ advance_scan_ptr_by_const_ptr_done:
     rts
 
 build_avm_text_content_or_fail:
-    lda #<content_buffer
-    sta content_ptr
-    lda #>content_buffer
-    sta content_ptr+1
-    lda #<avm_txt_entry_prefix
-    sta const_ptr
-    lda #>avm_txt_entry_prefix
-    sta const_ptr+1
-    jsr append_const_ptr
-    jsr append_module_symbol_lower
-    jsr append_newline
+    lda #$21
+    sta ALINK_TRACE
+    jsr layout_payload_or_fail
+    lda #$22
+    sta ALINK_TRACE
+    jsr emit_payload_or_fail
+    lda #$23
+    sta ALINK_TRACE
+    jmp render_payload_as_byte_text_or_fail
+
+layout_payload_or_fail:
     lda #$00
+    sta current_bit_lo
+    sta current_bit_hi
     sta string_use_mask
     sta pending_count
-    jsr append_current_object_live_code_only
+    jsr layout_current_object_code_or_fail
+    jsr copy_current_export_layout_to_root
     jsr save_current_string_state
     jsr queue_current_external_symbols_or_fail
-build_avm_text_pending_loop:
+layout_payload_pending_loop:
     ldx #$00
-build_avm_text_pending_loop_next:
+layout_payload_pending_next:
     cpx pending_count
-    beq build_avm_text_strings
+    beq layout_payload_root_strings
     txa
     pha
-    jsr append_external_object_from_x_or_fail
+    jsr layout_external_object_from_x_or_fail
     pla
     tax
     inx
-    bne build_avm_text_pending_loop_next
-build_avm_text_strings:
+    bne layout_payload_pending_next
+layout_payload_root_strings:
     jsr restore_saved_string_state
-    jsr append_current_object_string_defs
-build_avm_text_done:
     lda #$00
-    jmp append_char
+    sta save_mode
+    jmp layout_current_object_strings_or_fail
 
-append_current_object_live_code_only:
+layout_external_object_from_x_or_fail:
+    txa
+    pha
+    jsr save_module_name
+    pla
+    tax
+    txa
+    pha
+    jsr copy_pending_symbol_to_module_name_from_x
+    lda current_bit_lo
+    pha
+    lda current_bit_hi
+    pha
+    jsr load_current_object_link_state_or_fail
+    pla
+    sta current_bit_hi
+    pla
+    sta current_bit_lo
+    lda #$00
+    sta string_use_mask
+    jsr layout_current_object_code_or_fail
+    jsr find_export_index_from_module_name
+    stx export_index
+    pla
+    tax
+    ldy export_index
+    lda current_export_offsets_lo,y
+    sta pending_offsets_lo,x
+    lda current_export_offsets_hi,y
+    sta pending_offsets_hi,x
+    jsr queue_current_external_symbols_or_fail
+    lda #$01
+    sta save_mode
+    jsr layout_current_object_strings_or_fail
+    jmp restore_module_name
+
+layout_current_object_code_or_fail:
     lda #$00
     sta main_flags_hi
-append_current_object_live_code_only_proc_scan_loop:
+layout_current_object_code_loop:
     lda main_flags_hi
     cmp payload_bytes_data
-    beq append_current_object_live_code_only_done
+    beq layout_current_object_code_done
     jsr find_live_export_at_current_offset
-    bcs append_current_object_live_code_only_gap
+    bcs layout_current_object_code_gap
     stx export_index
-    jsr append_export_label_from_x
+    lda current_bit_lo
+    sta current_export_offsets_lo,x
+    lda current_bit_hi
+    sta current_export_offsets_hi,x
     ldx export_index
-    jsr append_live_call_lines_for_export_x
+    jsr note_strings_used_for_export_x_or_fail
+    ldx export_index
+    jsr add_proc_size_to_layout_from_x
     clc
     lda main_flags_hi
     adc proc_sizes,x
     sta main_flags_hi
-    bcc append_current_object_live_code_only_proc_scan_loop
-    beq append_current_object_live_code_only_done
-    jmp append_current_object_live_code_only_proc_scan_loop
-append_current_object_live_code_only_gap:
+    bcc layout_current_object_code_loop
+    beq layout_current_object_code_done
+    jmp layout_current_object_code_loop
+layout_current_object_code_gap:
     inc main_flags_hi
-    bne append_current_object_live_code_only_proc_scan_loop
-append_current_object_live_code_only_done:
+    bne layout_current_object_code_loop
+layout_current_object_code_done:
     rts
 
-append_current_object_string_defs:
+note_strings_used_for_export_x_or_fail:
+    jsr set_body_ptr_from_x
+    ldy #$00
+note_strings_used_for_export_x_loop:
+    lda (body_ptr),y
+    beq note_strings_used_for_export_x_done
+    cmp #'s'
+    beq note_strings_used_for_export_x_string
+    iny
+    bne note_strings_used_for_export_x_loop
+note_strings_used_for_export_x_string:
+    iny
+    lda (body_ptr),y
+    cmp #'0'
+    bcc note_strings_used_for_export_x_bad
+    cmp #'7'+1
+    bcs note_strings_used_for_export_x_bad
+    sec
+    sbc #'0'
+    tax
+    lda bit_masks,x
+    ora string_use_mask
+    sta string_use_mask
+    iny
+    bne note_strings_used_for_export_x_loop
+note_strings_used_for_export_x_bad:
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+note_strings_used_for_export_x_done:
+    rts
+
+add_proc_size_to_layout_from_x:
+    clc
+    lda current_bit_lo
+    adc proc_sizes,x
+    sta current_bit_lo
+    bcc :+
+    inc current_bit_hi
+:   rts
+
+copy_current_export_layout_to_root:
     ldx #$00
-append_current_object_string_defs_loop:
+copy_current_export_layout_to_root_loop:
+    cpx #8
+    beq copy_current_export_layout_to_root_done
+    lda current_export_offsets_lo,x
+    sta root_export_offsets_lo,x
+    lda current_export_offsets_hi,x
+    sta root_export_offsets_hi,x
+    inx
+    bne copy_current_export_layout_to_root_loop
+copy_current_export_layout_to_root_done:
+    rts
+
+layout_current_object_strings_or_fail:
+    ldx #$00
+layout_current_object_strings_loop:
     cpx string_count
-    beq append_current_object_string_defs_done
+    beq layout_current_object_strings_done
     lda bit_masks,x
     and string_use_mask
-    beq append_current_object_string_defs_next
+    beq layout_current_object_strings_next
+    lda save_mode
+    beq :+
+    lda current_bit_lo
+    sta current_string_offsets_lo,x
+    lda current_bit_hi
+    sta current_string_offsets_hi,x
+    jmp layout_current_object_strings_store_done
+:   lda current_bit_lo
+    sta root_string_offsets_lo,x
+    lda current_bit_hi
+    sta root_string_offsets_hi,x
+layout_current_object_strings_store_done:
     txa
     pha
-    jsr append_string_definition_from_x
+    jsr set_string_ptr_from_x
+    jsr add_current_string_length_to_layout
     pla
     tax
-append_current_object_string_defs_next:
+layout_current_object_strings_next:
     inx
-    bne append_current_object_string_defs_loop
-append_current_object_string_defs_done:
+    bne layout_current_object_strings_loop
+layout_current_object_strings_done:
     rts
+
+add_current_string_length_to_layout:
+    ldy #$00
+add_current_string_length_to_layout_loop:
+    lda (const_ptr),y
+    beq add_current_string_length_to_layout_done
+    iny
+    bne add_current_string_length_to_layout_loop
+add_current_string_length_to_layout_done:
+    tya
+    clc
+    adc #$01
+    clc
+    adc current_bit_lo
+    sta current_bit_lo
+    bcc :+
+    inc current_bit_hi
+:   rts
+
+emit_payload_or_fail:
+    lda #$23
+    sta ALINK_TRACE
+    lda #<content_buffer
+    sta content_ptr
+    lda #>content_buffer
+    sta content_ptr+1
+    jsr load_current_object_link_state_or_fail
+    lda #$24
+    sta ALINK_TRACE
+    lda #$00
+    sta main_flags_lo
+    sta main_flags_hi
+    lda #$00
+    sta string_use_mask
+    sta save_mode
+    jsr emit_current_object_code_or_fail
+    lda #$25
+    sta ALINK_TRACE
+    jsr save_current_string_state
+    lda #$26
+    sta ALINK_TRACE
+emit_payload_pending_loop:
+    ldx #$00
+emit_payload_pending_next:
+    cpx pending_count
+    beq emit_payload_root_strings
+    lda #$27
+    sta ALINK_TRACE
+    txa
+    pha
+    jsr emit_external_object_from_x_or_fail
+    pla
+    tax
+    inx
+    bne emit_payload_pending_next
+emit_payload_root_strings:
+    jsr restore_saved_string_state
+    lda #$28
+    sta ALINK_TRACE
+    jmp emit_current_object_strings_or_fail
+
+emit_external_object_from_x_or_fail:
+    lda #$31
+    sta ALINK_TRACE
+    txa
+    pha
+    jsr save_module_name
+    pla
+    tax
+    txa
+    pha
+    jsr copy_pending_symbol_to_module_name_from_x
+    lda main_flags_lo
+    pha
+    lda main_flags_hi
+    pha
+    jsr load_current_object_link_state_or_fail
+    lda #$32
+    sta ALINK_TRACE
+    pla
+    sta main_flags_hi
+    pla
+    sta main_flags_lo
+    pla
+    tax
+    lda pending_offsets_lo,x
+    sta current_bit_lo
+    lda pending_offsets_hi,x
+    sta current_bit_hi
+    lda #$01
+    sta save_mode
+    lda #$00
+    sta string_use_mask
+    lda main_flags_hi
+    pha
+    jsr layout_current_object_code_or_fail
+    pla
+    sta main_flags_hi
+    lda #$33
+    sta ALINK_TRACE
+    jsr layout_current_object_strings_or_fail
+    lda #$34
+    sta ALINK_TRACE
+    jsr emit_current_object_code_or_fail
+    lda #$35
+    sta ALINK_TRACE
+    jsr emit_current_object_strings_or_fail
+    lda #$36
+    sta ALINK_TRACE
+    jmp restore_module_name
+
+load_current_object_link_state_or_fail:
+    jsr build_object_target_path
+    jsr load_object_or_fail
+    jsr require_loaded_source_not_truncated_or_fail
+    jsr require_avo1_header_or_fail
+    jsr parse_exports_or_fail
+    jsr parse_body_ops_or_fail
+    jsr parse_external_symbols_or_fail
+    jsr parse_strings_or_fail
+    jsr parse_ints_or_fail
+    jsr compute_code_bytes
+    jmp build_live_set
+
+emit_current_object_code_or_fail:
+    lda #$00
+    sta current_bit_hi
+emit_current_object_code_loop:
+    lda current_bit_hi
+    cmp payload_bytes_data
+    beq emit_current_object_code_done
+    jsr find_live_export_at_emit_offset
+    bcs emit_current_object_code_gap
+    stx export_index
+    ldx export_index
+    jsr emit_live_bytes_for_export_x_or_fail
+    ldx export_index
+    clc
+    lda current_bit_hi
+    adc proc_sizes,x
+    sta current_bit_hi
+    bcc emit_current_object_code_loop
+    beq emit_current_object_code_done
+    jmp emit_current_object_code_loop
+emit_current_object_code_gap:
+    inc current_bit_hi
+    bne emit_current_object_code_loop
+emit_current_object_code_done:
+    rts
+
+find_live_export_at_emit_offset:
+    ldx #$00
+find_live_export_at_emit_offset_loop:
+    cpx export_count
+    beq find_live_export_at_emit_offset_fail
+    lda live_flags,x
+    beq find_live_export_at_emit_offset_next
+    lda export_offsets,x
+    cmp current_bit_hi
+    beq find_live_export_at_emit_offset_done
+find_live_export_at_emit_offset_next:
+    inx
+    bne find_live_export_at_emit_offset_loop
+find_live_export_at_emit_offset_fail:
+    sec
+    rts
+find_live_export_at_emit_offset_done:
+    clc
+    rts
+
+emit_live_bytes_for_export_x_or_fail:
+    txa
+    pha
+    jsr set_body_ptr_from_x
+    ldy #$00
+emit_live_bytes_for_export_x_loop:
+    lda #$50
+    sta ALINK_TRACE
+    lda (body_ptr),y
+    bne :+
+    jmp emit_live_bytes_for_export_x_done
+:   cmp #'c'
+    bne :+
+    jmp emit_live_bytes_for_export_x_call
+:   cmp #'u'
+    bne :+
+    jmp emit_live_bytes_for_export_x_external
+:   cmp #'s'
+    bne :+
+    jmp emit_live_bytes_for_export_x_print
+:   cmp #'i'
+    bne :+
+    jmp emit_live_bytes_for_export_x_printie
+:   cmp #'r'
+    bne :+
+    jmp emit_live_bytes_for_export_x_ret
+: 
+    jmp emit_live_bytes_for_export_x_bad
+emit_live_bytes_for_export_x_call:
+    lda #$51
+    sta ALINK_TRACE
+    iny
+    lda (body_ptr),y
+    cmp #'0'
+    bcs :+
+    jmp emit_live_bytes_for_export_x_bad
+: 
+    cmp #'7'+1
+    bcc :+
+    jmp emit_live_bytes_for_export_x_bad
+: 
+    sec
+    sbc #'0'
+    tax
+    jsr load_export_target_offset_from_x_or_fail
+    lda #OPCODE_CALL
+    jsr append_payload_byte
+    lda current_bit_lo
+    jsr append_payload_byte
+    lda current_bit_hi
+    jsr append_payload_byte
+    iny
+    jmp emit_live_bytes_for_export_x_loop
+emit_live_bytes_for_export_x_external:
+    lda #$52
+    sta ALINK_TRACE
+    iny
+    lda (body_ptr),y
+    cmp #'0'
+    bcs :+
+    jmp emit_live_bytes_for_export_x_bad
+: 
+    cmp #'7'+1
+    bcc :+
+    jmp emit_live_bytes_for_export_x_bad
+: 
+    sec
+    sbc #'0'
+    tax
+    tya
+    pha
+    jsr load_pending_offset_for_external_x_or_fail
+    pla
+    tay
+    lda #OPCODE_CALL
+    jsr append_payload_byte
+    lda current_bit_lo
+    jsr append_payload_byte
+    lda current_bit_hi
+    jsr append_payload_byte
+    iny
+    jmp emit_live_bytes_for_export_x_loop
+emit_live_bytes_for_export_x_print:
+    lda #$53
+    sta ALINK_TRACE
+    iny
+    lda (body_ptr),y
+    cmp #'0'
+    bcs :+
+    jmp emit_live_bytes_for_export_x_bad
+:   cmp #'7'+1
+    bcc :+
+    jmp emit_live_bytes_for_export_x_bad
+: 
+    sec
+    sbc #'0'
+    tax
+    lda bit_masks,x
+    ora string_use_mask
+    sta string_use_mask
+    jsr load_string_target_offset_from_x_or_fail
+    lda #OPCODE_SETP16
+    jsr append_payload_byte
+    lda current_bit_lo
+    jsr append_payload_byte
+    lda current_bit_hi
+    jsr append_payload_byte
+    lda #OPCODE_CALLN
+    jsr append_payload_byte
+    lda #$00
+    jsr append_payload_byte
+    lda #$FF
+    jsr append_payload_byte
+    iny
+    jmp emit_live_bytes_for_export_x_loop
+emit_live_bytes_for_export_x_printie:
+    lda #$54
+    sta ALINK_TRACE
+    iny
+    lda (body_ptr),y
+    cmp #'0'
+    bcc emit_live_bytes_for_export_x_bad
+    cmp #'7'+1
+    bcs emit_live_bytes_for_export_x_bad
+    sec
+    sbc #'0'
+    tax
+    txa
+    pha
+    lda int_values_hi,x
+    pha
+    lda int_values_lo,x
+    pha
+    lda #OPCODE_PUSH16
+    jsr append_payload_byte
+    pla
+    jsr append_payload_byte
+    pla
+    jsr append_payload_byte
+    pla
+    tax
+    lda #OPCODE_CALLN
+    jsr append_payload_byte
+    lda #$31
+    jsr append_payload_byte
+    lda #$FF
+    jsr append_payload_byte
+    iny
+    jmp emit_live_bytes_for_export_x_loop
+emit_live_bytes_for_export_x_ret:
+    lda #$55
+    sta ALINK_TRACE
+    lda #OPCODE_RET
+    jsr append_payload_byte
+    iny
+    jmp emit_live_bytes_for_export_x_loop
+emit_live_bytes_for_export_x_bad:
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+emit_live_bytes_for_export_x_done:
+    pla
+    tax
+    rts
+
+load_export_target_offset_from_x_or_fail:
+    lda save_mode
+    beq :+
+    lda current_export_offsets_lo,x
+    sta current_bit_lo
+    lda current_export_offsets_hi,x
+    sta current_bit_hi
+    rts
+:   lda root_export_offsets_lo,x
+    sta current_bit_lo
+    lda root_export_offsets_hi,x
+    sta current_bit_hi
+    rts
+
+load_string_target_offset_from_x_or_fail:
+    lda save_mode
+    beq :+
+    lda current_string_offsets_lo,x
+    sta current_bit_lo
+    lda current_string_offsets_hi,x
+    sta current_bit_hi
+    rts
+:   lda root_string_offsets_lo,x
+    sta current_bit_lo
+    lda root_string_offsets_hi,x
+    sta current_bit_hi
+    rts
+
+load_pending_offset_for_external_x_or_fail:
+    lda #$41
+    sta ALINK_TRACE
+    txa
+    pha
+    jsr set_external_ptr_from_x
+    jsr copy_export_ptr_to_symbol_buffer
+    jsr find_pending_index_from_symbol_buffer_or_fail
+    lda #$42
+    sta ALINK_TRACE
+    lda pending_offsets_lo,x
+    sta current_bit_lo
+    lda pending_offsets_hi,x
+    sta current_bit_hi
+    pla
+    tax
+    rts
+
+find_pending_index_from_symbol_buffer_or_fail:
+    ldx #$00
+find_pending_index_from_symbol_buffer_loop:
+    cpx pending_count
+    beq find_pending_index_from_symbol_buffer_bad
+    stx compare_char
+    jsr set_pending_ptr_from_x
+    lda export_ptr
+    sta const_ptr
+    lda export_ptr+1
+    sta const_ptr+1
+    jsr symbol_buffer_matches_const_ptr
+    bcc find_pending_index_from_symbol_buffer_done
+    ldx compare_char
+    inx
+    bne find_pending_index_from_symbol_buffer_loop
+find_pending_index_from_symbol_buffer_bad:
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+find_pending_index_from_symbol_buffer_done:
+    ldx compare_char
+    rts
+
+emit_current_object_strings_or_fail:
+    ldx #$00
+emit_current_object_strings_loop:
+    cpx string_count
+    beq emit_current_object_strings_done
+    lda bit_masks,x
+    and string_use_mask
+    beq emit_current_object_strings_next
+    txa
+    pha
+    jsr set_string_ptr_from_x
+    ldy #$00
+emit_current_object_strings_value_loop:
+    lda (const_ptr),y
+    beq emit_current_object_strings_value_done
+    jsr append_payload_byte
+    iny
+    bne emit_current_object_strings_value_loop
+emit_current_object_strings_value_done:
+    lda #$00
+    jsr append_payload_byte
+    pla
+    tax
+emit_current_object_strings_next:
+    inx
+    bne emit_current_object_strings_loop
+emit_current_object_strings_done:
+    rts
+
+append_payload_byte:
+    tax
+    tya
+    pha
+    lda main_flags_hi
+    bne append_payload_byte_fail
+    ldy #$00
+    txa
+    sta (content_ptr),y
+    pla
+    tay
+    inc content_ptr
+    bne :+
+    inc content_ptr+1
+:   inc main_flags_lo
+    bne :+
+    inc main_flags_hi
+:   rts
+append_payload_byte_fail:
+    lda main_flags_lo
+    sta ALINK_TRACE+1
+    lda main_flags_hi
+    sta ALINK_TRACE+2
+    lda module_name
+    sta ALINK_TRACE+3
+    pla
+    tay
+    lda #<msg_too_large
+    ldy #>msg_too_large
+    jmp fail_with_ptr
+
+render_payload_as_byte_text_or_fail:
+    lda main_flags_hi
+    bne render_payload_as_byte_text_too_large
+    lda main_flags_lo
+    cmp #62
+    bcc :+
+render_payload_as_byte_text_too_large:
+    lda #<msg_too_large
+    ldy #>msg_too_large
+    jmp fail_with_ptr
+:   lda #<source_buffer
+    sta content_ptr
+    lda #>source_buffer
+    sta content_ptr+1
+    lda #<avm_byte_entry_prefix
+    sta const_ptr
+    lda #>avm_byte_entry_prefix
+    sta const_ptr+1
+    jsr append_const_ptr
+    lda #<avm_byte_db_prefix
+    sta const_ptr
+    lda #>avm_byte_db_prefix
+    sta const_ptr+1
+    jsr append_const_ptr
+    ldx #$00
+render_payload_as_byte_text_loop:
+    cpx main_flags_lo
+    beq render_payload_as_byte_text_done
+    stx compare_char
+    cpx #$00
+    beq :+
+    lda #','
+    jsr append_char
+:   ldx compare_char
+    lda content_buffer,x
+    jsr append_hex_byte
+    ldx compare_char
+    inx
+    bne render_payload_as_byte_text_loop
+render_payload_as_byte_text_done:
+    jsr append_newline
+    lda #$00
+    jmp append_char
+
+append_hex_byte:
+    pha
+    lda #'$'
+    jsr append_char
+    pla
+    pha
+    lsr a
+    lsr a
+    lsr a
+    lsr a
+    jsr append_hex_nibble
+    pla
+    and #$0F
+    jmp append_hex_nibble
+
+append_hex_nibble:
+    and #$0F
+    cmp #10
+    bcc :+
+    clc
+    adc #'a' - 10
+    jmp append_char
+:   clc
+    adc #'0'
+    jmp append_char
 
 save_current_string_state:
     lda string_count
@@ -1100,291 +1601,6 @@ find_live_export_at_current_offset_fail:
 find_live_export_at_current_offset_done:
     clc
     rts
-
-append_module_symbol_lower:
-    ldy #$00
-append_module_symbol_lower_loop:
-    lda module_name,y
-    beq append_module_symbol_lower_done
-    jsr lowercase_ascii
-    jsr append_char
-    iny
-    bne append_module_symbol_lower_loop
-append_module_symbol_lower_done:
-    rts
-
-append_export_label_from_x:
-    jsr set_export_ptr_from_x
-    jsr append_export_ptr_lower
-    lda #':'
-    jsr append_char
-    jmp append_newline
-
-append_export_ptr_lower:
-    ldy #$00
-append_export_ptr_lower_loop:
-    lda (export_ptr),y
-    beq append_export_ptr_lower_done
-    jsr lowercase_ascii
-    jsr append_char
-    iny
-    bne append_export_ptr_lower_loop
-append_export_ptr_lower_done:
-    rts
-
-append_live_call_lines_for_export_x:
-    txa
-    pha
-    jsr set_body_ptr_from_x
-    ldy #$00
-append_live_call_lines_for_export_x_loop:
-    lda (body_ptr),y
-    bne :+
-    jmp append_live_call_lines_for_export_x_done
-: 
-    cmp #'c'
-    beq append_live_call_lines_for_export_x_call
-    cmp #'u'
-    beq append_live_call_lines_for_export_x_external
-    cmp #'s'
-    beq append_live_call_lines_for_export_x_print
-    cmp #'i'
-    beq :+
-    cmp #'r'
-    beq :++
-    lda #<msg_bad_avo
-    ldy #>msg_bad_avo
-    jmp fail_with_ptr
-:   jmp append_live_call_lines_for_export_x_printie
-:   jmp append_live_call_lines_for_export_x_ret
-append_live_call_lines_for_export_x_call:
-    iny
-    lda (body_ptr),y
-    cmp #'0'
-    bcc :+
-    cmp #'7'+1
-    bcs :+
-    sec
-    sbc #'0'
-    sta current_bit_hi
-    tya
-    sta compare_char
-    lda #<avm_txt_call_prefix
-    sta const_ptr
-    lda #>avm_txt_call_prefix
-    sta const_ptr+1
-    jsr append_const_ptr
-    ldx current_bit_hi
-    jsr set_export_ptr_from_x
-    jsr append_export_ptr_lower
-    jsr append_newline
-    ldy compare_char
-    iny
-    bne append_live_call_lines_for_export_x_loop
-:   jmp append_live_call_lines_for_export_x_bad
-append_live_call_lines_for_export_x_external:
-    iny
-    lda (body_ptr),y
-    cmp #'0'
-    bcc append_live_call_lines_for_export_x_bad
-    cmp #'7'+1
-    bcs append_live_call_lines_for_export_x_bad
-    sec
-    sbc #'0'
-    sta current_bit_hi
-    tya
-    sta compare_char
-    lda #<avm_txt_call_prefix
-    sta const_ptr
-    lda #>avm_txt_call_prefix
-    sta const_ptr+1
-    jsr append_const_ptr
-    ldx current_bit_hi
-    jsr set_external_ptr_from_x
-    jsr append_export_ptr_lower
-    jsr append_newline
-    ldy compare_char
-    iny
-    jmp append_live_call_lines_for_export_x_loop
-append_live_call_lines_for_export_x_print:
-    iny
-    lda (body_ptr),y
-    cmp #'0'
-    bcc append_live_call_lines_for_export_x_bad
-    cmp #'7'+1
-    bcs append_live_call_lines_for_export_x_bad
-    sec
-    sbc #'0'
-    tax
-    lda bit_masks,x
-    ora string_use_mask
-    sta string_use_mask
-    tya
-    sta compare_char
-    jsr append_setp16_string_from_x
-    jsr append_calln_print_line
-    ldy compare_char
-    iny
-    jmp append_live_call_lines_for_export_x_loop
-append_live_call_lines_for_export_x_printie:
-    iny
-    lda (body_ptr),y
-    cmp #'0'
-    bcc append_live_call_lines_for_export_x_bad
-    cmp #'7'+1
-    bcs append_live_call_lines_for_export_x_bad
-    sec
-    sbc #'0'
-    tax
-    tya
-    sta compare_char
-    jsr append_push16_int_from_x
-    jsr append_calln_printie_line
-    ldy compare_char
-    iny
-    jmp append_live_call_lines_for_export_x_loop
-append_live_call_lines_for_export_x_ret:
-    tya
-    sta compare_char
-    jsr append_ret_line
-    ldy compare_char
-    iny
-    jmp append_live_call_lines_for_export_x_loop
-append_live_call_lines_for_export_x_bad:
-    lda #<msg_bad_avo
-    ldy #>msg_bad_avo
-    jmp fail_with_ptr
-append_live_call_lines_for_export_x_done:
-    pla
-    tax
-    rts
-
-append_ret_line:
-    lda #<avm_txt_ret
-    sta const_ptr
-    lda #>avm_txt_ret
-    sta const_ptr+1
-    jsr append_const_ptr
-    jmp append_newline
-
-append_calln_print_line:
-    lda #<avm_txt_calln_print
-    sta const_ptr
-    lda #>avm_txt_calln_print
-    sta const_ptr+1
-    jsr append_const_ptr
-    jmp append_newline
-
-append_calln_printie_line:
-    lda #<avm_txt_calln_printie
-    sta const_ptr
-    lda #>avm_txt_calln_printie
-    sta const_ptr+1
-    jsr append_const_ptr
-    jmp append_newline
-
-append_push16_int_from_x:
-    txa
-    pha
-    lda #<avm_txt_push16_prefix
-    sta const_ptr
-    lda #>avm_txt_push16_prefix
-    sta const_ptr+1
-    jsr append_const_ptr
-    pla
-    tax
-    lda int_values_hi,x
-    bne append_live_call_lines_for_export_x_bad
-    lda int_values_lo,x
-    jsr append_small_decimal
-    jmp append_newline
-
-append_setp16_string_from_x:
-    txa
-    pha
-    lda #<avm_txt_setp16_prefix
-    sta const_ptr
-    lda #>avm_txt_setp16_prefix
-    sta const_ptr+1
-    jsr append_const_ptr
-    pla
-    tax
-    jsr append_module_string_label_from_x
-    jmp append_newline
-
-append_string_definition_from_x:
-    txa
-    pha
-    jsr append_module_string_label_from_x
-    lda #':'
-    jsr append_char
-    jsr append_newline
-    lda #<avm_txt_stringz_prefix
-    sta const_ptr
-    lda #>avm_txt_stringz_prefix
-    sta const_ptr+1
-    jsr append_const_ptr
-    pla
-    tax
-    txa
-    pha
-    jsr set_string_ptr_from_x
-    ldy #$00
-append_string_definition_value_loop:
-    lda (const_ptr),y
-    beq append_string_definition_value_done
-    jsr append_char
-    iny
-    bne append_string_definition_value_loop
-append_string_definition_value_done:
-    lda #<avm_txt_stringz_suffix
-    sta const_ptr
-    lda #>avm_txt_stringz_suffix
-    sta const_ptr+1
-    jsr append_const_ptr
-    jsr append_newline
-    pla
-    tax
-    rts
-
-append_module_string_label_from_x:
-    txa
-    pha
-    jsr append_module_symbol_lower
-    lda #'_'
-    jsr append_char
-    lda #'s'
-    jsr append_char
-    lda #'t'
-    jsr append_char
-    lda #'r'
-    jsr append_char
-    pla
-    jsr append_small_decimal
-    rts
-
-append_small_decimal:
-    cmp #10
-    bcc append_small_decimal_ones
-    ldx #$00
-append_small_decimal_tens_loop:
-    cmp #10
-    bcc append_small_decimal_tens_done
-    sec
-    sbc #10
-    inx
-    bne append_small_decimal_tens_loop
-append_small_decimal_tens_done:
-    pha
-    txa
-    clc
-    adc #'0'
-    jsr append_char
-    pla
-append_small_decimal_ones:
-    clc
-    adc #'0'
-    jmp append_char
 
 append_const_ptr:
     ldy #$00
@@ -1543,6 +1759,28 @@ lowercase_ascii_done:
 build_module_stub_content:
     rts
 
+save_source_buffer_to_target:
+    lda #<target_path
+    sta save_params+0
+    lda #>target_path
+    sta save_params+1
+    lda #<source_buffer
+    sta save_params+2
+    lda #>source_buffer
+    sta save_params+3
+    lda #tool_file_status_fail
+    sta save_params+4
+    ldx #save_params
+    jsr svc_file_save_sc0
+    lda save_params+4
+    cmp #tool_file_status_ok
+    beq save_source_buffer_to_target_ok
+    sec
+    rts
+save_source_buffer_to_target_ok:
+    clc
+    rts
+
 .include "../common/action_project_module_arg.inc"
 .include "../common/action_project_load.inc"
 .include "../common/action_project_load_guard.inc"
@@ -1617,24 +1855,10 @@ line_string:
 line_int:
     .byte "i ",0
 
-avm_txt_entry_prefix:
-    .byte "entry ",0
-avm_txt_call_prefix:
-    .byte "call ",0
-avm_txt_setp16_prefix:
-    .byte "setp16 ",0
-avm_txt_push16_prefix:
-    .byte "push16 ",0
-avm_txt_calln_print:
-    .byte "calln print",0
-avm_txt_calln_printie:
-    .byte "calln printie",0
-avm_txt_ret:
-    .byte "ret",0
-avm_txt_stringz_prefix:
-    .byte "stringz ",0
-avm_txt_stringz_suffix:
-    .byte 0
+avm_byte_entry_prefix:
+    .byte "entry 0",10,0
+avm_byte_db_prefix:
+    .byte "db ",0
 bit_masks:
     .byte $01,$02,$04,$08,$10,$20,$40,$80
 
@@ -1657,6 +1881,14 @@ export_offsets:
     .res 8
 proc_sizes:
     .res 8
+root_export_offsets_lo:
+    .res 8
+root_export_offsets_hi:
+    .res 8
+current_export_offsets_lo:
+    .res 8
+current_export_offsets_hi:
+    .res 8
 string_literals:
     .res 192
 string_count:
@@ -1667,6 +1899,14 @@ saved_string_count:
     .res 1
 payload_bytes_data:
     .res 1
+root_string_offsets_lo:
+    .res 8
+root_string_offsets_hi:
+    .res 8
+current_string_offsets_lo:
+    .res 8
+current_string_offsets_hi:
+    .res 8
 live_flags:
     .res 8
 string_use_mask:
@@ -1683,6 +1923,10 @@ external_count:
     .res 1
 pending_count:
     .res 1
+pending_offsets_lo:
+    .res PENDING_SYMBOL_MAX
+pending_offsets_hi:
+    .res PENDING_SYMBOL_MAX
 symbol_buffer:
     .res 25
 manifest_buffer:

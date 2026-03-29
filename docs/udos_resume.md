@@ -94,25 +94,19 @@ They are exported into `ACTION.DNP` root and `BIN/`.
   import list is inferred from simple source-pattern scanning, not a full
   parser or code generator.
 - `ALINK.PRG` is now the first UDOS-native linker slice. The current proof
-  loads a deterministic `OBJ/<NAME>.AVO` object stub, parses its export, body,
-  import, payload, and unresolved external symbol metadata, uses
-  compiler-emitted export offset/size triplets instead of inferring procedure
-  spans from the payload shape, seeds the local live set from the module entry
-  proc instead of assuming export slot `0`, propagates the local body-op call
-  graph, resolves the current small runtime closure, and emits
-  `BIN/<NAME>.AVMTXT` on the host fs tree as symbolic AVM text: `entry main`,
-  emitted labels, `call`, and `ret` directives reconstructed from `body_ops`
-  instead of copied `payload_hex`. The current focused proof also resolves a
-  small unresolved external closure by loading secondary objects, emitting
-  their live code into the symbolic image before literal data, and carrying
-  child-object integer and string literal pools through to the linked text.
-  The focused headless VICE proof is green through
-  `make vice-action-alink`, with host-side verification that
+  loads deterministic `OBJ/<NAME>.AVO` object stubs, parses export, body,
+  payload, and unresolved external symbol metadata, uses compiler-emitted
+  export offset/size triplets instead of inferring procedure spans from the
+  payload shape, seeds the local live set from the module entry proc instead
+  of assuming export slot `0`, propagates the local body-op call graph,
+  resolves the current widened small-object closure, and emits
+  `BIN/<NAME>.AVMTXT` on the host fs tree as deterministic AVM byte text:
+  `entry 0` plus a `db $..` payload line. The focused headless VICE proof is
+  green through `make vice-action-alink`, with host-side verification that
   `avm_pack.py --text --flags 1` packs the emitted text into the exact
   expected `AVM1` bytes and that an unused local export is stripped from the
-  final image. A dead-code cleanup dropped the current `ALINK.PRG` footprint
-  to `3604` bytes while keeping that proof green. It is still not a full
-  object merger or direct on-target binary emitter.
+  final image. The current `ALINK.PRG` footprint is `3979` bytes. It is still
+  not a full object merger or direct on-target binary emitter.
 - `ACTFLOW.BAT` is the first composite workspace flow proof. It exercises the
   preserved UDOS file write/copy/move/delete services through the existing
   Action-side proof tools, prints `ACTFLOW OK`, and returns to the prompt.

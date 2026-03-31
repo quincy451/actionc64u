@@ -333,14 +333,16 @@ collect_proc_body_ops_after_space_check:
 : 
     lda current_proc_index_data
     cmp #$FF
-    beq collect_proc_body_ops_skip_line
+    bne :+
+    jmp collect_proc_body_ops_skip_line
+: 
 
     lda #<pattern_print_quote
     sta const_ptr
     lda #>pattern_print_quote
     sta const_ptr+1
     jsr pattern_matches_scan_ptr
-    bcs collect_proc_body_ops_try_printie
+    bcs collect_proc_body_ops_try_printe
     jsr advance_scan_ptr_by_const_ptr
     lda #$12
     sta ACTC_TRACE
@@ -354,21 +356,61 @@ collect_proc_body_ops_after_space_check:
     jsr append_body_op_for_current_proc
     jmp collect_proc_body_ops_skip_line
 
+collect_proc_body_ops_try_printe:
+    lda #<pattern_printe_quote
+    sta const_ptr
+    lda #>pattern_printe_quote
+    sta const_ptr+1
+    jsr pattern_matches_scan_ptr
+    bcs collect_proc_body_ops_try_printie
+    jsr advance_scan_ptr_by_const_ptr
+    lda #$14
+    sta ACTC_TRACE
+    jsr store_string_literal_from_scan_ptr
+    bcc :+
+    jmp collect_proc_body_ops_bad_literal
+: 
+    lda #$15
+    sta ACTC_TRACE
+    lda #'e'
+    jsr append_body_op_for_current_proc
+    jmp collect_proc_body_ops_skip_line
+
 collect_proc_body_ops_try_printie:
     lda #<pattern_printie
     sta const_ptr
     lda #>pattern_printie
     sta const_ptr+1
     jsr pattern_matches_scan_ptr
+    bcs collect_proc_body_ops_try_printi
+    jsr advance_scan_ptr_by_const_ptr
+    lda #$16
+    sta ACTC_TRACE
+    jsr store_small_decimal_literal_from_scan_ptr
+    bcc :+
+    jmp collect_proc_body_ops_bad_literal
+: 
+    lda #$17
+    sta ACTC_TRACE
+    lda #'i'
+    jsr append_body_op_for_current_proc
+    jmp collect_proc_body_ops_skip_line
+
+collect_proc_body_ops_try_printi:
+    lda #<pattern_printi
+    sta const_ptr
+    lda #>pattern_printi
+    sta const_ptr+1
+    jsr pattern_matches_scan_ptr
     bcs collect_proc_body_ops_try_local_call
     jsr advance_scan_ptr_by_const_ptr
-    lda #$14
+    lda #$18
     sta ACTC_TRACE
     jsr store_small_decimal_literal_from_scan_ptr
     bcs collect_proc_body_ops_bad_literal
-    lda #$15
+    lda #$19
     sta ACTC_TRACE
-    lda #'i'
+    lda #'j'
     jsr append_body_op_for_current_proc
     jmp collect_proc_body_ops_skip_line
 
@@ -583,7 +625,11 @@ compute_payload_layout_body_loop:
     beq compute_payload_layout_add_call
     cmp #'s'
     beq compute_payload_layout_add_string
+    cmp #'e'
+    beq compute_payload_layout_add_string
     cmp #'i'
+    beq compute_payload_layout_add_int
+    cmp #'j'
     beq compute_payload_layout_add_int
     jmp compute_payload_layout_bad
 compute_payload_layout_add_call:
@@ -1320,6 +1366,8 @@ pattern_proc:
     .asciiz "PROC"
 pattern_print_quote:
     .byte "PRINT(",34,0
+pattern_printe_quote:
+    .byte "PRINTE(",34,0
 pattern_print:
     .asciiz "PRINT("
 pattern_printe:

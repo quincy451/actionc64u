@@ -580,7 +580,9 @@ store_small_decimal_literal_from_scan_ptr_fail:
 parse_small_decimal_expr_at_scan_y:
     jsr skip_inline_spaces_at_scan_y
     jsr parse_small_decimal_sum_at_scan_y
-    bcs parse_small_decimal_expr_at_scan_y_fail
+    bcc parse_small_decimal_expr_lhs_ok
+    jmp parse_small_decimal_expr_at_scan_y_fail
+parse_small_decimal_expr_lhs_ok:
     lda expr_value_lo
     sta expr_compare_lo
     jsr skip_inline_spaces_at_scan_y
@@ -588,9 +590,9 @@ parse_small_decimal_expr_at_scan_y:
     cmp #'='
     beq parse_small_decimal_expr_eq
     cmp #'<'
-    beq parse_small_decimal_expr_lt
+    beq parse_small_decimal_expr_lt_entry
     cmp #'>'
-    beq parse_small_decimal_expr_gt
+    beq parse_small_decimal_expr_gt_entry
     lda expr_compare_lo
     sta expr_value_lo
     clc
@@ -599,30 +601,93 @@ parse_small_decimal_expr_at_scan_y:
 parse_small_decimal_expr_eq:
     iny
     jsr parse_small_decimal_sum_at_scan_y
-    bcs parse_small_decimal_expr_at_scan_y_fail
+    bcc parse_small_decimal_expr_eq_ok
+    jmp parse_small_decimal_expr_at_scan_y_fail
+parse_small_decimal_expr_eq_ok:
     lda expr_compare_lo
     cmp expr_value_lo
-    beq parse_small_decimal_expr_true
-    bne parse_small_decimal_expr_false
+    beq parse_small_decimal_expr_eq_true
+    jmp parse_small_decimal_expr_false
+parse_small_decimal_expr_eq_true:
+    jmp parse_small_decimal_expr_true
 
-parse_small_decimal_expr_lt:
+parse_small_decimal_expr_lt_entry:
+    iny
+    lda (scan_ptr),y
+    cmp #'='
+    beq parse_small_decimal_expr_le
+    cmp #'>'
+    beq parse_small_decimal_expr_ne
+    jsr parse_small_decimal_sum_at_scan_y
+    bcc parse_small_decimal_expr_lt_ok
+    jmp parse_small_decimal_expr_at_scan_y_fail
+parse_small_decimal_expr_lt_ok:
+    lda expr_compare_lo
+    cmp expr_value_lo
+    bcc parse_small_decimal_expr_lt_true
+    jmp parse_small_decimal_expr_false
+parse_small_decimal_expr_lt_true:
+    jmp parse_small_decimal_expr_true
+
+parse_small_decimal_expr_gt_entry:
+    iny
+    lda (scan_ptr),y
+    cmp #'='
+    beq parse_small_decimal_expr_ge
+    jsr parse_small_decimal_sum_at_scan_y
+    bcc parse_small_decimal_expr_gt_ok
+    jmp parse_small_decimal_expr_at_scan_y_fail
+parse_small_decimal_expr_gt_ok:
+    lda expr_compare_lo
+    cmp expr_value_lo
+    beq parse_small_decimal_expr_gt_false
+    bcs parse_small_decimal_expr_gt_true
+    jmp parse_small_decimal_expr_false
+parse_small_decimal_expr_gt_true:
+    jmp parse_small_decimal_expr_true
+parse_small_decimal_expr_gt_false:
+    jmp parse_small_decimal_expr_false
+
+parse_small_decimal_expr_le:
     iny
     jsr parse_small_decimal_sum_at_scan_y
-    bcs parse_small_decimal_expr_at_scan_y_fail
+    bcc parse_small_decimal_expr_le_ok
+    jmp parse_small_decimal_expr_at_scan_y_fail
+parse_small_decimal_expr_le_ok:
     lda expr_compare_lo
     cmp expr_value_lo
-    bcc parse_small_decimal_expr_true
-    bcs parse_small_decimal_expr_false
+    beq parse_small_decimal_expr_le_true
+    bcc parse_small_decimal_expr_le_true
+    jmp parse_small_decimal_expr_false
+parse_small_decimal_expr_le_true:
+    jmp parse_small_decimal_expr_true
 
-parse_small_decimal_expr_gt:
+parse_small_decimal_expr_ge:
     iny
     jsr parse_small_decimal_sum_at_scan_y
-    bcs parse_small_decimal_expr_at_scan_y_fail
+    bcc parse_small_decimal_expr_ge_ok
+    jmp parse_small_decimal_expr_at_scan_y_fail
+parse_small_decimal_expr_ge_ok:
     lda expr_compare_lo
     cmp expr_value_lo
-    beq parse_small_decimal_expr_false
-    bcs parse_small_decimal_expr_true
-    bcc parse_small_decimal_expr_false
+    beq parse_small_decimal_expr_ge_true
+    bcs parse_small_decimal_expr_ge_true
+    jmp parse_small_decimal_expr_false
+parse_small_decimal_expr_ge_true:
+    jmp parse_small_decimal_expr_true
+
+parse_small_decimal_expr_ne:
+    iny
+    jsr parse_small_decimal_sum_at_scan_y
+    bcc parse_small_decimal_expr_ne_ok
+    jmp parse_small_decimal_expr_at_scan_y_fail
+parse_small_decimal_expr_ne_ok:
+    lda expr_compare_lo
+    cmp expr_value_lo
+    beq parse_small_decimal_expr_ne_false
+    jmp parse_small_decimal_expr_true
+parse_small_decimal_expr_ne_false:
+    jmp parse_small_decimal_expr_false
 
 parse_small_decimal_expr_done:
     lda expr_compare_lo

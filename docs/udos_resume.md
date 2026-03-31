@@ -82,7 +82,8 @@ They are exported into `ACTION.DNP` root and `BIN/`.
   `PROC` exports, scans the loaded source text for the current runtime-call
   marker set, folds the current narrow decimal `PrintI` / `PrintIE`
   `+` / `-` / `*` / `/` expressions with inline spaces, simple precedence,
-  parenthesized grouping, and simple `=` / `<` / `>` comparisons before
+  parenthesized grouping, and simple `=` / `<` / `>` / `<=` / `>=` / `<>`
+  comparisons before
   object emission, and emits a
   deterministic `OBJ/<NAME>.AVO` text object stub with `AVO1`,
   module/export/call/import metadata where each export carries compiled offset

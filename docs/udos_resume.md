@@ -81,7 +81,7 @@ They are exported into `ACTION.DNP` root and `BIN/`.
   `MODULE` header matches the requested module name, extracts top-level
   `PROC` exports, scans the loaded source text for the current runtime-call
   marker set, folds the current narrow decimal `PrintI` / `PrintIE` `+` / `-`
-  expressions before object emission, and emits a
+  expression chains with inline spaces before object emission, and emits a
   deterministic `OBJ/<NAME>.AVO` text object stub with `AVO1`,
   module/export/call/import metadata where each export carries compiled offset
   and size, plus compiler-emitted `body_ops` and a minimal local control-flow
@@ -101,16 +101,17 @@ They are exported into `ACTION.DNP` root and `BIN/`.
   payload shape, seeds the local live set from the module entry proc instead
   of assuming export slot `0`, propagates the local body-op call graph,
   resolves the current widened small-object closure, and emits
-  `BIN/<NAME>.AVMTXT` on the host fs tree as compact AVM byte text:
-  `entry 0`, `code $..`, and `hex ...`. The focused headless VICE proof is
-  green through `make vice-action-alink`, with host-side verification that
-  `avm_pack.py --text --flags 1` packs the emitted text into the exact
-  expected `AVM1` bytes and that an unused local export is stripped from the
-  final image. The direct typed `make vice-action-alink-avmrun` proof is now
-  also green and executes the emitted artifact through `AVMRUN.PRG`, printing
-  `HELLOTOOL7` and `42` before returning to the UDOS prompt. The current
-  `ALINK.PRG` footprint is `4137` bytes. It is still not a full object merger
-  or direct on-target binary emitter.
+  `BIN/<NAME>.AVM` on the host fs tree as direct binary `AVM1`. The focused
+  headless VICE proof is green through `make vice-action-alink`, with
+  host-side verification of the exact emitted `AVM1` bytes and proof that an
+  unused local export is stripped from the final image. The direct typed
+  `make vice-action-alink-avmrun` proof is now also green and executes the
+  emitted artifact through `AVMRUN.PRG`, printing `HELLOWORLD`, `TOOL7`, and
+  `12342` before returning to the UDOS prompt. The integrated typed
+  `make vice-action-actc-alink-avmrun` proof is also green and runs a real
+  compiled `MAIN.ACT` object through `ALINK` and `AVMRUN`, printing `HELLO`,
+  `TOOL7`, and `12455`. The current `ALINK.PRG` slice is still a narrow
+  object/link pipeline rather than a full historical Action code generator.
 - `ACTFLOW.BAT` is the first composite workspace flow proof. It exercises the
   preserved UDOS file write/copy/move/delete services through the existing
   Action-side proof tools, prints `ACTFLOW OK`, and returns to the prompt.

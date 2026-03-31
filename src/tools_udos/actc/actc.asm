@@ -578,17 +578,20 @@ store_small_decimal_literal_from_scan_ptr_fail:
     rts
 
 parse_small_decimal_expr_at_scan_y:
+    jsr skip_inline_spaces_at_scan_y
     jsr parse_small_decimal_at_scan_y
     bcs parse_small_decimal_expr_at_scan_y_fail
     lda expr_value_lo
     sta expr_saved_lo
+parse_small_decimal_expr_loop:
+    jsr skip_inline_spaces_at_scan_y
     lda (scan_ptr),y
     cmp #'+'
     beq parse_small_decimal_expr_add
     cmp #'-'
     beq parse_small_decimal_expr_sub
     cmp #')'
-    beq parse_small_decimal_expr_single
+    beq parse_small_decimal_expr_done
     bne parse_small_decimal_expr_at_scan_y_fail
 
 parse_small_decimal_expr_add:
@@ -599,12 +602,8 @@ parse_small_decimal_expr_add:
     clc
     adc expr_value_lo
     bcs parse_small_decimal_expr_at_scan_y_fail
-    sta expr_value_lo
-    lda (scan_ptr),y
-    cmp #')'
-    bne parse_small_decimal_expr_at_scan_y_fail
-    clc
-    rts
+    sta expr_saved_lo
+    jmp parse_small_decimal_expr_loop
 
 parse_small_decimal_expr_sub:
     iny
@@ -614,14 +613,10 @@ parse_small_decimal_expr_sub:
     sec
     sbc expr_value_lo
     bcc parse_small_decimal_expr_at_scan_y_fail
-    sta expr_value_lo
-    lda (scan_ptr),y
-    cmp #')'
-    bne parse_small_decimal_expr_at_scan_y_fail
-    clc
-    rts
+    sta expr_saved_lo
+    jmp parse_small_decimal_expr_loop
 
-parse_small_decimal_expr_single:
+parse_small_decimal_expr_done:
     lda expr_saved_lo
     sta expr_value_lo
     clc
@@ -632,6 +627,7 @@ parse_small_decimal_expr_at_scan_y_fail:
     rts
 
 parse_small_decimal_at_scan_y:
+    jsr skip_inline_spaces_at_scan_y
     lda #$00
     sta expr_value_lo
     sta expr_digit_count
@@ -668,6 +664,18 @@ parse_small_decimal_at_scan_y_done_check:
     rts
 parse_small_decimal_at_scan_y_fail:
     sec
+    rts
+
+skip_inline_spaces_at_scan_y:
+    lda (scan_ptr),y
+    cmp #' '
+    beq skip_inline_spaces_at_scan_y_advance
+    cmp #9
+    beq skip_inline_spaces_at_scan_y_advance
+    rts
+skip_inline_spaces_at_scan_y_advance:
+    iny
+    bne skip_inline_spaces_at_scan_y
     rts
 
 compute_payload_layout:

@@ -579,50 +579,125 @@ store_small_decimal_literal_from_scan_ptr_fail:
 
 parse_small_decimal_expr_at_scan_y:
     jsr skip_inline_spaces_at_scan_y
-    jsr parse_small_decimal_term_at_scan_y
+    jsr parse_small_decimal_sum_at_scan_y
     bcs parse_small_decimal_expr_at_scan_y_fail
     lda expr_value_lo
-    sta expr_saved_lo
-parse_small_decimal_expr_loop:
+    sta expr_compare_lo
     jsr skip_inline_spaces_at_scan_y
     lda (scan_ptr),y
-    cmp #'+'
-    beq parse_small_decimal_expr_add
-    cmp #'-'
-    beq parse_small_decimal_expr_sub
-    cmp #')'
-    beq parse_small_decimal_expr_done
-    bne parse_small_decimal_expr_at_scan_y_fail
-
-parse_small_decimal_expr_add:
-    iny
-    jsr parse_small_decimal_term_at_scan_y
-    bcs parse_small_decimal_expr_at_scan_y_fail
-    lda expr_saved_lo
+    cmp #'='
+    beq parse_small_decimal_expr_eq
+    cmp #'<'
+    beq parse_small_decimal_expr_lt
+    cmp #'>'
+    beq parse_small_decimal_expr_gt
+    lda expr_compare_lo
+    sta expr_value_lo
     clc
-    adc expr_value_lo
-    bcs parse_small_decimal_expr_at_scan_y_fail
-    sta expr_saved_lo
-    jmp parse_small_decimal_expr_loop
+    rts
 
-parse_small_decimal_expr_sub:
+parse_small_decimal_expr_eq:
     iny
-    jsr parse_small_decimal_term_at_scan_y
+    jsr parse_small_decimal_sum_at_scan_y
     bcs parse_small_decimal_expr_at_scan_y_fail
-    lda expr_saved_lo
-    sec
-    sbc expr_value_lo
-    bcc parse_small_decimal_expr_at_scan_y_fail
-    sta expr_saved_lo
-    jmp parse_small_decimal_expr_loop
+    lda expr_compare_lo
+    cmp expr_value_lo
+    beq parse_small_decimal_expr_true
+    bne parse_small_decimal_expr_false
+
+parse_small_decimal_expr_lt:
+    iny
+    jsr parse_small_decimal_sum_at_scan_y
+    bcs parse_small_decimal_expr_at_scan_y_fail
+    lda expr_compare_lo
+    cmp expr_value_lo
+    bcc parse_small_decimal_expr_true
+    bcs parse_small_decimal_expr_false
+
+parse_small_decimal_expr_gt:
+    iny
+    jsr parse_small_decimal_sum_at_scan_y
+    bcs parse_small_decimal_expr_at_scan_y_fail
+    lda expr_compare_lo
+    cmp expr_value_lo
+    beq parse_small_decimal_expr_false
+    bcs parse_small_decimal_expr_true
+    bcc parse_small_decimal_expr_false
 
 parse_small_decimal_expr_done:
-    lda expr_saved_lo
+    lda expr_compare_lo
+    sta expr_value_lo
+    clc
+    rts
+
+parse_small_decimal_expr_true:
+    lda #$01
+    sta expr_value_lo
+    clc
+    rts
+
+parse_small_decimal_expr_false:
+    lda #$00
     sta expr_value_lo
     clc
     rts
 
 parse_small_decimal_expr_at_scan_y_fail:
+    sec
+    rts
+
+parse_small_decimal_sum_at_scan_y:
+    jsr skip_inline_spaces_at_scan_y
+    jsr parse_small_decimal_term_at_scan_y
+    bcs parse_small_decimal_sum_at_scan_y_fail
+    lda expr_value_lo
+    sta expr_saved_lo
+parse_small_decimal_sum_loop:
+    jsr skip_inline_spaces_at_scan_y
+    lda (scan_ptr),y
+    cmp #'+'
+    beq parse_small_decimal_sum_add
+    cmp #'-'
+    beq parse_small_decimal_sum_sub
+    cmp #')'
+    beq parse_small_decimal_sum_done
+    cmp #'='
+    beq parse_small_decimal_sum_done
+    cmp #'<'
+    beq parse_small_decimal_sum_done
+    cmp #'>'
+    beq parse_small_decimal_sum_done
+    bne parse_small_decimal_sum_at_scan_y_fail
+
+parse_small_decimal_sum_add:
+    iny
+    jsr parse_small_decimal_term_at_scan_y
+    bcs parse_small_decimal_sum_at_scan_y_fail
+    lda expr_saved_lo
+    clc
+    adc expr_value_lo
+    bcs parse_small_decimal_sum_at_scan_y_fail
+    sta expr_saved_lo
+    jmp parse_small_decimal_sum_loop
+
+parse_small_decimal_sum_sub:
+    iny
+    jsr parse_small_decimal_term_at_scan_y
+    bcs parse_small_decimal_sum_at_scan_y_fail
+    lda expr_saved_lo
+    sec
+    sbc expr_value_lo
+    bcc parse_small_decimal_sum_at_scan_y_fail
+    sta expr_saved_lo
+    jmp parse_small_decimal_sum_loop
+
+parse_small_decimal_sum_done:
+    lda expr_saved_lo
+    sta expr_value_lo
+    clc
+    rts
+
+parse_small_decimal_sum_at_scan_y_fail:
     sec
     rts
 
@@ -1607,6 +1682,8 @@ current_proc_index_data:
 extern_count_data:
     .res 1
 expr_saved_lo:
+    .res 1
+expr_compare_lo:
     .res 1
 expr_term_lo:
     .res 1

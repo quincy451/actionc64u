@@ -80,8 +80,9 @@ They are exported into `ACTION.DNP` root and `BIN/`.
   corresponding `SRC/<NAME>.ACT` source exists, checks that the source
   `MODULE` header matches the requested module name, extracts top-level
   `PROC` exports, scans the loaded source text for the current runtime-call
-  marker set, folds the current narrow decimal `PrintI` / `PrintIE` `+` / `-`
-  expression chains with inline spaces before object emission, and emits a
+  marker set, folds the current narrow decimal `PrintI` / `PrintIE`
+  `+` / `-` / `*` / `/` expressions with inline spaces and simple precedence
+  before object emission, and emits a
   deterministic `OBJ/<NAME>.AVO` text object stub with `AVO1`,
   module/export/call/import metadata where each export carries compiled offset
   and size, plus compiler-emitted `body_ops` and a minimal local control-flow
@@ -110,7 +111,7 @@ They are exported into `ACTION.DNP` root and `BIN/`.
   `12342` before returning to the UDOS prompt. The integrated typed
   `make vice-action-actc-alink-avmrun` proof is also green and runs a real
   compiled `MAIN.ACT` object through `ALINK` and `AVMRUN`, printing `HELLO`,
-  `TOOL7`, and `12455`. The current `ALINK.PRG` slice is still a narrow
+  `TOOL7`, and `12457`. The current `ALINK.PRG` slice is still a narrow
   object/link pipeline rather than a full historical Action code generator.
 - `ACTFLOW.BAT` is the first composite workspace flow proof. It exercises the
   preserved UDOS file write/copy/move/delete services through the existing

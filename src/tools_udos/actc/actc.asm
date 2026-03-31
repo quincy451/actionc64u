@@ -579,7 +579,7 @@ store_small_decimal_literal_from_scan_ptr_fail:
 
 parse_small_decimal_expr_at_scan_y:
     jsr skip_inline_spaces_at_scan_y
-    jsr parse_small_decimal_at_scan_y
+    jsr parse_small_decimal_term_at_scan_y
     bcs parse_small_decimal_expr_at_scan_y_fail
     lda expr_value_lo
     sta expr_saved_lo
@@ -596,7 +596,7 @@ parse_small_decimal_expr_loop:
 
 parse_small_decimal_expr_add:
     iny
-    jsr parse_small_decimal_at_scan_y
+    jsr parse_small_decimal_term_at_scan_y
     bcs parse_small_decimal_expr_at_scan_y_fail
     lda expr_saved_lo
     clc
@@ -607,7 +607,7 @@ parse_small_decimal_expr_add:
 
 parse_small_decimal_expr_sub:
     iny
-    jsr parse_small_decimal_at_scan_y
+    jsr parse_small_decimal_term_at_scan_y
     bcs parse_small_decimal_expr_at_scan_y_fail
     lda expr_saved_lo
     sec
@@ -623,6 +623,70 @@ parse_small_decimal_expr_done:
     rts
 
 parse_small_decimal_expr_at_scan_y_fail:
+    sec
+    rts
+
+parse_small_decimal_term_at_scan_y:
+    jsr skip_inline_spaces_at_scan_y
+    jsr parse_small_decimal_at_scan_y
+    bcs parse_small_decimal_term_at_scan_y_fail
+    lda expr_value_lo
+    sta expr_term_lo
+parse_small_decimal_term_loop:
+    jsr skip_inline_spaces_at_scan_y
+    lda (scan_ptr),y
+    cmp #'*'
+    beq parse_small_decimal_term_mul
+    cmp #'/'
+    beq parse_small_decimal_term_div
+    lda expr_term_lo
+    sta expr_value_lo
+    clc
+    rts
+
+parse_small_decimal_term_mul:
+    iny
+    jsr parse_small_decimal_at_scan_y
+    bcs parse_small_decimal_term_at_scan_y_fail
+    lda expr_term_lo
+    sta compare_char
+    lda expr_value_lo
+    sta hex_work
+    lda #$00
+    sta expr_term_lo
+parse_small_decimal_term_mul_loop:
+    lda hex_work
+    beq parse_small_decimal_term_loop
+    dec hex_work
+    lda expr_term_lo
+    clc
+    adc compare_char
+    bcs parse_small_decimal_term_at_scan_y_fail
+    sta expr_term_lo
+    jmp parse_small_decimal_term_mul_loop
+
+parse_small_decimal_term_div:
+    iny
+    jsr parse_small_decimal_at_scan_y
+    bcs parse_small_decimal_term_at_scan_y_fail
+    lda expr_value_lo
+    beq parse_small_decimal_term_at_scan_y_fail
+    sta hex_work
+    lda expr_term_lo
+    sta compare_char
+    lda #$00
+    sta expr_term_lo
+parse_small_decimal_term_div_loop:
+    lda compare_char
+    cmp hex_work
+    bcc parse_small_decimal_term_loop
+    sec
+    sbc hex_work
+    sta compare_char
+    inc expr_term_lo
+    bne parse_small_decimal_term_div_loop
+
+parse_small_decimal_term_at_scan_y_fail:
     sec
     rts
 
@@ -1520,6 +1584,8 @@ current_proc_index_data:
 extern_count_data:
     .res 1
 expr_saved_lo:
+    .res 1
+expr_term_lo:
     .res 1
 expr_value_lo:
     .res 1

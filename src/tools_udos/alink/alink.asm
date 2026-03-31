@@ -2,9 +2,10 @@
 
 .export start
 
+ALINK_TRACE = $03FC
+
 MANIFEST_LIMIT = 191
 SOURCE_LIMIT = 255
-ALINK_TRACE = $03FC
 AVM_VERSION = 2
 AVM_FLAG_ACHERON = 1
 AVM_HEADER_SIZE = 12
@@ -65,14 +66,8 @@ start:
     jsr parse_ints_or_fail
     jsr compute_code_bytes
     jsr build_live_set
-    lda #$10
-    sta ALINK_TRACE
     jsr build_avm_binary_content_or_fail
-    lda #$1E
-    sta ALINK_TRACE
     jsr build_avm_binary_target_path
-    lda #$1F
-    sta ALINK_TRACE
     jsr save_source_buffer_to_target
     bcc save_ok
     lda #<msg_save_fail
@@ -1187,8 +1182,6 @@ emit_external_object_code_from_x_or_fail:
 
 emit_external_object_strings_from_x_or_fail:
     stx $03FD
-    lda #$1A
-    sta ALINK_TRACE
     txa
     pha
     jsr save_module_name
@@ -1206,28 +1199,40 @@ emit_external_object_strings_from_x_or_fail:
     sta main_flags_hi
     pla
     sta main_flags_lo
-    lda #$1B
-    sta ALINK_TRACE
     pla
     tax
     lda pending_string_use_masks,x
     sta string_use_mask
     jsr emit_current_object_strings_or_fail
-    lda #$1C
-    sta ALINK_TRACE
     jmp restore_module_name
 
 load_current_object_link_state_or_fail:
+    lda #$25
+    sta ALINK_TRACE
     jsr build_object_target_path
     jsr load_object_or_fail
+    lda #$26
+    sta ALINK_TRACE
     jsr require_loaded_source_not_truncated_or_fail
     jsr require_avo1_header_or_fail
     jsr parse_exports_or_fail
+    lda #$27
+    sta ALINK_TRACE
     jsr parse_body_ops_or_fail
+    lda #$28
+    sta ALINK_TRACE
     jsr parse_external_symbols_or_fail
+    lda #$29
+    sta ALINK_TRACE
     jsr parse_strings_or_fail
+    lda #$2A
+    sta ALINK_TRACE
     jsr parse_ints_or_fail
+    lda #$2B
+    sta ALINK_TRACE
     jsr compute_code_bytes
+    lda #$2C
+    sta ALINK_TRACE
     jmp build_live_set
 
 emit_current_object_code_or_fail:
@@ -1451,6 +1456,8 @@ load_export_target_offset_from_x_or_fail:
     rts
 
 load_string_target_offset_from_x_or_fail:
+    tya
+    pha
     lda save_mode
     beq :+
     stx compare_char
@@ -1477,11 +1484,15 @@ load_string_target_offset_pending_next:
     bne load_string_target_offset_pending_loop
 load_string_target_offset_pending_done:
     ldx compare_char
+    pla
+    tay
     rts
 :   lda root_string_offsets_lo,x
     sta current_bit_lo
     lda root_string_offsets_hi,x
     sta current_bit_hi
+    pla
+    tay
     rts
 
 load_pending_offset_for_external_x_or_fail:

@@ -11,6 +11,7 @@ build_object_target_path:
 build_object_target_path_loop:
     lda module_name,y
     beq build_object_target_path_suffix
+    jsr normalize_module_arg_char
     sta target_path+4,y
     iny
     bne build_object_target_path_loop

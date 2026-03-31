@@ -1218,8 +1218,16 @@ append_newline:
     jmp append_char
 
 append_small_decimal:
-    cmp #10
-    bcc append_small_decimal_ones
+    ldx #$00
+append_small_decimal_hundreds_loop:
+    cmp #100
+    bcc append_small_decimal_tens_prep
+    sec
+    sbc #100
+    inx
+    bne append_small_decimal_hundreds_loop
+append_small_decimal_tens_prep:
+    stx compare_char
     ldx #$00
 append_small_decimal_tens_loop:
     cmp #10
@@ -1231,11 +1239,20 @@ append_small_decimal_tens_loop:
 append_small_decimal_tens_done:
     pha
     txa
+    pha
+    lda compare_char
+    beq append_small_decimal_emit_tens
     clc
     adc #'0'
     jsr append_char
+append_small_decimal_emit_tens:
     pla
-append_small_decimal_ones:
+    beq append_small_decimal_ones_pop
+    clc
+    adc #'0'
+    jsr append_char
+append_small_decimal_ones_pop:
+    pla
     clc
     adc #'0'
     jmp append_char

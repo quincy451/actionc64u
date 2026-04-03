@@ -1031,6 +1031,7 @@ patch_payload_fail:
 interpret_payload:
     lda #$00
     sta interp_sp
+    sta interp_rsp
     lda entry_ptr
     sta scan_ptr
     lda entry_ptr+1
@@ -1085,6 +1086,12 @@ interpret_payload_loop:
 :   cmp #OPCODE_SETP16
     bne :+
     jmp interpret_setp16
+:   cmp #OPCODE_CALL
+    bne :+
+    jmp interpret_call
+:   cmp #OPCODE_RET
+    bne :+
+    jmp interpret_ret
 :   cmp #OPCODE_CALLN
     bne :+
     jmp interpret_calln
@@ -1221,15 +1228,59 @@ interpret_setp16:
     iny
     lda (scan_ptr),y
     sta word_tmp+1
-    clc
-    lda payload_ptr
-    adc word_tmp
+    jsr interpret_resolve_word_tmp_to_absolute
+    bcc :+
+    jmp interpret_payload_fail
+:   lda word_tmp
     sta interp_string_ptr
-    lda payload_ptr+1
-    adc word_tmp+1
+    lda word_tmp+1
     sta interp_string_ptr+1
     lda #$03
     jsr advance_scan_ptr
+    jmp interpret_payload_loop
+
+interpret_call:
+    jsr ensure_scan_room_3
+    bcc :+
+    jmp interpret_payload_fail
+:   lda interp_rsp
+    cmp #INTERP_STACK_MAX
+    bcc :+
+    jmp interpret_payload_fail
+:   ldx interp_rsp
+    clc
+    lda scan_ptr
+    adc #$03
+    sta interp_rstack_lo,x
+    lda scan_ptr+1
+    adc #$00
+    sta interp_rstack_hi,x
+    inc interp_rsp
+    ldy #$01
+    lda (scan_ptr),y
+    sta word_tmp
+    iny
+    lda (scan_ptr),y
+    sta word_tmp+1
+    jsr interpret_resolve_word_tmp_to_absolute
+    bcc :+
+    jmp interpret_payload_fail
+:   lda word_tmp
+    sta scan_ptr
+    lda word_tmp+1
+    sta scan_ptr+1
+    jmp interpret_payload_loop
+
+interpret_ret:
+    lda interp_rsp
+    bne :+
+    jmp interpret_payload_done
+:   dec interp_rsp
+    ldx interp_rsp
+    lda interp_rstack_lo,x
+    sta scan_ptr
+    lda interp_rstack_hi,x
+    sta scan_ptr+1
     jmp interpret_payload_loop
 
 interpret_calln:
@@ -1244,39 +1295,69 @@ interpret_calln:
     sta word_tmp+1
     lda word_tmp
     cmp #<INTRINSIC_PRINT
-    bne interpret_calln_check_printe
+    bne :+
     lda word_tmp+1
     cmp #>INTRINSIC_PRINT
+    beq interpret_calln_print
+:   lda word_tmp
+    cmp #<native_print
+    bne interpret_calln_check_printe
+    lda word_tmp+1
+    cmp #>native_print
     beq interpret_calln_print
 interpret_calln_check_printe:
     lda word_tmp
     cmp #<INTRINSIC_PRINTE
-    bne interpret_calln_check_printi
+    bne :+
     lda word_tmp+1
     cmp #>INTRINSIC_PRINTE
+    beq interpret_calln_printe
+:   lda word_tmp
+    cmp #<native_printe
+    bne interpret_calln_check_printi
+    lda word_tmp+1
+    cmp #>native_printe
     beq interpret_calln_printe
 interpret_calln_check_printi:
     lda word_tmp
     cmp #<INTRINSIC_PRINTI
-    bne interpret_calln_check_printie
+    bne :+
     lda word_tmp+1
     cmp #>INTRINSIC_PRINTI
+    beq interpret_calln_printi
+:   lda word_tmp
+    cmp #<native_printi
+    bne interpret_calln_check_printie
+    lda word_tmp+1
+    cmp #>native_printi
     beq interpret_calln_printi
 interpret_calln_check_printie:
     lda word_tmp
     cmp #<INTRINSIC_PRINTIE
-    bne interpret_calln_check_exit
+    bne :+
     lda word_tmp+1
     cmp #>INTRINSIC_PRINTIE
+    beq interpret_calln_printie
+:   lda word_tmp
+    cmp #<native_printie
+    bne interpret_calln_check_exit
+    lda word_tmp+1
+    cmp #>native_printie
     beq interpret_calln_printie
 interpret_calln_check_exit:
     lda word_tmp
     cmp #<INTRINSIC_EXIT
-    bne interpret_payload_fail
+    bne :+
     lda word_tmp+1
     cmp #>INTRINSIC_EXIT
+    beq :++
+:   lda word_tmp
+    cmp #<native_exit
     bne interpret_payload_fail
-    lda #$03
+    lda word_tmp+1
+    cmp #>native_exit
+    bne interpret_payload_fail
+:   lda #$03
     jsr advance_scan_ptr
     jmp interpret_payload_done
 
@@ -1468,6 +1549,27 @@ interp_compare_false:
     lda #$00
     sta word_tmp
     sta word_tmp+1
+    clc
+    rts
+
+interpret_resolve_word_tmp_to_absolute:
+    lda word_tmp+1
+    cmp payload_ptr+1
+    bcc interpret_resolve_relative
+    bne interpret_resolve_absolute
+    lda word_tmp
+    cmp payload_ptr
+    bcc interpret_resolve_relative
+    bcs interpret_resolve_absolute
+interpret_resolve_relative:
+    clc
+    lda word_tmp
+    adc payload_ptr
+    sta word_tmp
+    lda word_tmp+1
+    adc payload_ptr+1
+    sta word_tmp+1
+interpret_resolve_absolute:
     clc
     rts
 
@@ -1766,11 +1868,17 @@ char_buffer:
     .res 2
 interp_sp:
     .res 1
+interp_rsp:
+    .res 1
 interp_string_ptr:
     .res 2
 interp_stack_lo:
     .res INTERP_STACK_MAX
 interp_stack_hi:
+    .res INTERP_STACK_MAX
+interp_rstack_lo:
+    .res INTERP_STACK_MAX
+interp_rstack_hi:
     .res INTERP_STACK_MAX
 
 saved_iptr:

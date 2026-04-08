@@ -34,6 +34,7 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
 - [x] simple comparisons:
   `=`, `<>`, `<`, `<=`, `>`, `>=`
 - [x] `IF ... THEN ... FI`
+- [x] `IF ... THEN ... ELSE ... FI`
 - [x] nested `IF ... THEN ... FI`
 
 ## Current Widening Work
@@ -61,10 +62,14 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `HELLO()`
 - [x] single-branch control flow:
   `IF 1 = 0 THEN ... FI` and `IF 1 = 1 THEN ... FI`
+- [x] `ELSE` control flow:
+  `IF 1 = 0 THEN ... ELSE ... FI`
 - [x] nested control flow:
   `IF 1 = 1 THEN IF 1 = 0 THEN ... FI ... FI`
 - [x] current widened control-flow object emission:
   `b p0p1qhe0vp2p3qhe1ve2r`
+- [x] current widened `ELSE` object emission:
+  `b p0p1qhe0we1ve2r`
 - [x] current widened nested-control-flow object emission:
   `b p0p1qhp2p3qhe0ve1ve2r`
 - [x] current widened additive object emission:
@@ -85,6 +90,8 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `ONE`, `TWO`
 - [x] current harness runtime output for the `IF` slice:
   `YES`, `DONE`
+- [x] current harness runtime output for the `ELSE` slice:
+  `GOOD`, `DONE`
 - [x] current harness runtime output for the nested-`IF` slice:
   `INNERDONE`, `OUTERDONE`
 

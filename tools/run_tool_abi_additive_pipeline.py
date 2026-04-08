@@ -196,6 +196,41 @@ SCENARIOS = {
         ),
         "expected_console": "YES\nDONE\n",
     },
+    "else_blocks": {
+        "out_fs_name": "harness-actc-alink-avmrun-else-blocks",
+        "source": (
+            'MODULE MAIN\r'
+            'PROC MAIN()\r'
+            'IF 1 = 0 THEN\r'
+            'PrintE("BAD")\r'
+            'ELSE\r'
+            'PrintE("GOOD")\r'
+            'FI\r'
+            'PrintE("DONE")\r'
+            'RETURN\r'
+        ),
+        "expected_avo": (
+            "AVO1\n"
+            "x main 0 32\n"
+            "b p0p1qhe0we1ve2r\n"
+            "s BAD\n"
+            "s GOOD\n"
+            "s DONE\n"
+            "i 1\n"
+            "i 0\n"
+            "k 2\n"
+            "n main\n"
+        ),
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 48, 0, 0, 0, 1, 34, 0, 17, 1, 0, 17,
+                0, 0, 22, 24, 19, 0, 97, 34, 0, 73, 16, 255, 25, 25, 0, 97,
+                38, 0, 73, 16, 255, 97, 43, 0, 73, 16, 255, 73, 32, 255, 66,
+                65, 68, 0, 71, 79, 79, 68, 0, 68, 79, 78, 69, 0,
+            ]
+        ),
+        "expected_console": "GOOD\nDONE\n",
+    },
     "nested_if": {
         "out_fs_name": "harness-actc-alink-avmrun-nested-if",
         "source": (

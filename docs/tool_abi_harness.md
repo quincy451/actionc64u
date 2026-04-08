@@ -90,6 +90,13 @@ cd /mnt/c/test/action/actionc64u
 ./tools/run_tool_abi_additive_pipeline.py --scenario if_blocks --keep-workspace
 ```
 
+Run the current `ELSE` control-flow proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario else_blocks --keep-workspace
+```
+
 Run the current nested-`IF` control-flow proof end to end:
 
 ```sh
@@ -254,6 +261,8 @@ That now includes at least two stable scenarios:
   `ONE`, `TWO`
 - single-branch `IF` control flow:
   `YES`, `DONE`
+- `ELSE` control flow:
+  `GOOD`, `DONE`
 - nested `IF` control flow:
   `INNERDONE`, `OUTERDONE`
 

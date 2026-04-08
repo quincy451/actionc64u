@@ -392,8 +392,19 @@ collect_proc_body_ops_try_fi:
 	    lda #>pattern_fi
 	    sta const_ptr+1
 	    jsr pattern_matches_scan_ptr_keyword
-	    bcs collect_proc_body_ops_try_if
+	    bcs collect_proc_body_ops_try_else
 	    lda #'v'
+	    jsr append_body_op_no_arg_for_current_proc
+	    jmp collect_proc_body_ops_skip_line
+
+collect_proc_body_ops_try_else:
+	    lda #<pattern_else
+	    sta const_ptr
+	    lda #>pattern_else
+	    sta const_ptr+1
+	    jsr pattern_matches_scan_ptr_keyword
+	    bcs collect_proc_body_ops_try_if
+	    lda #'w'
 	    jsr append_body_op_no_arg_for_current_proc
 	    jmp collect_proc_body_ops_skip_line
 
@@ -1416,6 +1427,8 @@ compute_payload_layout_body_loop:
 	    beq compute_payload_layout_add_single_int
 	    cmp #'h'
 	    beq compute_payload_layout_add_single_int
+	    cmp #'w'
+	    beq compute_payload_layout_add_single_int
 	    cmp #'v'
 	    beq compute_payload_layout_add_zero
 	    cmp #'a'
@@ -2244,6 +2257,8 @@ pattern_proc:
     .asciiz "PROC"
 pattern_if:
     .asciiz "IF"
+pattern_else:
+    .asciiz "ELSE"
 pattern_fi:
     .asciiz "FI"
 pattern_endif:

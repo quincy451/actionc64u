@@ -50,11 +50,14 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `PROC HELLO() ...` and `HELLO()`
 - [x] also loads single-branch `IF` control-flow `ACTC` output for:
   `IF 1 = 0 THEN ... FI` and `IF 1 = 1 THEN ... FI`
+- [x] also loads nested `IF` control-flow `ACTC` output for:
+  `IF 1 = 1 THEN IF 1 = 0 THEN ... FI ... FI`
 - [x] resolves the current widened child-object closure including `OBJ/W.AVO`
 - [x] emits a widened `BIN/MAIN.AVM` of `76` bytes on that slice
 - [x] emits a precedence-slice `BIN/MAIN.AVM` of `31` bytes
 - [x] emits an arithmetic/comparison slice `BIN/MAIN.AVM` of `72` bytes
 - [x] emits an `IF` slice `BIN/MAIN.AVM` of `65` bytes
+- [x] emits a nested-`IF` slice `BIN/MAIN.AVM` of `77` bytes
 - [x] harness proof exists through:
   `ACTC -> ALINK -> AVMRUN`
 - [x] current harness runtime output for that widened slice:
@@ -67,6 +70,8 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `ONE`, `TWO`
 - [x] current harness runtime output for the `IF` slice:
   `YES`, `DONE`
+- [x] current harness runtime output for the nested-`IF` slice:
+  `INNERDONE`, `OUTERDONE`
 
 ## Current Biggest Blockers
 

@@ -90,6 +90,13 @@ cd /mnt/c/test/action/actionc64u
 ./tools/run_tool_abi_additive_pipeline.py --scenario if_blocks --keep-workspace
 ```
 
+Run the current nested-`IF` control-flow proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario nested_if --keep-workspace
+```
+
 That script:
 
 - clones a clean harness workspace from the current manual-pipeline fs tree
@@ -247,6 +254,8 @@ That now includes at least two stable scenarios:
   `ONE`, `TWO`
 - single-branch `IF` control flow:
   `YES`, `DONE`
+- nested `IF` control flow:
+  `INNERDONE`, `OUTERDONE`
 
 ## Current Debug Value
 

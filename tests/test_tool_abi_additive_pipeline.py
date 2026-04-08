@@ -71,6 +71,9 @@ class TestToolAbiPipeline(unittest.TestCase):
     def test_if_block_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("if_blocks", "YES\nDONE\n", 86, 65)
 
+    def test_nested_if_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("nested_if", "INNERDONE\nOUTERDONE\n", 98, 77)
+
 
 if __name__ == "__main__":
     unittest.main()

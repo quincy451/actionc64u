@@ -62,10 +62,17 @@ cd /mnt/c/test/action/actionc64u
 ./tools/run_tool_abi_additive_pipeline.py --keep-workspace
 ```
 
+Run the current precedence/parentheses proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario precedence --keep-workspace
+```
+
 That script:
 
 - clones a clean harness workspace from the current manual-pipeline fs tree
-- writes the additive widening source
+- writes the selected scenario source
 - runs `ACTC`, `ALINK`, and `AVMRUN` under the harness
 - verifies:
   - exact `OBJ/MAIN.AVO` text
@@ -206,6 +213,13 @@ On the real widened manual-pipeline object workspace, the harness proves:
 
 So the current widened `ACTC -> ALINK -> AVMRUN` slice is working under the
 harness when the resident/VICE service path is removed from the equation.
+
+That now includes at least two stable scenarios:
+
+- additive chains with an external call:
+  `HELLO`, `TOOL7`, `5459`
+- mixed precedence and parentheses:
+  `145`
 
 ## Current Debug Value
 

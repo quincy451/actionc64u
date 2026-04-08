@@ -7,16 +7,13 @@ import tempfile
 import unittest
 
 
-EXPECTED_CONSOLE = "HELLO\nTOOL7\n5459\n"
-
-
-class TestToolAbiAdditivePipeline(unittest.TestCase):
+class TestToolAbiPipeline(unittest.TestCase):
     def setUp(self) -> None:
         self.root = Path(__file__).resolve().parents[1]
         self.script = self.root / "tools" / "run_tool_abi_additive_pipeline.py"
         self.base_fs = self.root.parent / "udos" / "build" / "udos-release-fs-manual-pipeline-44"
 
-    def test_additive_pipeline_is_green_under_harness(self) -> None:
+    def run_scenario(self, scenario: str, expected_console: str, expected_avo_size: int, expected_avm_size: int) -> None:
         for tool in ("cc", "ca65", "ld65", "make"):
             if shutil.which(tool) is None:
                 self.skipTest(f"{tool} not found")
@@ -30,6 +27,8 @@ class TestToolAbiAdditivePipeline(unittest.TestCase):
                 [
                     sys.executable,
                     str(self.script),
+                    "--scenario",
+                    scenario,
                     "--out-fs",
                     str(out_fs),
                     "--keep-workspace",
@@ -45,6 +44,7 @@ class TestToolAbiAdditivePipeline(unittest.TestCase):
             self.assertEqual(result.returncode, 0, msg=output)
 
             summary = json.loads(result.stdout)
+            self.assertEqual(summary["scenario"], scenario)
             workspace = Path(summary["workspace"])
             actc_object_path = Path(summary["actc_object_path"])
             alink_image_path = Path(summary["alink_image_path"])
@@ -52,9 +52,15 @@ class TestToolAbiAdditivePipeline(unittest.TestCase):
             self.assertTrue(workspace.is_dir(), msg=output)
             self.assertTrue(actc_object_path.is_file(), msg=output)
             self.assertTrue(alink_image_path.is_file(), msg=output)
-            self.assertEqual(summary["avmrun_console"], EXPECTED_CONSOLE)
-            self.assertEqual(actc_object_path.stat().st_size, 92)
-            self.assertEqual(alink_image_path.stat().st_size, 76)
+            self.assertEqual(summary["avmrun_console"], expected_console)
+            self.assertEqual(actc_object_path.stat().st_size, expected_avo_size)
+            self.assertEqual(alink_image_path.stat().st_size, expected_avm_size)
+
+    def test_additive_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("additive", "HELLO\nTOOL7\n5459\n", 92, 76)
+
+    def test_precedence_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("precedence", "145\n", 53, 31)
 
 
 if __name__ == "__main__":

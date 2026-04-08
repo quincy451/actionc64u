@@ -21,44 +21,73 @@ ALINK_LABELS = BUILD_DIR / "alink.current.labels"
 AVMRUN_LABELS = BUILD_DIR / "avmrun.current.labels"
 SERVICES_INC = BUILD_DIR / "udos_services.inc"
 DEFAULT_BASE_FS = UDOS_ROOT / "build" / "udos-release-fs-manual-pipeline-44"
-DEFAULT_OUT_FS = UDOS_ROOT / "build" / "harness-actc-alink-avmrun-additive"
 
-ADDITIVE_SOURCE = (
-    'MODULE MAIN\r'
-    'PROC MAIN()\r'
-    'PrintE("HELLO")\r'
-    'W()\r'
-    'PrintI(50 + 7 - 3)\r'
-    'PrintIE(60 - 3 + 2)\r'
-    'RETURN\r'
-)
-
-EXPECTED_AVO = (
-    "AVO1\n"
-    "x main 0 38\n"
-    "b e0u0p0p1ap2myp3p4mp5azr\n"
-    "u w\n"
-    "s HELLO\n"
-    "i 50\n"
-    "i 7\n"
-    "i 3\n"
-    "i 60\n"
-    "i 3\n"
-    "i 2\n"
-    "k 7\n"
-    "n main\n"
-)
-
-EXPECTED_AVM = bytes(
-    [
-        65, 86, 77, 49, 2, 64, 0, 0, 0, 1, 53, 0, 97, 53, 0, 73,
-        16, 255, 69, 40, 0, 17, 50, 0, 17, 7, 0, 20, 17, 3, 0, 21,
-        73, 48, 255, 17, 60, 0, 17, 3, 0, 21, 17, 2, 0, 20, 73, 49,
-        255, 73, 32, 255, 97, 59, 0, 73, 0, 255, 17, 7, 0, 73, 49,
-        255, 72, 72, 69, 76, 76, 79, 0, 84, 79, 79, 76, 0,
-    ]
-)
-EXPECTED_CONSOLE = "HELLO\nTOOL7\n5459\n"
+SCENARIOS = {
+    "additive": {
+        "out_fs_name": "harness-actc-alink-avmrun-additive",
+        "source": (
+            'MODULE MAIN\r'
+            'PROC MAIN()\r'
+            'PrintE("HELLO")\r'
+            'W()\r'
+            'PrintI(50 + 7 - 3)\r'
+            'PrintIE(60 - 3 + 2)\r'
+            'RETURN\r'
+        ),
+        "expected_avo": (
+            "AVO1\n"
+            "x main 0 38\n"
+            "b e0u0p0p1ap2myp3p4mp5azr\n"
+            "u w\n"
+            "s HELLO\n"
+            "i 50\n"
+            "i 7\n"
+            "i 3\n"
+            "i 60\n"
+            "i 3\n"
+            "i 2\n"
+            "k 7\n"
+            "n main\n"
+        ),
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 64, 0, 0, 0, 1, 53, 0, 97, 53, 0, 73,
+                16, 255, 69, 40, 0, 17, 50, 0, 17, 7, 0, 20, 17, 3, 0, 21,
+                73, 48, 255, 17, 60, 0, 17, 3, 0, 21, 17, 2, 0, 20, 73, 49,
+                255, 73, 32, 255, 97, 59, 0, 73, 0, 255, 17, 7, 0, 73, 49,
+                255, 72, 72, 69, 76, 76, 79, 0, 84, 79, 79, 76, 0,
+            ]
+        ),
+        "expected_console": "HELLO\nTOOL7\n5459\n",
+    },
+    "precedence": {
+        "out_fs_name": "harness-actc-alink-avmrun-precedence",
+        "source": (
+            'MODULE MAIN\r'
+            'PROC MAIN()\r'
+            'PrintI(2 + 3 * 4)\r'
+            'PrintIE((20 - 5) / 3)\r'
+            'RETURN\r'
+        ),
+        "expected_avo": (
+            "AVO1\n"
+            "x main 0 17\n"
+            "b p0p1ayi2r\n"
+            "i 2\n"
+            "i 12\n"
+            "i 5\n"
+            "k 7\n"
+            "n main\n"
+        ),
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 19, 0, 0, 0, 1, 19, 0, 17, 2, 0, 17,
+                12, 0, 20, 73, 48, 255, 17, 5, 0, 73, 49, 255, 73, 32, 255,
+            ]
+        ),
+        "expected_console": "145\n",
+    },
+}
 
 
 def run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
@@ -81,11 +110,11 @@ def build_current_tools() -> None:
         run([str(ROOT / "tools" / script)], cwd=ROOT)
 
 
-def prepare_workspace(base_fs: Path, out_fs: Path) -> Path:
+def prepare_workspace(base_fs: Path, out_fs: Path, source: str) -> Path:
     project_root = out_fs / "IMAGES" / "ACTION.DNP" / "PROJ3"
     shutil.rmtree(out_fs, ignore_errors=True)
     shutil.copytree(base_fs, out_fs)
-    (project_root / "src" / "main.act").write_text(ADDITIVE_SOURCE, encoding="ascii")
+    (project_root / "src" / "main.act").write_text(source, encoding="ascii")
     for stale in (
         project_root / "obj" / "MAIN.AVO",
         project_root / "obj" / "main.avo",
@@ -136,40 +165,42 @@ def find_last_op(summary: dict, kind: str) -> dict:
     return matches[-1]
 
 
-def verify_actc(project_root: Path, summary: dict) -> None:
+def verify_actc(project_root: Path, summary: dict, expected_avo: str) -> None:
     require(summary["exit_status"] == 0, f"ACTC exited nonzero: {summary['exit_status']}")
     save_op = find_last_op(summary, "save")
     require(save_op["path"] == "OBJ/MAIN.AVO", f"unexpected ACTC save path: {save_op['path']!r}")
-    require(save_op["actual_len"] == len(EXPECTED_AVO.encode("ascii")), f"unexpected ACTC object size: {save_op['actual_len']}")
+    require(save_op["actual_len"] == len(expected_avo.encode("ascii")), f"unexpected ACTC object size: {save_op['actual_len']}")
     output_path = project_root / "obj" / "MAIN.AVO"
     require(output_path.is_file(), f"missing ACTC output: {output_path}")
     text = output_path.read_text(encoding="ascii", errors="replace")
-    require(text == EXPECTED_AVO, f"unexpected ACTC object text:\n{text}")
+    require(text == expected_avo, f"unexpected ACTC object text:\n{text}")
 
 
-def verify_alink(project_root: Path, summary: dict) -> None:
+def verify_alink(project_root: Path, summary: dict, expected_avm: bytes) -> None:
     require(summary["exit_status"] == 0, f"ALINK exited nonzero: {summary['exit_status']}")
     save_op = find_last_op(summary, "save")
     require(save_op["path"] == "BIN/MAIN.AVM", f"unexpected ALINK save path: {save_op['path']!r}")
-    require(save_op["actual_len"] == len(EXPECTED_AVM), f"unexpected ALINK image size: {save_op['actual_len']}")
+    require(save_op["actual_len"] == len(expected_avm), f"unexpected ALINK image size: {save_op['actual_len']}")
     output_path = project_root / "bin" / "MAIN.AVM"
     require(output_path.is_file(), f"missing ALINK output: {output_path}")
     data = output_path.read_bytes()
-    require(data == EXPECTED_AVM, f"unexpected ALINK bytes: {list(data)}")
+    require(data == expected_avm, f"unexpected ALINK bytes: {list(data)}")
 
 
-def verify_avmrun(summary: dict) -> None:
+def verify_avmrun(summary: dict, expected_console: str) -> None:
     require(summary["exit_status"] == 0, f"AVMRUN exited nonzero: {summary['exit_status']}")
-    require(summary.get("console", "") == EXPECTED_CONSOLE, f"unexpected AVMRUN console: {summary.get('console', '')!r}")
+    require(summary.get("console", "") == expected_console, f"unexpected AVMRUN console: {summary.get('console', '')!r}")
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run the additive ACTC -> ALINK -> AVMRUN harness proof")
+    parser = argparse.ArgumentParser(description="Run named ACTC -> ALINK -> AVMRUN harness proofs")
     parser.add_argument("--base-fs", type=Path, default=DEFAULT_BASE_FS)
-    parser.add_argument("--out-fs", type=Path, default=DEFAULT_OUT_FS)
+    parser.add_argument("--out-fs", type=Path)
+    parser.add_argument("--scenario", choices=sorted(SCENARIOS), default="additive")
     parser.add_argument("--skip-build", action="store_true")
     parser.add_argument("--keep-workspace", action="store_true")
     args = parser.parse_args()
+    scenario = SCENARIOS[args.scenario]
 
     if not args.base_fs.is_dir():
         raise RuntimeError(f"missing base fs tree: {args.base_fs}")
@@ -177,7 +208,8 @@ def main() -> int:
     if not args.skip_build:
         build_current_tools()
 
-    project_root = prepare_workspace(args.base_fs, args.out_fs)
+    out_fs = args.out_fs if args.out_fs is not None else (UDOS_ROOT / "build" / scenario["out_fs_name"])
+    project_root = prepare_workspace(args.base_fs, out_fs, scenario["source"])
 
     actc = run_harness(
         ACTC_PRG,
@@ -186,7 +218,7 @@ def main() -> int:
         ACTC_LABELS,
         ["--op-dump-cstr", "target_path:32", "--op-dump-cstr", "content_buffer:256"],
     )
-    verify_actc(project_root, actc)
+    verify_actc(project_root, actc, scenario["expected_avo"])
 
     alink = run_harness(
         ALINK_PRG,
@@ -195,7 +227,7 @@ def main() -> int:
         ALINK_LABELS,
         ["--op-dump-cstr", "target_path:32", "--op-dump-cstr", "binary_target_path:32", "--op-dump", "content_buffer:80"],
     )
-    verify_alink(project_root, alink)
+    verify_alink(project_root, alink, scenario["expected_avm"])
 
     avmrun = run_harness(
         AVMRUN_PRG,
@@ -204,9 +236,10 @@ def main() -> int:
         AVMRUN_LABELS,
         [],
     )
-    verify_avmrun(avmrun)
+    verify_avmrun(avmrun, scenario["expected_console"])
 
     summary = {
+        "scenario": args.scenario,
         "workspace": str(project_root),
         "actc_object_path": str(project_root / "obj" / "MAIN.AVO"),
         "alink_image_path": str(project_root / "bin" / "MAIN.AVM"),
@@ -215,7 +248,7 @@ def main() -> int:
     print(json.dumps(summary, indent=2))
 
     if not args.keep_workspace:
-        shutil.rmtree(args.out_fs, ignore_errors=True)
+        shutil.rmtree(out_fs, ignore_errors=True)
     return 0
 
 

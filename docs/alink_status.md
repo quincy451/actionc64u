@@ -42,12 +42,17 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
 
 - [x] loads widened `ACTC` output for:
   `PrintI(50 + 7 - 3)` and `PrintIE(60 - 3 + 2)`
+- [x] also loads mixed-precedence / parenthesized `ACTC` output for:
+  `PrintI(2 + 3 * 4)` and `PrintIE((20 - 5) / 3)`
 - [x] resolves the current widened child-object closure including `OBJ/W.AVO`
 - [x] emits a widened `BIN/MAIN.AVM` of `76` bytes on that slice
+- [x] emits a precedence-slice `BIN/MAIN.AVM` of `31` bytes
 - [x] harness proof exists through:
   `ACTC -> ALINK -> AVMRUN`
 - [x] current harness runtime output for that widened slice:
   `HELLO`, `TOOL7`, `5459`
+- [x] current harness runtime output for the precedence slice:
+  `145`
 
 ## Current Biggest Blockers
 

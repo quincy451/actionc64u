@@ -4,7 +4,6 @@
 
 MANIFEST_LIMIT = 191
 SOURCE_LIMIT = 255
-ACTC_TRACE = $03FB
 BODY_OPS_STRIDE = 24
 
 IMPORT_PRINT_STR  = $01
@@ -16,8 +15,6 @@ svc_retptr:
     .res 2
 file_params:
     .res 9
-save_params:
-    .res 7
 src_ptr:
     .res 2
 scan_ptr:
@@ -39,6 +36,8 @@ payload_offset:
 proc_index:
     .res 1
 
+save_params = file_params
+
 export_index = list_started
 export_ptr = src_ptr
 body_ptr = src_ptr
@@ -47,7 +46,7 @@ body_ptr = src_ptr
 
 start:
     lda #$10
-    sta ACTC_TRACE
+    sta actc_trace_byte
     jsr init_module_name
     jsr build_manifest_entry
     jsr require_loaded_project
@@ -69,6 +68,14 @@ source_loaded:
     jsr parse_module_header_or_fail
     jsr collect_proc_exports_or_fail
     jsr collect_proc_body_ops
+    lda body_ops_data+0
+    sta $03E8
+    lda body_ops_data+1
+    sta $03E9
+    lda body_ops_data+2
+    sta $03EA
+    lda body_ops_data+3
+    sta $03EB
     jsr detect_runtime_imports
     jsr compute_payload_layout
     jsr build_avo_content
@@ -76,29 +83,61 @@ source_loaded:
     lda #$01
     sta save_mode
     lda #$1F
-    sta ACTC_TRACE
-    jsr save_content_buffer_to_target
-    lda #$20
-    sta ACTC_TRACE
-    bcc save_ok
-    lda #<msg_save_fail
-    ldy #>msg_save_fail
-    jmp fail_with_ptr
+    sta actc_trace_byte
+    jmp save_and_exit_clean_stack
 
 save_ok:
     lda #$21
-    sta ACTC_TRACE
-    jsr report_save_mode_result
-    lda #<msg_ok
-    ldy #>msg_ok
-    jsr print_line_ptr
-    lda #$22
-    sta ACTC_TRACE
+    sta actc_trace_byte
     lda #$00
     sta svc_retptr
     sta svc_retptr+1
     ldx #svc_retptr
     jmp svc_program_exit
+
+scrub_unused_stack_before_save:
+    tsx
+    stx save_stack_top
+    lda #$00
+    ldx #$00
+scrub_unused_stack_before_save_loop:
+    cpx save_stack_top
+    bcs scrub_unused_stack_before_save_done
+    sta $0100,x
+    inx
+    bne scrub_unused_stack_before_save_loop
+scrub_unused_stack_before_save_done:
+    rts
+
+clear_post_build_state:
+    lda #$00
+    sta src_ptr
+    sta src_ptr+1
+    sta scan_ptr
+    sta scan_ptr+1
+    sta content_ptr
+    sta content_ptr+1
+    sta const_ptr
+    sta const_ptr+1
+    sta import_flags_lo
+    sta truncated_flag
+    sta save_mode
+    sta list_started
+    sta payload_offset
+    sta proc_index
+    sta current_proc_index_data
+    rts
+
+save_and_exit_clean_stack:
+    ldx #$FF
+    txs
+    jsr save_content_buffer_to_target
+    lda #$20
+    sta actc_trace_byte
+    bcc save_ok
+    lda #<msg_save_fail
+    ldy #>msg_save_fail
+    jmp fail_with_ptr
 
 init_module_name:
     ldx #svc_retptr
@@ -345,13 +384,13 @@ collect_proc_body_ops_after_space_check:
     bcs collect_proc_body_ops_try_printe
     jsr advance_scan_ptr_by_const_ptr
     lda #$12
-    sta ACTC_TRACE
+    sta actc_trace_byte
     jsr store_string_literal_from_scan_ptr
     bcc :+
     jmp collect_proc_body_ops_bad_literal
 :
     lda #$13
-    sta ACTC_TRACE
+    sta actc_trace_byte
     lda #'s'
     jsr append_body_op_for_current_proc
     jmp collect_proc_body_ops_skip_line
@@ -365,13 +404,13 @@ collect_proc_body_ops_try_printe:
     bcs collect_proc_body_ops_try_printie
     jsr advance_scan_ptr_by_const_ptr
     lda #$14
-    sta ACTC_TRACE
+    sta actc_trace_byte
     jsr store_string_literal_from_scan_ptr
     bcc :+
     jmp collect_proc_body_ops_bad_literal
 :
     lda #$15
-    sta ACTC_TRACE
+    sta actc_trace_byte
     lda #'e'
     jsr append_body_op_for_current_proc
     jmp collect_proc_body_ops_skip_line
@@ -461,6 +500,8 @@ collect_proc_body_ops_done:
 append_body_op_for_current_proc:
     sta compare_char
     stx hex_work
+    tya
+    pha
     ldx current_proc_index_data
     jsr set_body_ptr_from_x
     ldy #$00
@@ -470,6 +511,11 @@ append_body_op_for_current_proc_loop:
     iny
     cpy #(BODY_OPS_STRIDE - 2)
     bcc append_body_op_for_current_proc_loop
+    lda compare_char
+    sta actc_trace_byte
+    sty $03FC
+    lda #'A'
+    sta $03FD
     lda #<msg_bad_call
     ldy #>msg_bad_call
     jmp fail_with_ptr
@@ -484,10 +530,14 @@ append_body_op_for_current_proc_store:
     iny
     lda #$00
     sta (body_ptr),y
+    pla
+    tay
     rts
 
 append_body_op_no_arg_for_current_proc:
     sta compare_char
+    tya
+    pha
     ldx current_proc_index_data
     jsr set_body_ptr_from_x
     ldy #$00
@@ -497,6 +547,11 @@ append_body_op_no_arg_for_current_proc_loop:
     iny
     cpy #(BODY_OPS_STRIDE - 1)
     bcc append_body_op_no_arg_for_current_proc_loop
+    lda compare_char
+    sta actc_trace_byte
+    sty $03FC
+    lda #'N'
+    sta $03FD
     lda #<msg_bad_call
     ldy #>msg_bad_call
     jmp fail_with_ptr
@@ -506,9 +561,13 @@ append_body_op_no_arg_for_current_proc_store:
     iny
     lda #$00
     sta (body_ptr),y
+    pla
+    tay
     rts
 
 set_body_ptr_from_x:
+    txa
+    pha
     lda #<body_ops_data
     sta body_ptr
     lda #>body_ops_data
@@ -526,6 +585,8 @@ set_body_ptr_from_x_loop:
     dex
     bne set_body_ptr_from_x_loop
 set_body_ptr_from_x_done:
+    pla
+    tax
     rts
 
 set_string_ptr_from_x:
@@ -603,7 +664,7 @@ store_small_runtime_expr_from_scan_ptr:
     ldy #$00
     lda #$00
     sta expr_runtime_post_zero
-    jsr parse_small_decimal_factor_at_scan_y
+    jsr parse_small_decimal_term_at_scan_y
     bcc :+
     sec
     rts
@@ -611,27 +672,80 @@ store_small_runtime_expr_from_scan_ptr:
     sta expr_saved_lo
     jsr skip_inline_spaces_at_scan_y
     lda (scan_ptr),y
-    cmp #'+'
-    beq store_small_runtime_expr_add
+    sta expr_compare_lo
+    cmp #'+' 
+    beq store_small_runtime_expr_start
     cmp #'-'
-    beq store_small_runtime_expr_sub
+    beq store_small_runtime_expr_start
+    cmp #'='
+    beq store_small_runtime_expr_start
+    cmp #'<'
+    beq store_small_runtime_expr_start
+    cmp #'>' 
+    beq store_small_runtime_expr_start
+    sec
+    rts
+store_small_runtime_expr_start:
+    jsr emit_saved_expr_push_or_fail
+    bcc :+
+    jmp store_small_runtime_expr_fail
+: 
+    lda expr_compare_lo
+    cmp #'+'
+    beq store_small_runtime_expr_lhs_sum
+    cmp #'-'
+    beq store_small_runtime_expr_lhs_sum
+    jmp store_small_runtime_expr_compare_entry
+store_small_runtime_expr_lhs_sum:
+    lda expr_compare_lo
+    cmp #'+'
+    beq store_small_runtime_expr_lhs_add
+    lda #'m'
+    bne store_small_runtime_expr_lhs_apply
+store_small_runtime_expr_lhs_add:
+    lda #'a'
+store_small_runtime_expr_lhs_apply:
+    sta expr_runtime_op
+    iny
+    jsr emit_runtime_term_push_from_scan_y_or_fail
+    bcc :+
+    jmp store_small_runtime_expr_fail
+: 
+    lda expr_runtime_op
+    jsr append_body_op_no_arg_for_current_proc
+    jsr skip_inline_spaces_at_scan_y
+    lda (scan_ptr),y
+    sta expr_compare_lo
+    cmp #'+' 
+    beq store_small_runtime_expr_lhs_sum
+    cmp #'-'
+    beq store_small_runtime_expr_lhs_sum
+    cmp #')'
+    bne :+
+    jmp store_small_runtime_expr_print
+: 
+    cmp #'='
+    beq store_small_runtime_expr_compare_entry
+    cmp #'<'
+    beq store_small_runtime_expr_compare_entry
+    cmp #'>' 
+    beq store_small_runtime_expr_compare_entry
+    sec
+    rts
+store_small_runtime_expr_compare_entry:
+    lda #$00
+    sta expr_runtime_post_zero
+    lda expr_compare_lo
     cmp #'='
     beq store_small_runtime_expr_eq
     cmp #'<'
     beq store_small_runtime_expr_lt_entry
-    cmp #'>'
+    cmp #'>' 
     beq store_small_runtime_expr_gt_entry
     sec
     rts
-store_small_runtime_expr_add:
-    lda #'a'
-    bne store_small_runtime_expr_op_single
-store_small_runtime_expr_sub:
-    lda #'m'
-    bne store_small_runtime_expr_op_single
 store_small_runtime_expr_eq:
     lda #'q'
-store_small_runtime_expr_op_single:
     sta expr_runtime_op
     iny
     jmp store_small_runtime_expr_rhs
@@ -672,37 +786,19 @@ store_small_runtime_expr_ne:
     sta expr_runtime_op
     iny
 store_small_runtime_expr_rhs:
-    jsr parse_small_decimal_factor_at_scan_y
+    jsr emit_runtime_sum_from_scan_y_or_fail
     bcc :+
 store_small_runtime_expr_fail:
     sec
     rts
-:   lda expr_value_lo
-    sta expr_digit_count
-    jsr skip_inline_spaces_at_scan_y
+:   jsr skip_inline_spaces_at_scan_y
     lda (scan_ptr),y
     cmp #')'
     bne store_small_runtime_expr_fail
-    lda expr_saved_lo
-    sta expr_value_lo
-    jsr store_expr_value_as_int_literal
-    bcs store_small_runtime_expr_fail
-    stx compare_char
-    lda expr_digit_count
-    sta expr_value_lo
-    jsr store_expr_value_as_int_literal
-    bcs store_small_runtime_expr_fail
-    stx expr_digit_count
-    ldx compare_char
-    lda #'p'
-    jsr append_body_op_for_current_proc
-    ldx expr_digit_count
-    lda #'p'
-    jsr append_body_op_for_current_proc
     lda expr_runtime_op
     jsr append_body_op_no_arg_for_current_proc
     lda expr_runtime_post_zero
-    beq :+
+    beq store_small_runtime_expr_print
     lda #$00
     sta expr_value_lo
     jsr store_expr_value_as_int_literal
@@ -711,11 +807,54 @@ store_small_runtime_expr_fail:
     jsr append_body_op_for_current_proc
     lda #'q'
     jsr append_body_op_no_arg_for_current_proc
-:
+store_small_runtime_expr_print:
     lda expr_print_op
     jsr append_body_op_no_arg_for_current_proc
     clc
     rts
+
+emit_saved_expr_push_or_fail:
+    lda expr_saved_lo
+    sta expr_value_lo
+emit_current_expr_push_or_fail:
+    jsr store_expr_value_as_int_literal
+    bcs store_small_runtime_expr_fail
+    lda #'p'
+    jsr append_body_op_for_current_proc
+    clc
+    rts
+
+emit_runtime_term_push_from_scan_y_or_fail:
+    jsr parse_small_decimal_term_at_scan_y
+    bcs store_small_runtime_expr_fail
+    jmp emit_current_expr_push_or_fail
+
+emit_runtime_sum_from_scan_y_or_fail:
+    jsr emit_runtime_term_push_from_scan_y_or_fail
+    bcs store_small_runtime_expr_fail
+emit_runtime_sum_from_scan_y_loop:
+    jsr skip_inline_spaces_at_scan_y
+    lda (scan_ptr),y
+    cmp #'+' 
+    beq emit_runtime_sum_from_scan_y_add
+    cmp #'-'
+    beq emit_runtime_sum_from_scan_y_sub
+    clc
+    rts
+emit_runtime_sum_from_scan_y_add:
+    iny
+    jsr emit_runtime_term_push_from_scan_y_or_fail
+    bcs store_small_runtime_expr_fail
+    lda #'a'
+    jsr append_body_op_no_arg_for_current_proc
+    jmp emit_runtime_sum_from_scan_y_loop
+emit_runtime_sum_from_scan_y_sub:
+    iny
+    jsr emit_runtime_term_push_from_scan_y_or_fail
+    bcs store_small_runtime_expr_fail
+    lda #'m'
+    jsr append_body_op_no_arg_for_current_proc
+    jmp emit_runtime_sum_from_scan_y_loop
 
 store_expr_value_as_int_literal:
     ldx int_count_data
@@ -1110,6 +1249,8 @@ compute_payload_layout_body_loop:
     beq compute_payload_layout_add_single
     cmp #'g'
     beq compute_payload_layout_add_single
+    cmp #'r'
+    beq compute_payload_layout_add_single
     jmp compute_payload_layout_bad
 compute_payload_layout_add_call:
     clc
@@ -1184,6 +1325,19 @@ compute_payload_layout_string_done:
 compute_payload_layout_done_ok:
     rts
 compute_payload_layout_bad:
+    sta compare_char
+    lda body_ops_data+0
+    sta $C59F
+    lda body_ops_data+1
+    sta $C5A0
+    lda body_ops_data+2
+    sta $C5A1
+    lda body_ops_data+3
+    sta $C5A2
+    lda compare_char
+    sta actc_trace_byte
+    sty $03FC
+    stx $03FD
     lda #<msg_bad_call
     ldy #>msg_bad_call
     jmp fail_with_ptr
@@ -1955,6 +2109,10 @@ expr_value_lo:
 expr_digit_count:
     .res 1
 compare_char:
+    .res 1
+actc_trace_byte:
+    .res 1
+save_stack_top:
     .res 1
 hex_work:
     .res 1

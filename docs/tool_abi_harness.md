@@ -76,6 +76,13 @@ cd /mnt/c/test/action/actionc64u
 ./tools/run_tool_abi_additive_pipeline.py --scenario comparisons --keep-workspace
 ```
 
+Run the current local-procedure-call proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario procedures --keep-workspace
+```
+
 That script:
 
 - clones a clean harness workspace from the current manual-pipeline fs tree
@@ -229,6 +236,8 @@ That now includes at least two stable scenarios:
   `145`
 - arithmetic + comparisons + external call:
   `14`, `5`, `1`, `1`, `TOOL7`
+- local user procedure call:
+  `ONE`, `TWO`
 
 ## Current Debug Value
 

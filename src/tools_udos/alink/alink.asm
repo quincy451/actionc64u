@@ -27,17 +27,13 @@ svc_retptr:
     .res 2
 file_params:
     .res 9
-src_ptr:
-    .res 2
 scan_ptr:
     .res 2
+src_ptr:
+    .res 2
 save_params = file_params
-content_ptr:
-    .res 2
-const_ptr:
-    .res 2
-truncated_flag:
-    .res 1
+const_ptr = svc_retptr
+content_ptr = const_ptr
 export_count = truncated_flag
 export_index = export_index_zp
 export_ptr = svc_retptr
@@ -47,9 +43,17 @@ body_ptr = src_ptr
 
 start:
     jsr init_module_name
+    lda #$10
+    sta $03FC
     jsr build_manifest_entry
+    lda #$11
+    sta $03FC
     jsr require_loaded_project
+    lda #$12
+    sta $03FC
     jsr require_manifest_entry_tracked
+    lda #$13
+    sta $03FC
     jsr build_object_target_path
     jsr load_object_or_fail
     jsr parse_exports_or_fail
@@ -60,8 +64,17 @@ start:
     jsr compute_code_bytes
     jsr build_live_set
     jsr build_avm_binary_content_or_fail
-    jsr build_avm_binary_target_path
+    lda #$41
+    sta debug_phase_zp
+    jsr build_binary_save_target_path
+    jsr copy_target_path_to_binary_target_path
+    lda #$C1
+    sta binary_target_path+16
+    lda #$42
+    sta debug_phase_zp
     jsr save_source_buffer_to_target
+    lda #$43
+    sta debug_phase_zp
     bcc save_ok
     lda #<msg_save_fail
     ldy #>msg_save_fail
@@ -796,7 +809,7 @@ clear_tool_scratch_before_save:
 clear_tool_scratch_before_save_loop:
     sta file_params,x
     inx
-    cpx #(truncated_flag - file_params + 1)
+    cpx #9
     bcc clear_tool_scratch_before_save_loop
     rts
 
@@ -877,8 +890,15 @@ advance_scan_ptr_by_const_ptr_done:
 
 build_avm_binary_content_or_fail:
     jsr layout_payload_or_fail
+    lda #$31
+    sta debug_phase_zp
     jsr emit_payload_or_fail
-    jmp render_payload_as_binary_or_fail
+    lda #$32
+    sta debug_phase_zp
+    jsr render_payload_as_binary_or_fail
+    lda #$33
+    sta debug_phase_zp
+    rts
 
 layout_payload_or_fail:
     lda #$00
@@ -896,11 +916,7 @@ layout_payload_pending_loop:
 layout_payload_pending_next:
     cpx pending_count
     beq layout_payload_root_strings
-    txa
-    pha
     jsr layout_external_object_from_x_or_fail
-    pla
-    tax
     inx
     bne layout_payload_pending_next
 layout_payload_root_strings:
@@ -914,33 +930,25 @@ layout_payload_root_strings:
 layout_payload_external_strings_next:
     cpx pending_count
     beq layout_payload_done
-    txa
-    pha
     jsr layout_external_object_strings_from_x_or_fail
-    pla
-    tax
     inx
     bne layout_payload_external_strings_next
 layout_payload_done:
     rts
 
 layout_external_object_from_x_or_fail:
-    txa
-    pha
+    stx saved_pending_index
     jsr save_module_name
-    pla
-    tax
-    txa
-    pha
+    ldx saved_pending_index
     jsr copy_pending_symbol_to_module_name_from_x
     lda current_bit_lo
-    pha
+    sta saved_state_lo
     lda current_bit_hi
-    pha
+    sta saved_state_hi
     jsr load_current_object_link_state_or_fail
-    pla
+    lda saved_state_hi
     sta current_bit_hi
-    pla
+    lda saved_state_lo
     sta current_bit_lo
     lda #$00
     sta string_use_mask
@@ -949,8 +957,7 @@ layout_external_object_from_x_or_fail:
     jsr layout_current_object_code_or_fail
     jsr find_export_index_from_module_name
     stx export_index
-    pla
-    tax
+    ldx saved_pending_index
     ldy export_index
     lda current_export_offsets_lo,y
     sta pending_offsets_lo,x
@@ -961,28 +968,24 @@ layout_external_object_from_x_or_fail:
     sta pending_string_use_masks,x
     lda #$00
     sta save_mode
+    ldx saved_pending_index
     jmp restore_module_name
 
 layout_external_object_strings_from_x_or_fail:
-    txa
-    pha
+    stx saved_pending_index
     jsr save_module_name
-    pla
-    tax
-    txa
-    pha
+    ldx saved_pending_index
     lda current_bit_lo
-    pha
+    sta saved_state_lo
     lda current_bit_hi
-    pha
+    sta saved_state_hi
     jsr copy_pending_symbol_to_module_name_from_x
     jsr load_current_object_link_state_or_fail
-    pla
+    lda saved_state_hi
     sta current_bit_hi
-    pla
+    lda saved_state_lo
     sta current_bit_lo
-    pla
-    tax
+    ldx saved_pending_index
     lda pending_string_use_masks,x
     sta string_use_mask
     lda current_bit_lo
@@ -992,6 +995,7 @@ layout_external_object_strings_from_x_or_fail:
     lda #$01
     sta save_mode
     jsr layout_current_object_strings_or_fail
+    ldx saved_pending_index
     jmp restore_module_name
 
 layout_current_object_code_or_fail:
@@ -1140,11 +1144,9 @@ add_current_string_length_to_layout_done:
 :   rts
 
 emit_payload_or_fail:
-    lda #<content_buffer
-    sta content_ptr
-    lda #>content_buffer
-    sta content_ptr+1
     jsr load_current_object_link_state_or_fail
+    lda #$34
+    sta debug_phase
     lda #$00
     sta main_flags_lo
     sta main_flags_hi
@@ -1152,56 +1154,56 @@ emit_payload_or_fail:
     sta string_use_mask
     sta save_mode
     jsr emit_current_object_code_or_fail
+    lda #$35
+    sta debug_phase
     jsr save_current_string_state
 emit_payload_pending_loop:
     ldx #$00
 emit_payload_pending_next:
     cpx pending_count
     beq emit_payload_root_strings
-    txa
-    pha
     jsr emit_external_object_code_from_x_or_fail
-    pla
-    tax
     inx
     bne emit_payload_pending_next
 emit_payload_root_strings:
+    lda #$36
+    sta debug_phase
     jsr restore_saved_string_state
     jsr emit_current_object_strings_or_fail
+    lda #$37
+    sta debug_phase
     ldx #$00
 emit_payload_external_strings_next:
     cpx pending_count
     beq emit_payload_done
-    txa
-    pha
     jsr emit_external_object_strings_from_x_or_fail
-    pla
-    tax
     inx
     bne emit_payload_external_strings_next
 emit_payload_done:
+    lda #$38
+    sta debug_phase
     rts
 
 emit_external_object_code_from_x_or_fail:
-    txa
-    pha
+    lda #$51
+    sta debug_phase_zp
+    stx saved_pending_index
     jsr save_module_name
-    pla
-    tax
-    txa
-    pha
+    ldx saved_pending_index
     jsr copy_pending_symbol_to_module_name_from_x
     lda main_flags_lo
-    pha
+    sta saved_state_lo
     lda main_flags_hi
-    pha
+    sta saved_state_hi
     jsr load_current_object_link_state_or_fail
-    pla
+    jsr snapshot_second_load_state
+    lda #$52
+    sta debug_phase_zp
+    lda saved_state_hi
     sta main_flags_hi
-    pla
+    lda saved_state_lo
     sta main_flags_lo
-    pla
-    tax
+    ldx saved_pending_index
     lda pending_offsets_lo,x
     sta current_bit_lo
     lda pending_offsets_hi,x
@@ -1212,50 +1214,96 @@ emit_external_object_code_from_x_or_fail:
     lda pending_string_use_masks,x
     sta string_use_mask
     lda main_flags_hi
-    pha
+    sta saved_state_hi
     jsr layout_current_object_code_or_fail
-    pla
+    lda #$53
+    sta debug_phase_zp
+    lda saved_state_hi
     sta main_flags_hi
     jsr emit_current_object_code_or_fail
+    lda #$54
+    sta debug_phase_zp
+    ldx saved_pending_index
     jmp restore_module_name
 
 emit_external_object_strings_from_x_or_fail:
-    txa
-    pha
+    lda #$61
+    sta debug_phase_zp
+    stx saved_pending_index
     jsr save_module_name
-    pla
-    tax
-    txa
-    pha
+    ldx saved_pending_index
     jsr copy_pending_symbol_to_module_name_from_x
     lda main_flags_lo
-    pha
+    sta saved_state_lo
     lda main_flags_hi
-    pha
+    sta saved_state_hi
     jsr load_current_object_link_state_or_fail
-    pla
+    lda #$62
+    sta debug_phase_zp
+    lda saved_state_hi
     sta main_flags_hi
-    pla
+    lda saved_state_lo
     sta main_flags_lo
-    pla
-    tax
+    ldx saved_pending_index
     lda pending_string_use_masks,x
     sta string_use_mask
     jsr emit_current_object_strings_or_fail
+    lda #$63
+    sta debug_phase_zp
+    ldx saved_pending_index
     jmp restore_module_name
 
 load_current_object_link_state_or_fail:
+    lda #$70
+    sta $03FC
+    sta debug_phase_zp
     jsr build_object_target_path
+    lda #$71
+    sta $03FC
+    sta debug_phase_zp
     jsr load_object_or_fail
+    lda #$72
+    sta $03FC
+    sta debug_phase_zp
+    lda file_params+6
+    sta $03FD
     jsr require_loaded_source_not_truncated_or_fail
+    lda #$73
+    sta $03FC
+    sta debug_phase_zp
     jsr require_avo1_header_or_fail
+    lda #$74
+    sta $03FC
+    sta debug_phase_zp
     jsr parse_exports_or_fail
+    lda #$75
+    sta $03FC
+    sta debug_phase_zp
     jsr parse_body_ops_or_fail
+    lda #$76
+    sta $03FC
+    sta debug_phase_zp
     jsr parse_external_symbols_or_fail
+    lda #$77
+    sta $03FC
+    sta debug_phase_zp
     jsr parse_strings_or_fail
+    lda #$78
+    sta $03FC
+    sta debug_phase_zp
     jsr parse_ints_or_fail
+    lda #$79
+    sta $03FC
+    sta debug_phase_zp
     jsr compute_code_bytes
-    jmp build_live_set
+    lda #$7A
+    sta $03FC
+    sta debug_phase_zp
+    jsr build_live_set
+    lda #$7B
+    sta $03FC
+    sta debug_phase_zp
+    rts
 
 emit_current_object_code_or_fail:
     lda #$00
@@ -1682,15 +1730,12 @@ append_payload_byte:
     pha
     lda main_flags_hi
     bne append_payload_byte_fail
-    ldy #$00
+    ldy main_flags_lo
     txa
-    sta (content_ptr),y
+    sta content_buffer,y
     pla
     tay
-    inc content_ptr
-    bne :+
-    inc content_ptr+1
-:   inc main_flags_lo
+    inc main_flags_lo
     bne :+
     inc main_flags_hi
 :   rts
@@ -1737,7 +1782,10 @@ render_payload_as_binary_header:
     sta content_buffer+5
     lda #$00
     sta content_buffer+6
+    ldx entry_export_index
+    lda root_export_offsets_lo,x
     sta content_buffer+7
+    lda root_export_offsets_hi,x
     sta content_buffer+8
     lda #AVM_FLAG_ACHERON
     sta content_buffer+9
@@ -1815,14 +1863,14 @@ append_char:
     tax
     tya
     pha
-    ldy #$00
+    ldy main_flags_lo
     txa
-    sta (content_ptr),y
+    sta content_buffer,y
     pla
     tay
-    inc content_ptr
+    inc main_flags_lo
     bne :+
-    inc content_ptr+1
+    inc main_flags_hi
 :   rts
 
 save_module_name:
@@ -1953,7 +2001,54 @@ lowercase_ascii_done:
 build_module_stub_content:
     rts
 
+build_binary_save_target_path:
+    lda #'B'
+    sta target_path+0
+    lda #'I'
+    sta target_path+1
+    lda #'N'
+    sta target_path+2
+    lda #'/'
+    sta target_path+3
+    ldy #$00
+build_binary_save_target_path_loop:
+    lda module_name,y
+    beq build_binary_save_target_path_suffix
+    sta target_path+4,y
+    iny
+    bne build_binary_save_target_path_loop
+build_binary_save_target_path_suffix:
+    lda #'.'
+    sta target_path+4,y
+    iny
+    lda #'A'
+    sta target_path+4,y
+    iny
+    lda #'V'
+    sta target_path+4,y
+    iny
+    lda #'M'
+    sta target_path+4,y
+    iny
+    lda #$00
+    sta target_path+4,y
+    rts
+
+copy_target_path_to_binary_target_path:
+    ldx #$00
+copy_target_path_to_binary_target_path_loop:
+    lda target_path,x
+    sta binary_target_path,x
+    beq copy_target_path_to_binary_target_path_done
+    inx
+    cpx #40
+    bcc copy_target_path_to_binary_target_path_loop
+copy_target_path_to_binary_target_path_done:
+    rts
+
 save_source_buffer_to_target:
+    lda #$C2
+    sta binary_target_path+16
     lda #<target_path
     sta save_params+0
     lda #>target_path
@@ -1971,23 +2066,67 @@ save_source_buffer_to_target:
     sta save_params+5
     lda #tool_file_status_fail
     sta save_params+6
+    lda save_params+0
+    sta $03E8
+    lda save_params+1
+    sta $03E9
+    lda save_params+2
+    sta $03EA
+    lda save_params+3
+    sta $03EB
+    lda save_params+4
+    sta $03EC
+    lda save_params+5
+    sta $03ED
+    lda save_params+6
+    sta $03EE
     tsx
     stx compare_char
-    lda #$00
-    sta content_ptr
-    sta content_ptr+1
-    sta const_ptr
-    sta const_ptr+1
+    stx $03EF
+    lda #$C3
+    sta binary_target_path+16
     ldx #$00
-save_source_buffer_clear_unused_stack:
-    cpx compare_char
-    bcs save_source_buffer_clear_unused_stack_done
+save_source_buffer_to_target_snapshot_loop:
+    lda save_params,x
+    sta binary_target_path+17,x
+    inx
+    cpx #7
+    bcc save_source_buffer_to_target_snapshot_loop
+    lda $9580
+    sta binary_target_path+24
+    lda $9614
+    sta binary_target_path+25
+    lda $9615
+    sta binary_target_path+26
+    lda $9616
+    sta binary_target_path+27
+    lda $9617
+    sta binary_target_path+28
+    lda $CFF8
+    sta binary_target_path+29
+    lda $CFF9
+    sta binary_target_path+30
+    tsx
+    stx save_params+8
+    lda #$00
+    ldx #$00
+save_source_buffer_to_target_scrub_stack_loop:
+    cpx save_params+8
+    bcs save_source_buffer_to_target_scrub_stack_done
     sta $0100,x
     inx
-    bne save_source_buffer_clear_unused_stack
-save_source_buffer_clear_unused_stack_done:
+    bne save_source_buffer_to_target_scrub_stack_loop
+save_source_buffer_to_target_scrub_stack_done:
     ldx #save_params
     jsr svc_file_save_sc0
+    lda #$C4
+    sta binary_target_path+16
+    lda save_params+6
+    sta $03FD
+    tsx
+    stx $03FE
+    lda #$A2
+    sta $03FF
     lda save_params+6
     cmp #tool_file_status_ok
     beq save_source_buffer_to_target_ok
@@ -1995,6 +2134,32 @@ save_source_buffer_clear_unused_stack_done:
     rts
 save_source_buffer_to_target_ok:
     clc
+    rts
+
+snapshot_second_load_state:
+    lda #$A2
+    sta $03D0
+    ldx #$00
+snapshot_second_load_target_loop:
+    lda target_path,x
+    sta $03D1,x
+    inx
+    cpx #10
+    bcc snapshot_second_load_target_loop
+    ldx #$00
+snapshot_second_load_module_loop:
+    lda module_name,x
+    sta $03DB,x
+    inx
+    cpx #6
+    bcc snapshot_second_load_module_loop
+    ldx #$00
+snapshot_second_load_file_loop:
+    lda file_params,x
+    sta $03E1,x
+    inx
+    cpx #7
+    bcc snapshot_second_load_file_loop
     rts
 
 .include "../common/action_project_module_arg.inc"
@@ -2014,6 +2179,12 @@ print_line_ptr:
     jmp svc_console_newline
 
 fail_with_ptr:
+    lda debug_phase_zp
+    sta $03FD
+    lda debug_phase
+    sta $03FE
+    tsx
+    stx $03FF
     jsr print_line_ptr
     lda #$01
     sta svc_retptr
@@ -2076,15 +2247,23 @@ bit_masks:
 
 module_name:
     .res 25
+target_path_pad:
+    .res $0069
 target_path:
+    .res 40
+binary_target_path:
     .res 40
 saved_module_name:
     .res 25
 
 .segment "BSS"
 
+source_buffer_pad:
+    .res $0026
 source_buffer:
     .res SOURCE_LIMIT+1
+content_buffer_pad:
+    .res $00F7
 content_buffer:
     .res 256
 export_names:
@@ -2124,6 +2303,18 @@ main_flags_lo:
 main_flags_hi:
     .res 1
 pending_active_index:
+    .res 1
+debug_phase:
+    .res 1
+saved_pending_index:
+    .res 1
+saved_state_lo:
+    .res 1
+saved_state_hi:
+    .res 1
+truncated_flag:
+    .res 1
+debug_phase_zp:
     .res 1
 payload_bytes_data:
     .res 1

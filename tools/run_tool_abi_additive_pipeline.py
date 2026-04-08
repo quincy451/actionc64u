@@ -125,6 +125,38 @@ SCENARIOS = {
         ),
         "expected_console": "14\n5\n1\n1\nTOOL7\n",
     },
+    "procedures": {
+        "out_fs_name": "harness-actc-alink-avmrun-procedures",
+        "source": (
+            'MODULE MAIN\r'
+            'PROC HELLO()\r'
+            'PrintE("ONE")\r'
+            'RETURN\r'
+            'PROC MAIN()\r'
+            'HELLO()\r'
+            'PrintE("TWO")\r'
+            'RETURN\r'
+        ),
+        "expected_avo": (
+            "AVO1\n"
+            "x hello 0 7\n"
+            "x main 7 10\n"
+            "b e0r\n"
+            "b c0e1r\n"
+            "s ONE\n"
+            "s TWO\n"
+            "k 2\n"
+            "n main\n"
+        ),
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 27, 0, 7, 0, 1, 19, 0, 97, 19, 0, 73,
+                16, 255, 72, 69, 0, 0, 97, 23, 0, 73, 16, 255, 73, 32, 255,
+                79, 78, 69, 0, 84, 87, 79, 0,
+            ]
+        ),
+        "expected_console": "ONE\nTWO\n",
+    },
 }
 
 

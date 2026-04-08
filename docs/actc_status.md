@@ -53,6 +53,10 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `PrintIE((20 - 5) / 3)`
 - [x] arithmetic/comparison mixes in print-expression chains:
   `PrintIE((2 + 3) * 4 = 20)` and `PrintIE((2 + 3 * 4) > 10)`
+- [x] multiple local procedures in one module:
+  `PROC HELLO() ...` and `PROC MAIN() ...`
+- [x] local user procedure calls:
+  `HELLO()`
 - [x] current widened additive object emission:
   `b e0u0p0p1ap2myp3p4mp5azr`
 - [x] current widened precedence object emission:
@@ -67,6 +71,8 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `145`
 - [x] current harness runtime output for the arithmetic/comparison slice:
   `14`, `5`, `1`, `1`, `TOOL7`
+- [x] current harness runtime output for the local-procedure slice:
+  `ONE`, `TWO`
 
 ## Current Biggest Blockers
 

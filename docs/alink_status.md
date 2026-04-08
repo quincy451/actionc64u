@@ -46,6 +46,8 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `PrintI(2 + 3 * 4)` and `PrintIE((20 - 5) / 3)`
 - [x] also loads arithmetic/comparison mixed `ACTC` output for:
   `PrintIE((2 + 3) * 4 = 20)` and `PrintIE((2 + 3 * 4) > 10)`
+- [x] also loads multi-procedure local-call `ACTC` output for:
+  `PROC HELLO() ...` and `HELLO()`
 - [x] resolves the current widened child-object closure including `OBJ/W.AVO`
 - [x] emits a widened `BIN/MAIN.AVM` of `76` bytes on that slice
 - [x] emits a precedence-slice `BIN/MAIN.AVM` of `31` bytes
@@ -58,6 +60,8 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `145`
 - [x] current harness runtime output for the arithmetic/comparison slice:
   `14`, `5`, `1`, `1`, `TOOL7`
+- [x] current harness runtime output for the local-procedure slice:
+  `ONE`, `TWO`
 
 ## Current Biggest Blockers
 

@@ -370,15 +370,50 @@ collect_proc_body_ops_after_space_check:
     jsr pattern_matches_scan_ptr
     bcs :+
     jmp collect_proc_body_ops_proc_decl
-:
-    lda current_proc_index_data
-    cmp #$FF
-    bne :+
-    jmp collect_proc_body_ops_skip_line
-:
-    lda #<pattern_print_quote
-    sta const_ptr
-    lda #>pattern_print_quote
+	:
+	    lda current_proc_index_data
+	    cmp #$FF
+	    bne :+
+	    jmp collect_proc_body_ops_skip_line
+	:
+	    lda #<pattern_endif
+	    sta const_ptr
+	    lda #>pattern_endif
+	    sta const_ptr+1
+	    jsr pattern_matches_scan_ptr_keyword
+	    bcs collect_proc_body_ops_try_fi
+	    lda #'v'
+	    jsr append_body_op_no_arg_for_current_proc
+	    jmp collect_proc_body_ops_skip_line
+
+collect_proc_body_ops_try_fi:
+	    lda #<pattern_fi
+	    sta const_ptr
+	    lda #>pattern_fi
+	    sta const_ptr+1
+	    jsr pattern_matches_scan_ptr_keyword
+	    bcs collect_proc_body_ops_try_if
+	    lda #'v'
+	    jsr append_body_op_no_arg_for_current_proc
+	    jmp collect_proc_body_ops_skip_line
+
+collect_proc_body_ops_try_if:
+	    lda #<pattern_if
+	    sta const_ptr
+	    lda #>pattern_if
+	    sta const_ptr+1
+	    jsr pattern_matches_scan_ptr_keyword
+	    bcs collect_proc_body_ops_try_printe
+	    jsr advance_scan_ptr_by_const_ptr
+	    jsr store_small_runtime_condition_from_scan_ptr
+	    bcs collect_proc_body_ops_if_bad_literal
+	    jmp collect_proc_body_ops_skip_line
+collect_proc_body_ops_if_bad_literal:
+	    jmp collect_proc_body_ops_bad_literal
+
+	    lda #<pattern_print_quote
+	    sta const_ptr
+	    lda #>pattern_print_quote
     sta const_ptr+1
     jsr pattern_matches_scan_ptr
     bcs collect_proc_body_ops_try_printe
@@ -813,25 +848,167 @@ store_small_runtime_expr_print:
     clc
     rts
 
+store_small_runtime_condition_from_scan_ptr:
+    ldy #$00
+    jsr emit_runtime_sum_from_scan_y_or_fail
+    bcc :+
+    sec
+    rts
+:   jsr skip_inline_spaces_at_scan_y
+    lda (scan_ptr),y
+    sta expr_compare_lo
+    cmp #'='
+    beq store_small_runtime_condition_compare_entry
+    cmp #'<'
+    beq store_small_runtime_condition_compare_entry
+    cmp #'>'
+    beq store_small_runtime_condition_compare_entry
+    jmp store_small_runtime_condition_done_check
+
+store_small_runtime_condition_compare_entry:
+    lda #$00
+    sta expr_runtime_post_zero
+    lda expr_compare_lo
+    cmp #'='
+    beq store_small_runtime_condition_eq
+    cmp #'<'
+    beq store_small_runtime_condition_lt_entry
+    cmp #'>'
+    beq store_small_runtime_condition_gt_entry
+    sec
+    rts
+store_small_runtime_condition_eq:
+    lda #'q'
+    sta expr_runtime_op
+    iny
+    jmp store_small_runtime_condition_rhs
+store_small_runtime_condition_lt_entry:
+    iny
+    lda (scan_ptr),y
+    cmp #'>'
+    beq store_small_runtime_condition_ne
+    cmp #'='
+    beq store_small_runtime_condition_le
+    lda #'l'
+    sta expr_runtime_op
+    jmp store_small_runtime_condition_rhs
+store_small_runtime_condition_gt_entry:
+    iny
+    lda (scan_ptr),y
+    cmp #'='
+    beq store_small_runtime_condition_ge
+    lda #'g'
+    sta expr_runtime_op
+    jmp store_small_runtime_condition_rhs
+store_small_runtime_condition_le:
+    lda #'g'
+    sta expr_runtime_op
+    lda #$01
+    sta expr_runtime_post_zero
+    iny
+    jmp store_small_runtime_condition_rhs
+store_small_runtime_condition_ge:
+    lda #'l'
+    sta expr_runtime_op
+    lda #$01
+    sta expr_runtime_post_zero
+    iny
+    jmp store_small_runtime_condition_rhs
+store_small_runtime_condition_ne:
+    lda #'n'
+    sta expr_runtime_op
+    iny
+store_small_runtime_condition_rhs:
+    jsr emit_runtime_sum_from_scan_y_or_fail
+    bcc :+
+    sec
+    rts
+:   lda expr_runtime_op
+    jsr append_body_op_no_arg_for_current_proc
+    lda expr_runtime_post_zero
+    beq store_small_runtime_condition_done_check
+    lda #$00
+    sta expr_value_lo
+    jsr store_expr_value_as_int_literal
+    bcs store_small_runtime_condition_fail
+    lda #'p'
+    jsr append_body_op_for_current_proc
+    lda #'q'
+    jsr append_body_op_no_arg_for_current_proc
+store_small_runtime_condition_done_check:
+    jsr require_then_or_line_end_at_scan_y
+    bcc :+
+store_small_runtime_condition_fail:
+    sec
+    rts
+:   lda #'h'
+    jsr append_body_op_no_arg_for_current_proc
+    clc
+    rts
+
+require_then_or_line_end_at_scan_y:
+    jsr skip_inline_spaces_at_scan_y
+    lda (scan_ptr),y
+    beq require_then_or_line_end_at_scan_y_ok
+    cmp #10
+    beq require_then_or_line_end_at_scan_y_ok
+    cmp #13
+    beq require_then_or_line_end_at_scan_y_ok
+    jsr uppercase_ascii
+    cmp #'T'
+    bne require_then_or_line_end_at_scan_y_fail
+    iny
+    lda (scan_ptr),y
+    jsr uppercase_ascii
+    cmp #'H'
+    bne require_then_or_line_end_at_scan_y_fail
+    iny
+    lda (scan_ptr),y
+    jsr uppercase_ascii
+    cmp #'E'
+    bne require_then_or_line_end_at_scan_y_fail
+    iny
+    lda (scan_ptr),y
+    jsr uppercase_ascii
+    cmp #'N'
+    bne require_then_or_line_end_at_scan_y_fail
+    iny
+    jsr skip_inline_spaces_at_scan_y
+    lda (scan_ptr),y
+    beq require_then_or_line_end_at_scan_y_ok
+    cmp #10
+    beq require_then_or_line_end_at_scan_y_ok
+    cmp #13
+    beq require_then_or_line_end_at_scan_y_ok
+require_then_or_line_end_at_scan_y_fail:
+    sec
+    rts
+require_then_or_line_end_at_scan_y_ok:
+    clc
+    rts
+
 emit_saved_expr_push_or_fail:
     lda expr_saved_lo
     sta expr_value_lo
 emit_current_expr_push_or_fail:
     jsr store_expr_value_as_int_literal
-    bcs store_small_runtime_expr_fail
+    bcs emit_runtime_expr_push_fail
     lda #'p'
     jsr append_body_op_for_current_proc
     clc
     rts
+emit_runtime_expr_push_fail:
+    sec
+    rts
 
 emit_runtime_term_push_from_scan_y_or_fail:
     jsr parse_small_decimal_term_at_scan_y
-    bcs store_small_runtime_expr_fail
+    bcs emit_runtime_expr_push_fail
     jmp emit_current_expr_push_or_fail
 
 emit_runtime_sum_from_scan_y_or_fail:
     jsr emit_runtime_term_push_from_scan_y_or_fail
-    bcs store_small_runtime_expr_fail
+    bcs emit_runtime_expr_push_fail
 emit_runtime_sum_from_scan_y_loop:
     jsr skip_inline_spaces_at_scan_y
     lda (scan_ptr),y
@@ -844,14 +1021,14 @@ emit_runtime_sum_from_scan_y_loop:
 emit_runtime_sum_from_scan_y_add:
     iny
     jsr emit_runtime_term_push_from_scan_y_or_fail
-    bcs store_small_runtime_expr_fail
+    bcs emit_runtime_expr_push_fail
     lda #'a'
     jsr append_body_op_no_arg_for_current_proc
     jmp emit_runtime_sum_from_scan_y_loop
 emit_runtime_sum_from_scan_y_sub:
     iny
     jsr emit_runtime_term_push_from_scan_y_or_fail
-    bcs store_small_runtime_expr_fail
+    bcs emit_runtime_expr_push_fail
     lda #'m'
     jsr append_body_op_no_arg_for_current_proc
     jmp emit_runtime_sum_from_scan_y_loop
@@ -1233,12 +1410,16 @@ compute_payload_layout_body_loop:
     beq compute_payload_layout_add_int
     cmp #'j'
     beq compute_payload_layout_add_int
-    cmp #'y'
-    beq compute_payload_layout_add_single_int
-    cmp #'z'
-    beq compute_payload_layout_add_single_int
-    cmp #'a'
-    beq compute_payload_layout_add_single
+	    cmp #'y'
+	    beq compute_payload_layout_add_single_int
+	    cmp #'z'
+	    beq compute_payload_layout_add_single_int
+	    cmp #'h'
+	    beq compute_payload_layout_add_single_int
+	    cmp #'v'
+	    beq compute_payload_layout_add_zero
+	    cmp #'a'
+	    beq compute_payload_layout_add_single
     cmp #'m'
     beq compute_payload_layout_add_single
     cmp #'q'
@@ -1276,12 +1457,15 @@ compute_payload_layout_add_single:
     iny
     bne compute_payload_layout_body_loop
 compute_payload_layout_add_single_int:
-    clc
-    lda proc_sizes_data,x
-    adc #3
-    sta proc_sizes_data,x
-    iny
-    bne compute_payload_layout_body_loop
+	    clc
+	    lda proc_sizes_data,x
+	    adc #3
+	    sta proc_sizes_data,x
+	    iny
+	    jmp compute_payload_layout_body_loop
+compute_payload_layout_add_zero:
+	    iny
+	    jmp compute_payload_layout_body_loop
 compute_payload_layout_add_int:
     clc
     lda proc_sizes_data,x
@@ -1637,6 +1821,34 @@ pattern_matches_scan_ptr_fail:
     sec
     rts
 pattern_matches_scan_ptr_ok:
+    clc
+    rts
+
+pattern_matches_scan_ptr_keyword:
+    jsr pattern_matches_scan_ptr
+    bcc :+
+    sec
+    rts
+:   ldy #$00
+pattern_matches_scan_ptr_keyword_len_loop:
+    lda (const_ptr),y
+    beq pattern_matches_scan_ptr_keyword_boundary
+    iny
+    bne pattern_matches_scan_ptr_keyword_len_loop
+pattern_matches_scan_ptr_keyword_boundary:
+    lda (scan_ptr),y
+    beq pattern_matches_scan_ptr_keyword_ok
+    cmp #' '
+    beq pattern_matches_scan_ptr_keyword_ok
+    cmp #9
+    beq pattern_matches_scan_ptr_keyword_ok
+    cmp #10
+    beq pattern_matches_scan_ptr_keyword_ok
+    cmp #13
+    beq pattern_matches_scan_ptr_keyword_ok
+    sec
+    rts
+pattern_matches_scan_ptr_keyword_ok:
     clc
     rts
 
@@ -2030,6 +2242,12 @@ pattern_module:
     .asciiz "MODULE"
 pattern_proc:
     .asciiz "PROC"
+pattern_if:
+    .asciiz "IF"
+pattern_fi:
+    .asciiz "FI"
+pattern_endif:
+    .asciiz "ENDIF"
 pattern_print_quote:
     .byte "PRINT(",34,0
 pattern_printe_quote:

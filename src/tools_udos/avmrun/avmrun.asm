@@ -1077,6 +1077,12 @@ interpret_payload_loop:
 :   cmp #OPCODE_GT
     bne :+
     jmp interpret_gt
+:   cmp #OPCODE_JZ
+    bne :+
+    jmp interpret_jz
+:   cmp #OPCODE_JMP
+    bne :+
+    jmp interpret_jmp
 :   cmp #OPCODE_DUP
     bne :+
     jmp interpret_dup
@@ -1195,6 +1201,54 @@ interpret_compare_common:
     jmp interpret_payload_fail
 :   lda #$01
     jsr advance_scan_ptr
+    jmp interpret_payload_loop
+
+interpret_jz:
+    jsr ensure_scan_room_3
+    bcc :+
+    jmp interpret_payload_fail
+:   ldy #$01
+    lda (scan_ptr),y
+    sta word_tmp
+    iny
+    lda (scan_ptr),y
+    sta word_tmp+1
+    jsr interp_pop_to_svc_retptr
+    bcc :+
+    jmp interpret_payload_fail
+:   lda svc_retptr
+    ora svc_retptr+1
+    beq interpret_jz_taken
+    lda #$03
+    jsr advance_scan_ptr
+    jmp interpret_payload_loop
+interpret_jz_taken:
+    jsr interpret_resolve_word_tmp_to_absolute
+    bcc :+
+    jmp interpret_payload_fail
+:   lda word_tmp
+    sta scan_ptr
+    lda word_tmp+1
+    sta scan_ptr+1
+    jmp interpret_payload_loop
+
+interpret_jmp:
+    jsr ensure_scan_room_3
+    bcc :+
+    jmp interpret_payload_fail
+:   ldy #$01
+    lda (scan_ptr),y
+    sta word_tmp
+    iny
+    lda (scan_ptr),y
+    sta word_tmp+1
+    jsr interpret_resolve_word_tmp_to_absolute
+    bcc :+
+    jmp interpret_payload_fail
+:   lda word_tmp
+    sta scan_ptr
+    lda word_tmp+1
+    sta scan_ptr+1
     jmp interpret_payload_loop
 
 interpret_dup:

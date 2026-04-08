@@ -35,7 +35,7 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
 - [ ] broader object graph / external-resolution surface
 - [ ] more robust child-object load path under the current dirty VICE debug line
 - [ ] more robust final save/return path under the current dirty VICE debug line
-- [ ] larger body-op surface than the already-proven narrow slice
+- [ ] larger body-op surface than the current arithmetic/procedure/`IF` slice
 - [ ] full historical dead-strip/link behavior
 
 ## Harness-Proven Current Widening Line
@@ -48,10 +48,13 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `PrintIE((2 + 3) * 4 = 20)` and `PrintIE((2 + 3 * 4) > 10)`
 - [x] also loads multi-procedure local-call `ACTC` output for:
   `PROC HELLO() ...` and `HELLO()`
+- [x] also loads single-branch `IF` control-flow `ACTC` output for:
+  `IF 1 = 0 THEN ... FI` and `IF 1 = 1 THEN ... FI`
 - [x] resolves the current widened child-object closure including `OBJ/W.AVO`
 - [x] emits a widened `BIN/MAIN.AVM` of `76` bytes on that slice
 - [x] emits a precedence-slice `BIN/MAIN.AVM` of `31` bytes
 - [x] emits an arithmetic/comparison slice `BIN/MAIN.AVM` of `72` bytes
+- [x] emits an `IF` slice `BIN/MAIN.AVM` of `65` bytes
 - [x] harness proof exists through:
   `ACTC -> ALINK -> AVMRUN`
 - [x] current harness runtime output for that widened slice:
@@ -62,6 +65,8 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `14`, `5`, `1`, `1`, `TOOL7`
 - [x] current harness runtime output for the local-procedure slice:
   `ONE`, `TWO`
+- [x] current harness runtime output for the `IF` slice:
+  `YES`, `DONE`
 
 ## Current Biggest Blockers
 

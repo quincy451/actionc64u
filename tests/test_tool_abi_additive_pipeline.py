@@ -68,6 +68,9 @@ class TestToolAbiPipeline(unittest.TestCase):
     def test_procedure_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("procedures", "ONE\nTWO\n", 66, 39)
 
+    def test_if_block_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("if_blocks", "YES\nDONE\n", 86, 65)
+
 
 if __name__ == "__main__":
     unittest.main()

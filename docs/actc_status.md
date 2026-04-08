@@ -33,11 +33,12 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
 - [x] parenthesized grouping in the current narrow expression path
 - [x] simple comparisons:
   `=`, `<>`, `<`, `<=`, `>`, `>=`
+- [x] `IF ... THEN ... FI`
 
 ## Current Widening Work
 
 - [ ] broader runtime-emitted integer expression chains beyond the already-proven narrow path
-- [ ] larger statement/control-flow surface
+- [ ] larger statement/control-flow surface beyond the current single-branch `IF` path
 - [ ] broader procedure/function surface
 - [ ] full historical ACTION! source compatibility
 
@@ -57,6 +58,10 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `PROC HELLO() ...` and `PROC MAIN() ...`
 - [x] local user procedure calls:
   `HELLO()`
+- [x] single-branch control flow:
+  `IF 1 = 0 THEN ... FI` and `IF 1 = 1 THEN ... FI`
+- [x] current widened control-flow object emission:
+  `b p0p1qhe0vp2p3qhe1ve2r`
 - [x] current widened additive object emission:
   `b e0u0p0p1ap2myp3p4mp5azr`
 - [x] current widened precedence object emission:
@@ -73,6 +78,8 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `14`, `5`, `1`, `1`, `TOOL7`
 - [x] current harness runtime output for the local-procedure slice:
   `ONE`, `TWO`
+- [x] current harness runtime output for the `IF` slice:
+  `YES`, `DONE`
 
 ## Current Biggest Blockers
 

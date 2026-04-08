@@ -83,6 +83,13 @@ cd /mnt/c/test/action/actionc64u
 ./tools/run_tool_abi_additive_pipeline.py --scenario procedures --keep-workspace
 ```
 
+Run the current `IF` control-flow proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario if_blocks --keep-workspace
+```
+
 That script:
 
 - clones a clean harness workspace from the current manual-pipeline fs tree
@@ -238,6 +245,8 @@ That now includes at least two stable scenarios:
   `14`, `5`, `1`, `1`, `TOOL7`
 - local user procedure call:
   `ONE`, `TWO`
+- single-branch `IF` control flow:
+  `YES`, `DONE`
 
 ## Current Debug Value
 

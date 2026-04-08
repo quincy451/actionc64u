@@ -97,6 +97,20 @@ cd /mnt/c/test/action/actionc64u
 ./tools/run_tool_abi_additive_pipeline.py --scenario comparison_branch_calls --keep-workspace
 ```
 
+Run the current nested branch-local procedure-call proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario nested_branch_calls --keep-workspace
+```
+
+Run the current branch-local unresolved-external proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario branch_external --keep-workspace
+```
+
 Run the current local-procedure-call proof end to end:
 
 ```sh
@@ -291,6 +305,10 @@ That now includes at least two stable scenarios:
   `HELLO`, `DONE`
 - arithmetic/comparison branch-local procedure call:
   `HELLO`, `DONE`
+- nested branch-local procedure call:
+  `HELLO`, `DONE`
+- branch-local unresolved-external call:
+  `TOOL7`, `DONE`
 - local user procedure call:
   `ONE`, `TWO`
 - single-branch `IF` control flow:

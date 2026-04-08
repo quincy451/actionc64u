@@ -255,6 +255,104 @@ SCENARIOS = {
         ),
         "expected_console": "HELLO\nDONE\n",
     },
+    "nested_branch_calls": {
+        "out_fs_name": "harness-actc-alink-avmrun-nested-branch-calls",
+        "source": (
+            'MODULE MAIN\r'
+            'PROC HELLO()\r'
+            'PrintE("HELLO")\r'
+            'RETURN\r'
+            'PROC BYE()\r'
+            'PrintE("BYE")\r'
+            'RETURN\r'
+            'PROC OUTER()\r'
+            'PrintE("OUTER")\r'
+            'RETURN\r'
+            'PROC MAIN()\r'
+            'IF 1 = 1 THEN\r'
+            'IF 2 + 3 * 4 > 10 THEN\r'
+            'HELLO()\r'
+            'ELSE\r'
+            'BYE()\r'
+            'FI\r'
+            'ELSE\r'
+            'OUTER()\r'
+            'FI\r'
+            'PrintE("DONE")\r'
+            'RETURN\r'
+        ),
+        "expected_avo": (
+            "AVO1\n"
+            "x hello 0 7\n"
+            "x bye 7 7\n"
+            "x outer 14 7\n"
+            "x main 21 46\n"
+            "b e0r\n"
+            "b e1r\n"
+            "b e2r\n"
+            "b p0p1qhp2p3ap4ghc0wc1vwc2ve3r\n"
+            "s HELLO\n"
+            "s BYE\n"
+            "s OUTER\n"
+            "s DONE\n"
+            "i 1\n"
+            "i 1\n"
+            "i 2\n"
+            "i 12\n"
+            "i 10\n"
+            "k 2\n"
+            "n main\n"
+        ),
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 90, 0, 21, 0, 1, 69, 0, 97, 69, 0, 73,
+                16, 255, 72, 97, 75, 0, 73, 16, 255, 72, 97, 79, 0, 73, 16,
+                255, 72, 17, 1, 0, 17, 1, 0, 22, 24, 57, 0, 17, 2, 0, 17,
+                12, 0, 20, 17, 10, 0, 29, 24, 51, 0, 69, 0, 0, 25, 60, 0,
+                69, 7, 0, 25, 60, 0, 69, 14, 0, 97, 85, 0, 73, 16, 255, 73,
+                32, 255, 72, 69, 76, 76, 79, 0, 66, 89, 69, 0, 79, 85, 84,
+                69, 82, 0, 68, 79, 78, 69, 0,
+            ]
+        ),
+        "expected_console": "HELLO\nDONE\n",
+    },
+    "branch_external": {
+        "out_fs_name": "harness-actc-alink-avmrun-branch-external",
+        "source": (
+            'MODULE MAIN\r'
+            'PROC MAIN()\r'
+            'IF 2 + 3 * 4 > 10 THEN\r'
+            'W()\r'
+            'ELSE\r'
+            'PrintE("BAD")\r'
+            'FI\r'
+            'PrintE("DONE")\r'
+            'RETURN\r'
+        ),
+        "expected_avo": (
+            "AVO1\n"
+            "x main 0 33\n"
+            "b p0p1ap2ghu0we0ve1r\n"
+            "u w\n"
+            "s BAD\n"
+            "s DONE\n"
+            "i 2\n"
+            "i 12\n"
+            "i 10\n"
+            "k 2\n"
+            "n main\n"
+        ),
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 62, 0, 0, 0, 1, 48, 0, 17, 2, 0, 17,
+                12, 0, 20, 17, 10, 0, 29, 24, 20, 0, 69, 35, 0, 25, 26,
+                0, 97, 48, 0, 73, 16, 255, 97, 52, 0, 73, 16, 255, 73,
+                32, 255, 97, 57, 0, 73, 0, 255, 17, 7, 0, 73, 49, 255,
+                72, 66, 65, 68, 0, 68, 79, 78, 69, 0, 84, 79, 79, 76, 0,
+            ]
+        ),
+        "expected_console": "TOOL7\nDONE\n",
+    },
     "procedures": {
         "out_fs_name": "harness-actc-alink-avmrun-procedures",
         "source": (

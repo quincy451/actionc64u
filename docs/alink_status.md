@@ -54,6 +54,10 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `IF 1 = 1 THEN HELLO() ELSE BYE() FI`
 - [x] also loads arithmetic/comparison branch-local procedure-call `ACTC` output for:
   `IF 2 + 3 * 4 > 10 THEN HELLO() ELSE BYE() FI`
+- [x] also loads nested branch-local procedure-call `ACTC` output for:
+  `IF 1 = 1 THEN IF 2 + 3 * 4 > 10 THEN HELLO() ELSE BYE() FI ELSE OUTER() FI`
+- [x] also loads branch-local unresolved-external `ACTC` output for:
+  `IF 2 + 3 * 4 > 10 THEN W() ELSE ... FI`
 - [x] also loads single-branch `IF` control-flow `ACTC` output for:
   `IF 1 = 0 THEN ... FI` and `IF 1 = 1 THEN ... FI`
 - [x] also loads `ELSE` control-flow `ACTC` output for:
@@ -69,6 +73,8 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
 - [x] emits an arithmetic/comparison `IF/ELSE` slice `BIN/MAIN.AVM` of `62` bytes
 - [x] emits a branch-call `BIN/MAIN.AVM` of `69` bytes
 - [x] emits an arithmetic/comparison branch-call `BIN/MAIN.AVM` of `73` bytes
+- [x] emits a nested branch-call `BIN/MAIN.AVM` of `102` bytes
+- [x] emits a branch-external `BIN/MAIN.AVM` of `74` bytes
 - [x] emits an `IF` slice `BIN/MAIN.AVM` of `65` bytes
 - [x] emits an `ELSE` slice `BIN/MAIN.AVM` of `60` bytes
 - [x] emits a nested-`IF` slice `BIN/MAIN.AVM` of `77` bytes
@@ -87,6 +93,10 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `HELLO`, `DONE`
 - [x] current harness runtime output for the arithmetic/comparison branch-call slice:
   `HELLO`, `DONE`
+- [x] current harness runtime output for the nested branch-call slice:
+  `HELLO`, `DONE`
+- [x] current harness runtime output for the branch-external slice:
+  `TOOL7`, `DONE`
 - [x] current harness runtime output for the local-procedure slice:
   `ONE`, `TWO`
 - [x] current harness runtime output for the `IF` slice:

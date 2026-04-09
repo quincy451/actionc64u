@@ -230,6 +230,27 @@ cd /mnt/c/test/action/actionc64u
 ./tools/run_tool_abi_additive_pipeline.py --scenario do_until_calls --keep-workspace
 ```
 
+Run the current branch-controlled `DO ... UNTIL ... OD` proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario do_until_if_else --keep-workspace
+```
+
+Run the current branch-local-call `DO ... UNTIL ... OD` proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario do_until_branch_calls --keep-workspace
+```
+
+Run the current branch-external `DO ... UNTIL ... OD` proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario do_until_branch_external --keep-workspace
+```
+
 That script:
 
 - clones a clean harness workspace from the current manual-pipeline fs tree

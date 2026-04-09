@@ -90,6 +90,12 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `DO ... UNTIL 1 = 1 OD`
 - [x] also loads local-call plus unresolved-external loop `ACTC` output for:
   `DO HELLO() W() UNTIL 1 = 1 OD`
+- [x] also loads branch control flow inside `DO ... UNTIL ... OD`:
+  `DO IF 2 + 3 * 4 > 10 THEN ... ELSE ... FI UNTIL 1 = 1 OD`
+- [x] also loads branch-local procedure calls inside `DO ... UNTIL ... OD`:
+  `DO IF 2 + 3 * 4 > 10 THEN HELLO() ELSE BYE() FI UNTIL 1 = 1 OD`
+- [x] also loads branch-local unresolved externals inside `DO ... UNTIL ... OD`:
+  `DO IF 2 + 3 * 4 > 10 THEN W() ELSE ... FI UNTIL 1 = 1 OD`
 - [x] resolves the current widened child-object closure including `OBJ/W.AVO`
 - [x] resolves the current widened transitive child-object closure including `OBJ/W.AVO` and `OBJ/Z.AVO`
 - [x] resolves sibling child objects from the root:
@@ -122,6 +128,9 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
 - [x] emits a nested-`ELSE` slice `BIN/MAIN.AVM` of `86` bytes
 - [x] emits a `DO ... UNTIL ... OD` slice `BIN/MAIN.AVM` of `47` bytes
 - [x] emits a call/external `DO ... UNTIL ... OD` slice `BIN/MAIN.AVM` of `73` bytes
+- [x] emits a branch `DO ... UNTIL ... OD` slice `BIN/MAIN.AVM` of `73` bytes
+- [x] emits a branch-call `DO ... UNTIL ... OD` slice `BIN/MAIN.AVM` of `83` bytes
+- [x] emits a branch-external `DO ... UNTIL ... OD` slice `BIN/MAIN.AVM` of `84` bytes
 - [x] harness proof exists through:
   `ACTC -> ALINK -> AVMRUN`
 - [x] current harness runtime output for that widened slice:
@@ -174,6 +183,12 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `BODY`, `DONE`
 - [x] current harness runtime output for the call/external loop slice:
   `HELLO`, `TOOL7`, `DONE`
+- [x] current harness runtime output for the loop + branch slice:
+  `YES`, `DONE`
+- [x] current harness runtime output for the loop + branch-call slice:
+  `HELLO`, `DONE`
+- [x] current harness runtime output for the loop + branch-external slice:
+  `TOOL7`, `DONE`
 
 ## Current Biggest Blockers
 

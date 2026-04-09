@@ -128,6 +128,15 @@ class TestToolAbiPipeline(unittest.TestCase):
     def test_do_until_call_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("do_until_calls", "HELLO\nTOOL7\nDONE\n", 91, 73)
 
+    def test_do_until_if_else_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("do_until_if_else", "YES\nDONE\n", 98, 73)
+
+    def test_do_until_branch_call_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("do_until_branch_calls", "HELLO\nDONE\n", 135, 83)
+
+    def test_do_until_branch_external_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("do_until_branch_external", "TOOL7\nDONE\n", 96, 84)
+
     def test_nested_if_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("nested_if", "INNERDONE\nOUTERDONE\n", 98, 77)
 

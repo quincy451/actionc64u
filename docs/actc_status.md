@@ -39,6 +39,9 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
 - [x] nested `IF ... THEN ... ELSE ... FI`
 - [x] `DO ... UNTIL ... OD`
 - [x] local and unresolved-external calls inside `DO ... UNTIL ... OD`
+- [x] `IF ... THEN ... ELSE ... FI` inside `DO ... UNTIL ... OD`
+- [x] local branch calls inside `DO ... UNTIL ... OD`
+- [x] unresolved-external branch calls inside `DO ... UNTIL ... OD`
 
 ## Current Widening Work
 
@@ -105,6 +108,12 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `DO ... UNTIL 1 = 1 OD`
 - [x] local and unresolved-external calls inside `DO ... UNTIL ... OD`:
   `DO HELLO() W() UNTIL 1 = 1 OD`
+- [x] branch control flow inside `DO ... UNTIL ... OD`:
+  `DO IF 2 + 3 * 4 > 10 THEN ... ELSE ... FI UNTIL 1 = 1 OD`
+- [x] local branch calls inside `DO ... UNTIL ... OD`:
+  `DO IF 2 + 3 * 4 > 10 THEN HELLO() ELSE BYE() FI UNTIL 1 = 1 OD`
+- [x] unresolved-external branch calls inside `DO ... UNTIL ... OD`:
+  `DO IF 2 + 3 * 4 > 10 THEN W() ELSE ... FI UNTIL 1 = 1 OD`
 - [x] current widened control-flow object emission:
   `b p0p1qhe0vp2p3qhe1ve2r`
 - [x] current widened `ELSE` object emission:
@@ -117,6 +126,12 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `b de0p0p1qtoe1r`
 - [x] current widened call/external loop object emission:
   `b dc0u0p0p1qtoe1r`
+- [x] current widened loop + branch object emission:
+  `b dp0p1ap2ghe0we1vp3p4qtoe2r`
+- [x] current widened loop + branch-call object emission:
+  `b dp0p1ap2ghc0wc1vp3p4qtoe2r`
+- [x] current widened loop + branch-external object emission:
+  `b dp0p1ap2ghu0we0vp3p4qtoe1r`
 - [x] current widened additive object emission:
   `b e0u0p0p1ap2myp3p4mp5azr`
 - [x] current widened precedence object emission:
@@ -201,6 +216,12 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `BODY`, `DONE`
 - [x] current harness runtime output for the call/external loop slice:
   `HELLO`, `TOOL7`, `DONE`
+- [x] current harness runtime output for the loop + branch slice:
+  `YES`, `DONE`
+- [x] current harness runtime output for the loop + branch-call slice:
+  `HELLO`, `DONE`
+- [x] current harness runtime output for the loop + branch-external slice:
+  `TOOL7`, `DONE`
 
 ## Current Biggest Blockers
 

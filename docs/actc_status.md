@@ -37,6 +37,8 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
 - [x] `IF ... THEN ... ELSE ... FI`
 - [x] nested `IF ... THEN ... FI`
 - [x] nested `IF ... THEN ... ELSE ... FI`
+- [x] `DO ... UNTIL ... OD`
+- [x] local and unresolved-external calls inside `DO ... UNTIL ... OD`
 
 ## Current Widening Work
 
@@ -99,6 +101,10 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `IF 1 = 1 THEN IF 1 = 0 THEN ... FI ... FI`
 - [x] nested `ELSE` control flow:
   `IF 1 = 1 THEN IF 1 = 0 THEN ... ELSE ... FI ELSE ... FI`
+- [x] `DO ... UNTIL ... OD` loop control flow:
+  `DO ... UNTIL 1 = 1 OD`
+- [x] local and unresolved-external calls inside `DO ... UNTIL ... OD`:
+  `DO HELLO() W() UNTIL 1 = 1 OD`
 - [x] current widened control-flow object emission:
   `b p0p1qhe0vp2p3qhe1ve2r`
 - [x] current widened `ELSE` object emission:
@@ -107,6 +113,10 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `b p0p1qhp2p3qhe0ve1ve2r`
 - [x] current widened nested-`ELSE` object emission:
   `b p0p1qhp2p3qhe0we1vwe2ve3r`
+- [x] current widened `DO ... UNTIL ... OD` object emission:
+  `b de0p0p1qtoe1r`
+- [x] current widened call/external loop object emission:
+  `b dc0u0p0p1qtoe1r`
 - [x] current widened additive object emission:
   `b e0u0p0p1ap2myp3p4mp5azr`
 - [x] current widened precedence object emission:
@@ -187,6 +197,10 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `INNERDONE`, `OUTERDONE`
 - [x] current harness runtime output for the nested-`ELSE` slice:
   `GOOD1`, `DONE`
+- [x] current harness runtime output for the `DO ... UNTIL ... OD` slice:
+  `BODY`, `DONE`
+- [x] current harness runtime output for the call/external loop slice:
+  `HELLO`, `TOOL7`, `DONE`
 
 ## Current Biggest Blockers
 

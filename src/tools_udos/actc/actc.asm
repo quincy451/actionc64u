@@ -375,6 +375,40 @@ collect_proc_body_ops_after_space_check:
 	    bne :+
 	    jmp collect_proc_body_ops_skip_line
 	:
+	    lda #<pattern_od
+	    sta const_ptr
+	    lda #>pattern_od
+	    sta const_ptr+1
+	    jsr pattern_matches_scan_ptr_keyword
+	    bcs collect_proc_body_ops_try_until
+	    lda #'o'
+	    jsr append_body_op_no_arg_for_current_proc
+	    jmp collect_proc_body_ops_skip_line
+
+collect_proc_body_ops_try_until:
+	    lda #<pattern_until
+	    sta const_ptr
+	    lda #>pattern_until
+	    sta const_ptr+1
+	    jsr pattern_matches_scan_ptr_keyword
+	    bcs collect_proc_body_ops_try_do
+	    jsr advance_scan_ptr_by_const_ptr
+	    jsr store_small_runtime_until_from_scan_ptr
+	    bcs collect_proc_body_ops_if_bad_literal
+	    jmp collect_proc_body_ops_skip_line
+
+collect_proc_body_ops_try_do:
+	    lda #<pattern_do
+	    sta const_ptr
+	    lda #>pattern_do
+	    sta const_ptr+1
+	    jsr pattern_matches_scan_ptr_keyword
+	    bcs collect_proc_body_ops_try_endif
+	    lda #'d'
+	    jsr append_body_op_no_arg_for_current_proc
+	    jmp collect_proc_body_ops_skip_line
+
+collect_proc_body_ops_try_endif:
 	    lda #<pattern_endif
 	    sta const_ptr
 	    lda #>pattern_endif
@@ -859,6 +893,14 @@ store_small_runtime_expr_print:
     rts
 
 store_small_runtime_condition_from_scan_ptr:
+    lda #'h'
+    sta expr_print_op
+    jmp store_small_runtime_condition_core
+
+store_small_runtime_until_from_scan_ptr:
+    lda #'t'
+    sta expr_print_op
+store_small_runtime_condition_core:
     ldy #$00
     jsr emit_runtime_sum_from_scan_y_or_fail
     bcc :+
@@ -946,13 +988,34 @@ store_small_runtime_condition_rhs:
     lda #'q'
     jsr append_body_op_no_arg_for_current_proc
 store_small_runtime_condition_done_check:
+    lda expr_print_op
+    cmp #'h'
+    bne :+
     jsr require_then_or_line_end_at_scan_y
-    bcc :+
+    bcc store_small_runtime_condition_done_ok
+    jmp store_small_runtime_condition_fail
+:   jsr require_line_end_at_scan_y
+    bcc store_small_runtime_condition_done_ok
 store_small_runtime_condition_fail:
     sec
     rts
-:   lda #'h'
+store_small_runtime_condition_done_ok:
+    lda expr_print_op
     jsr append_body_op_no_arg_for_current_proc
+    clc
+    rts
+
+require_line_end_at_scan_y:
+    jsr skip_inline_spaces_at_scan_y
+    lda (scan_ptr),y
+    beq require_line_end_at_scan_y_ok
+    cmp #10
+    beq require_line_end_at_scan_y_ok
+    cmp #13
+    beq require_line_end_at_scan_y_ok
+    sec
+    rts
+require_line_end_at_scan_y_ok:
     clc
     rts
 
@@ -1426,9 +1489,15 @@ compute_payload_layout_body_loop:
 	    beq compute_payload_layout_add_single_int
 	    cmp #'h'
 	    beq compute_payload_layout_add_single_int
+	    cmp #'t'
+	    beq compute_payload_layout_add_single_int
 	    cmp #'w'
 	    beq compute_payload_layout_add_single_int
 	    cmp #'v'
+	    beq compute_payload_layout_add_zero
+	    cmp #'d'
+	    beq compute_payload_layout_add_zero
+	    cmp #'o'
 	    beq compute_payload_layout_add_zero
 	    cmp #'a'
 	    beq compute_payload_layout_add_single
@@ -1467,7 +1536,7 @@ compute_payload_layout_add_single:
     adc #1
     sta proc_sizes_data,x
     iny
-    bne compute_payload_layout_body_loop
+    jmp compute_payload_layout_body_loop
 compute_payload_layout_add_single_int:
 	    clc
 	    lda proc_sizes_data,x
@@ -2260,6 +2329,12 @@ pattern_proc:
     .asciiz "PROC"
 pattern_if:
     .asciiz "IF"
+pattern_do:
+    .asciiz "DO"
+pattern_od:
+    .asciiz "OD"
+pattern_until:
+    .asciiz "UNTIL"
 pattern_else:
     .asciiz "ELSE"
 pattern_fi:

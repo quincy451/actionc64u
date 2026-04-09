@@ -422,14 +422,20 @@ parse_body_ops_string_loop:
 	    beq parse_body_ops_store
 	    cmp #'z'
 	    beq parse_body_ops_store
-	    cmp #'h'
-	    beq parse_body_ops_store
-	    cmp #'w'
-	    beq parse_body_ops_store
-	    cmp #'v'
-	    beq parse_body_ops_store
-	    cmp #'r'
-	    beq parse_body_ops_store
+    cmp #'h'
+    beq parse_body_ops_store
+    cmp #'t'
+    beq parse_body_ops_store
+    cmp #'w'
+    beq parse_body_ops_store
+    cmp #'v'
+    beq parse_body_ops_store
+    cmp #'d'
+    beq parse_body_ops_store
+    cmp #'o'
+    beq parse_body_ops_store
+    cmp #'r'
+    beq parse_body_ops_store
     cmp #'0'
     bcc parse_body_ops_bad
     cmp #'7'+1
@@ -731,7 +737,9 @@ build_live_set_export_loop:
     ldy #$00
 build_live_set_body_loop:
     lda (body_ptr),y
-    beq build_live_set_next_export_restore
+    bne :+
+    jmp build_live_set_next_export_restore
+: 
     cmp #'c'
     beq build_live_set_call
     cmp #'u'
@@ -764,9 +772,15 @@ build_live_set_body_loop:
 	    beq build_live_set_single
 	    cmp #'h'
 	    beq build_live_set_single
+	    cmp #'t'
+	    beq build_live_set_single
 	    cmp #'w'
 	    beq build_live_set_single
 	    cmp #'v'
+	    beq build_live_set_single
+	    cmp #'d'
+	    beq build_live_set_single
+	    cmp #'o'
 	    beq build_live_set_single
 	    cmp #'r'
 	    beq build_live_set_ret
@@ -789,17 +803,17 @@ build_live_set_call:
 build_live_set_call_done:
     ldx current_bit_hi
     iny
-    bne build_live_set_body_loop
+    jmp build_live_set_body_loop
 build_live_set_skip_pair:
     iny
     iny
-    bne build_live_set_body_loop
+    jmp build_live_set_body_loop
 build_live_set_single:
     iny
-    bne build_live_set_body_loop
+    jmp build_live_set_body_loop
 build_live_set_ret:
     iny
-    bne build_live_set_body_loop
+    jmp build_live_set_body_loop
 build_live_set_next_export_restore:
     ldx current_bit_hi
 build_live_set_next_export:
@@ -1429,15 +1443,24 @@ emit_live_bytes_for_export_x_loop:
 	:   cmp #'z'
 	    bne :+
 	    jmp emit_live_bytes_for_export_x_printie_top
+	:   cmp #'d'
+	    bne :+
+	    jmp emit_live_bytes_for_export_x_do
 	:   cmp #'h'
 	    bne :+
 	    jmp emit_live_bytes_for_export_x_if
+	:   cmp #'t'
+	    bne :+
+	    jmp emit_live_bytes_for_export_x_until
 	:   cmp #'w'
 	    bne :+
 	    jmp emit_live_bytes_for_export_x_else
 	:   cmp #'v'
 	    bne :+
 	    jmp emit_live_bytes_for_export_x_endif
+	:   cmp #'o'
+	    bne :+
+	    jmp emit_live_bytes_for_export_x_od
 	:   cmp #'r'
 	    bne :+
 	    jmp emit_live_bytes_for_export_x_ret
@@ -1586,8 +1609,21 @@ emit_live_bytes_for_export_x_print_top_common:
 	    jsr append_payload_byte
 	    iny
 	    jmp emit_live_bytes_for_export_x_loop
+emit_live_bytes_for_export_x_do:
+	    iny
+	    jmp emit_live_bytes_for_export_x_loop
 emit_live_bytes_for_export_x_if:
 	    jsr load_if_false_target_offset_or_fail
+	    lda #OPCODE_JZ
+	    jsr append_payload_byte
+	    lda current_bit_lo
+	    jsr append_payload_byte
+	    lda current_bit_hi
+	    jsr append_payload_byte
+	    iny
+	    jmp emit_live_bytes_for_export_x_loop
+emit_live_bytes_for_export_x_until:
+	    jsr load_until_loop_start_target_offset_or_fail
 	    lda #OPCODE_JZ
 	    jsr append_payload_byte
 	    lda current_bit_lo
@@ -1607,6 +1643,9 @@ emit_live_bytes_for_export_x_else:
 	    iny
 	    jmp emit_live_bytes_for_export_x_loop
 emit_live_bytes_for_export_x_endif:
+	    iny
+	    jmp emit_live_bytes_for_export_x_loop
+emit_live_bytes_for_export_x_od:
 	    iny
 	    jmp emit_live_bytes_for_export_x_loop
 emit_live_bytes_for_export_x_ret:
@@ -1671,10 +1710,16 @@ load_if_false_target_offset_loop:
 	    beq load_if_false_target_offset_add_single_int
 	    cmp #'h'
 	    beq load_if_false_target_offset_add_if
+	    cmp #'t'
+	    beq load_if_false_target_offset_add_single_int
 	    cmp #'w'
 	    beq load_if_false_target_offset_add_else
 	    cmp #'v'
 	    beq load_if_false_target_offset_pop_if
+	    cmp #'d'
+	    beq load_if_false_target_offset_pop_if_next
+	    cmp #'o'
+	    beq load_if_false_target_offset_pop_if_next
 	    cmp #'a'
 	    beq load_if_false_target_offset_add_single
 	    cmp #'m'
@@ -1792,10 +1837,16 @@ load_else_end_target_offset_loop:
 	    beq load_else_end_target_offset_add_single_int
 	    cmp #'h'
 	    beq load_else_end_target_offset_add_if
+	    cmp #'t'
+	    beq load_else_end_target_offset_add_single_int
 	    cmp #'w'
 	    beq load_else_end_target_offset_add_else
 	    cmp #'v'
 	    beq load_else_end_target_offset_pop_if
+	    cmp #'d'
+	    beq load_else_end_target_offset_pop_if_next
+	    cmp #'o'
+	    beq load_else_end_target_offset_pop_if_next
 	    cmp #'a'
 	    beq load_else_end_target_offset_add_single
 	    cmp #'m'
@@ -1871,6 +1922,142 @@ load_else_end_target_offset_done:
 	    clc
 	    rts
 load_else_end_target_offset_fail:
+	    pla
+	    tay
+	    lda #<msg_bad_avo
+	    ldy #>msg_bad_avo
+	    jmp fail_with_ptr
+
+load_until_loop_start_target_offset_or_fail:
+	    tya
+	    pha
+	    sta saved_state_hi
+	    ldx export_index
+	    jsr load_export_target_offset_from_x_or_fail
+	    lda #$00
+	    sta compare_char
+	    ldy #$00
+load_until_loop_start_target_offset_loop:
+	    lda (body_ptr),y
+	    bne :+
+	    jmp load_until_loop_start_target_offset_fail
+: 
+	    cmp #'c'
+	    beq load_until_loop_start_target_offset_add_call
+	    cmp #'u'
+	    beq load_until_loop_start_target_offset_add_call
+	    cmp #'p'
+	    beq load_until_loop_start_target_offset_add_call
+	    cmp #'s'
+	    beq load_until_loop_start_target_offset_add_string
+	    cmp #'e'
+	    beq load_until_loop_start_target_offset_add_string
+	    cmp #'i'
+	    beq load_until_loop_start_target_offset_add_int
+	    cmp #'j'
+	    beq load_until_loop_start_target_offset_add_int
+	    cmp #'y'
+	    beq load_until_loop_start_target_offset_add_single_int
+	    cmp #'z'
+	    beq load_until_loop_start_target_offset_add_single_int
+	    cmp #'h'
+	    beq load_until_loop_start_target_offset_add_single_int
+	    cmp #'t'
+	    bne :+
+	    jmp load_until_loop_start_target_offset_until
+: 
+	    cmp #'w'
+	    beq load_until_loop_start_target_offset_add_single_int
+	    cmp #'v'
+	    beq load_until_loop_start_target_offset_skip
+	    cmp #'d'
+	    beq load_until_loop_start_target_offset_push_do
+	    cmp #'o'
+	    beq load_until_loop_start_target_offset_pop_do
+	    cmp #'a'
+	    beq load_until_loop_start_target_offset_add_single
+	    cmp #'m'
+	    beq load_until_loop_start_target_offset_add_single
+	    cmp #'q'
+	    beq load_until_loop_start_target_offset_add_single
+	    cmp #'n'
+	    beq load_until_loop_start_target_offset_add_single
+	    cmp #'l'
+	    beq load_until_loop_start_target_offset_add_single
+	    cmp #'g'
+	    beq load_until_loop_start_target_offset_add_single
+	    cmp #'r'
+	    beq load_until_loop_start_target_offset_add_single
+	    jmp load_until_loop_start_target_offset_fail
+load_until_loop_start_target_offset_add_call:
+	    lda #$03
+	    jsr add_if_false_target_size
+	    iny
+	    iny
+	    jmp load_until_loop_start_target_offset_loop
+load_until_loop_start_target_offset_add_string:
+	    lda #$06
+	    jsr add_if_false_target_size
+	    iny
+	    iny
+	    jmp load_until_loop_start_target_offset_loop
+load_until_loop_start_target_offset_add_int:
+	    lda #$06
+	    jsr add_if_false_target_size
+	    iny
+	    iny
+	    jmp load_until_loop_start_target_offset_loop
+load_until_loop_start_target_offset_add_single_int:
+	    lda #$03
+	    jsr add_if_false_target_size
+	    iny
+	    jmp load_until_loop_start_target_offset_loop
+load_until_loop_start_target_offset_add_single:
+	    lda #$01
+	    jsr add_if_false_target_size
+	    iny
+	    jmp load_until_loop_start_target_offset_loop
+load_until_loop_start_target_offset_skip:
+	    iny
+	    jmp load_until_loop_start_target_offset_loop
+load_until_loop_start_target_offset_push_do:
+	    ldx compare_char
+	    cpx #$08
+	    bcs load_until_loop_start_target_offset_fail
+	    lda current_bit_lo
+	    sta loop_offsets_lo,x
+	    lda current_bit_hi
+	    sta loop_offsets_hi,x
+	    inc compare_char
+	    iny
+	    jmp load_until_loop_start_target_offset_loop
+load_until_loop_start_target_offset_pop_do:
+	    lda compare_char
+	    beq load_until_loop_start_target_offset_fail
+	    dec compare_char
+	    iny
+	    jmp load_until_loop_start_target_offset_loop
+load_until_loop_start_target_offset_until:
+	    cpy saved_state_hi
+	    beq load_until_loop_start_target_offset_done
+	    lda #$03
+	    jsr add_if_false_target_size
+	    iny
+	    jmp load_until_loop_start_target_offset_loop
+load_until_loop_start_target_offset_done:
+	    lda compare_char
+	    beq load_until_loop_start_target_offset_fail
+	    tax
+	    dex
+	    lda loop_offsets_lo,x
+	    sta current_bit_lo
+	    lda loop_offsets_hi,x
+	    sta current_bit_hi
+	    pla
+	    tay
+	    clc
+	    rts
+load_until_loop_start_target_offset_fail:
 	    pla
 	    tay
 	    lda #<msg_bad_avo
@@ -2557,7 +2744,7 @@ bit_masks:
 module_name:
     .res 25
 target_path_pad:
-    .res $0069
+    .res $0000
 target_path:
     .res 40
 binary_target_path:
@@ -2568,11 +2755,11 @@ saved_module_name:
 .segment "BSS"
 
 source_buffer_pad:
-    .res $0026
+    .res $0000
 source_buffer:
     .res SOURCE_LIMIT+1
 content_buffer_pad:
-    .res $00F7
+    .res $0094
 content_buffer:
     .res 256
 export_names:
@@ -2636,6 +2823,10 @@ root_entry_export_index:
 root_string_offsets_lo:
     .res 8
 root_string_offsets_hi:
+    .res 8
+loop_offsets_lo:
+    .res 8
+loop_offsets_hi:
     .res 8
 live_flags:
     .res 8

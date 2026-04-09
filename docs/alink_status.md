@@ -86,6 +86,10 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `IF 1 = 1 THEN IF 1 = 0 THEN ... FI ... FI`
 - [x] also loads nested `ELSE` control-flow `ACTC` output for:
   `IF 1 = 1 THEN IF 1 = 0 THEN ... ELSE ... FI ELSE ... FI`
+- [x] also loads `DO ... UNTIL ... OD` loop `ACTC` output for:
+  `DO ... UNTIL 1 = 1 OD`
+- [x] also loads local-call plus unresolved-external loop `ACTC` output for:
+  `DO HELLO() W() UNTIL 1 = 1 OD`
 - [x] resolves the current widened child-object closure including `OBJ/W.AVO`
 - [x] resolves the current widened transitive child-object closure including `OBJ/W.AVO` and `OBJ/Z.AVO`
 - [x] resolves sibling child objects from the root:
@@ -116,6 +120,8 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
 - [x] emits an `ELSE` slice `BIN/MAIN.AVM` of `60` bytes
 - [x] emits a nested-`IF` slice `BIN/MAIN.AVM` of `77` bytes
 - [x] emits a nested-`ELSE` slice `BIN/MAIN.AVM` of `86` bytes
+- [x] emits a `DO ... UNTIL ... OD` slice `BIN/MAIN.AVM` of `47` bytes
+- [x] emits a call/external `DO ... UNTIL ... OD` slice `BIN/MAIN.AVM` of `73` bytes
 - [x] harness proof exists through:
   `ACTC -> ALINK -> AVMRUN`
 - [x] current harness runtime output for that widened slice:
@@ -164,6 +170,10 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `INNERDONE`, `OUTERDONE`
 - [x] current harness runtime output for the nested-`ELSE` slice:
   `GOOD1`, `DONE`
+- [x] current harness runtime output for the `DO ... UNTIL ... OD` slice:
+  `BODY`, `DONE`
+- [x] current harness runtime output for the call/external loop slice:
+  `HELLO`, `TOOL7`, `DONE`
 
 ## Current Biggest Blockers
 

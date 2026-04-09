@@ -1243,6 +1243,79 @@ SCENARIOS = {
         ),
         "expected_console": "GOOD1\nDONE\n",
     },
+    "do_until": {
+        "out_fs_name": "harness-actc-alink-avmrun-do-until",
+        "source": (
+            'MODULE MAIN\r'
+            'PROC MAIN()\r'
+            'DO\r'
+            'PrintE("BODY")\r'
+            'UNTIL 1 = 1\r'
+            'OD\r'
+            'PrintE("DONE")\r'
+            'RETURN\r'
+        ),
+        "expected_avo": (
+            "AVO1\n"
+            "x main 0 23\n"
+            "b de0p0p1qtoe1r\n"
+            "s BODY\n"
+            "s DONE\n"
+            "i 1\n"
+            "i 1\n"
+            "k 2\n"
+            "n main\n"
+        ),
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 35, 0, 0, 0, 1, 25, 0, 97, 25, 0, 73,
+                16, 255, 17, 1, 0, 17, 1, 0, 22, 24, 0, 0, 97, 30, 0, 73,
+                16, 255, 73, 32, 255, 66, 79, 68, 89, 0, 68, 79, 78, 69, 0,
+            ]
+        ),
+        "expected_console": "BODY\nDONE\n",
+    },
+    "do_until_calls": {
+        "out_fs_name": "harness-actc-alink-avmrun-do-until-calls",
+        "source": (
+            'MODULE MAIN\r'
+            'PROC HELLO()\r'
+            'PrintE("HELLO")\r'
+            'RETURN\r'
+            'PROC MAIN()\r'
+            'DO\r'
+            'HELLO()\r'
+            'W()\r'
+            'UNTIL 1 = 1\r'
+            'OD\r'
+            'PrintE("DONE")\r'
+            'RETURN\r'
+        ),
+        "expected_avo": (
+            "AVO1\n"
+            "x hello 0 7\n"
+            "x main 7 23\n"
+            "b e0r\n"
+            "b dc0u0p0p1qtoe1r\n"
+            "u w\n"
+            "s HELLO\n"
+            "s DONE\n"
+            "i 1\n"
+            "i 1\n"
+            "k 2\n"
+            "n main\n"
+        ),
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 61, 0, 7, 0, 1, 45, 0, 97, 45, 0, 73,
+                16, 255, 72, 69, 0, 0, 69, 32, 0, 17, 1, 0, 17, 1, 0, 22,
+                24, 7, 0, 97, 51, 0, 73, 16, 255, 73, 32, 255, 97, 56, 0,
+                73, 0, 255, 17, 7, 0, 73, 49, 255, 72, 72, 69, 76, 76, 79,
+                0, 68, 79, 78, 69, 0, 84, 79, 79, 76, 0,
+            ]
+        ),
+        "expected_console": "HELLO\nTOOL7\nDONE\n",
+    },
     "nested_if": {
         "out_fs_name": "harness-actc-alink-avmrun-nested-if",
         "source": (

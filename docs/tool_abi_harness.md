@@ -216,6 +216,20 @@ cd /mnt/c/test/action/actionc64u
 ./tools/run_tool_abi_additive_pipeline.py --scenario nested_else --keep-workspace
 ```
 
+Run the current `DO ... UNTIL ... OD` loop proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario do_until --keep-workspace
+```
+
+Run the current local-call plus unresolved-external `DO ... UNTIL ... OD` proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario do_until_calls --keep-workspace
+```
+
 That script:
 
 - clones a clean harness workspace from the current manual-pipeline fs tree

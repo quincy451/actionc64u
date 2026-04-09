@@ -4,8 +4,12 @@
 
 MANIFEST_LIMIT = 191
 SOURCE_LIMIT = 255
+.ifndef BODY_OPS_STRIDE
 BODY_OPS_STRIDE = 48
+.endif
+.ifndef INT_LITERAL_MAX
 INT_LITERAL_MAX = 10
+.endif
 
 IMPORT_PRINT_STR  = $01
 IMPORT_PRINT_LINE = $02
@@ -643,8 +647,16 @@ append_body_op_for_current_proc_store:
     sta (body_ptr),y
     iny
     lda hex_work
+    cmp #10
+    bcc :+
+    sec
+    sbc #10
     clc
+    adc #'A'
+    bne append_body_op_for_current_proc_store_index
+:   clc
     adc #'0'
+append_body_op_for_current_proc_store_index:
     sta (body_ptr),y
     iny
     lda #$00

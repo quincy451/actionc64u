@@ -46,8 +46,14 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `PrintI(2 + 3 * 4)` and `PrintIE((20 - 5) / 3)`
 - [x] also loads arithmetic/comparison mixed `ACTC` output for:
   `PrintIE((2 + 3) * 4 = 20)` and `PrintIE((2 + 3 * 4) > 10)`
+- [x] also loads direct comparison-operator `ACTC` output for:
+  `PrintIE(2 <> 3)`, `PrintIE(2 < 3)`, `PrintIE(3 <= 3)`, `PrintIE(4 >= 3)`
 - [x] also loads arithmetic/comparison `IF/ELSE` `ACTC` output for:
   `IF 2 + 3 * 4 > 10 THEN ... ELSE ... FI`
+- [x] also loads direct comparison-operator branch and loop `ACTC` output for:
+  `IF 2 <> 3 THEN ... FI`, `DO ... UNTIL 3 <= 3 OD`, `WHILE 2 >= 3 DO ... OD`
+- [x] also loads direct comparison-operator branch-local procedure-call `ACTC` output for:
+  `IF 2 < 3 THEN HELLO() FI` and `IF 2 >= 3 THEN ... ELSE ... FI`
 - [x] also loads multi-procedure local-call `ACTC` output for:
   `PROC HELLO() ...` and `HELLO()`
 - [x] also loads branch-local procedure-call `ACTC` output for:
@@ -139,6 +145,10 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
 - [x] emits a widened `BIN/MAIN.AVM` of `76` bytes on that slice
 - [x] emits a precedence-slice `BIN/MAIN.AVM` of `31` bytes
 - [x] emits an arithmetic/comparison slice `BIN/MAIN.AVM` of `72` bytes
+- [x] emits a direct-comparison print slice `BIN/MAIN.AVM` of `91` bytes
+- [x] emits a direct-comparison branch slice `BIN/MAIN.AVM` of `149` bytes
+- [x] emits a direct-comparison loop slice `BIN/MAIN.AVM` of `76` bytes
+- [x] emits a direct-comparison branch-call slice `BIN/MAIN.AVM` of `77` bytes
 - [x] emits an arithmetic/comparison `IF/ELSE` slice `BIN/MAIN.AVM` of `62` bytes
 - [x] emits a branch-call `BIN/MAIN.AVM` of `69` bytes
 - [x] emits an arithmetic/comparison branch-call `BIN/MAIN.AVM` of `73` bytes
@@ -205,6 +215,14 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `145`
 - [x] current harness runtime output for the arithmetic/comparison slice:
   `14`, `5`, `1`, `1`, `TOOL7`
+- [x] current harness runtime output for the direct-comparison slice:
+  `1`, `1`, `1`, `1`, `0`, `0`
+- [x] current harness runtime output for the direct-comparison branch slice:
+  `NE`, `LT`, `LE`, `GE`
+- [x] current harness runtime output for the direct-comparison loop slice:
+  `DO`, `DONE`
+- [x] current harness runtime output for the direct-comparison branch-call slice:
+  `HELLO`, `OK`
 - [x] current harness runtime output for the arithmetic/comparison `IF/ELSE` slice:
   `YES`, `DONE`
 - [x] current harness runtime output for the branch-call slice:

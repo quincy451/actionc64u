@@ -4,8 +4,12 @@
 
 MANIFEST_LIMIT = 191
 SOURCE_LIMIT = 255
+.ifndef BODY_OPS_STRIDE
 BODY_OPS_STRIDE = 48
+.endif
+.ifndef INT_LITERAL_MAX
 INT_LITERAL_MAX = 10
+.endif
 AVM_VERSION = 2
 AVM_FLAG_ACHERON = 1
 AVM_HEADER_SIZE = 12
@@ -388,68 +392,78 @@ parse_body_ops_loop:
     ldy #$00
 parse_body_ops_string_loop:
     lda (scan_ptr),y
-    beq parse_body_ops_string_done
+    beq parse_body_ops_string_done_branch
     cmp #10
-    beq parse_body_ops_string_done
+    beq parse_body_ops_string_done_branch
     cmp #13
-    beq parse_body_ops_string_done
+    beq parse_body_ops_string_done_branch
     cmp #'c'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'u'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'s'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'e'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'i'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'j'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'p'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'a'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'m'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'q'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'n'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'l'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'g'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
 	    cmp #'y'
-	    beq parse_body_ops_store
+	    beq parse_body_ops_store_branch
 	    cmp #'z'
-	    beq parse_body_ops_store
+	    beq parse_body_ops_store_branch
     cmp #'h'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'f'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'t'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'w'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'v'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'d'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'o'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'x'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'r'
-    beq parse_body_ops_store
+    beq parse_body_ops_store_branch
     cmp #'0'
-    bcc parse_body_ops_bad
+    bcc parse_body_ops_check_alpha
     cmp #'9'+1
+    bcc parse_body_ops_store_branch
+parse_body_ops_check_alpha:
+    cmp #'A'
+    bcc parse_body_ops_bad
+    cmp #'Z'+1
     bcs parse_body_ops_bad
+parse_body_ops_store_branch:
+    jmp parse_body_ops_store
+parse_body_ops_string_done_branch:
+    jmp parse_body_ops_string_done
 parse_body_ops_store:
     sta (body_ptr),y
     iny
     cpy #BODY_OPS_STRIDE
-    bcc parse_body_ops_string_loop
+    bcs parse_body_ops_bad
+    jmp parse_body_ops_string_loop
 parse_body_ops_bad:
     lda #<msg_bad_avo
     ldy #>msg_bad_avo
@@ -746,63 +760,83 @@ build_live_set_body_loop:
     jmp build_live_set_next_export_restore
 : 
     cmp #'c'
-    beq build_live_set_call
+    beq build_live_set_call_branch
     cmp #'u'
-    beq build_live_set_skip_pair
+    beq build_live_set_skip_pair_branch
     cmp #'s'
-    beq build_live_set_skip_pair
+    beq build_live_set_skip_pair_branch
     cmp #'e'
-    beq build_live_set_skip_pair
+    beq build_live_set_skip_pair_branch
     cmp #'i'
-    beq build_live_set_skip_pair
+    beq build_live_set_skip_pair_branch
     cmp #'j'
-    beq build_live_set_skip_pair
+    beq build_live_set_skip_pair_branch
     cmp #'p'
-    beq build_live_set_skip_pair
+    beq build_live_set_skip_pair_branch
     cmp #'a'
-    beq build_live_set_single
+    beq build_live_set_single_branch
     cmp #'m'
-    beq build_live_set_single
+    beq build_live_set_single_branch
     cmp #'q'
-    beq build_live_set_single
+    beq build_live_set_single_branch
     cmp #'n'
-    beq build_live_set_single
+    beq build_live_set_single_branch
     cmp #'l'
-    beq build_live_set_single
+    beq build_live_set_single_branch
     cmp #'g'
-    beq build_live_set_single
+    beq build_live_set_single_branch
 	    cmp #'y'
-	    beq build_live_set_single
+	    beq build_live_set_single_branch
 	    cmp #'z'
-	    beq build_live_set_single
+	    beq build_live_set_single_branch
 	    cmp #'h'
-	    beq build_live_set_single
+	    beq build_live_set_single_branch
 	    cmp #'f'
-	    beq build_live_set_single
+	    beq build_live_set_single_branch
 	    cmp #'t'
-	    beq build_live_set_single
+	    beq build_live_set_single_branch
 	    cmp #'w'
-	    beq build_live_set_single
+	    beq build_live_set_single_branch
 	    cmp #'v'
-	    beq build_live_set_single
+	    beq build_live_set_single_branch
 	    cmp #'d'
-	    beq build_live_set_single
+	    beq build_live_set_single_branch
 	    cmp #'o'
-	    beq build_live_set_single
+	    beq build_live_set_single_branch
 	    cmp #'x'
-	    beq build_live_set_single
+	    beq build_live_set_single_branch
 	    cmp #'r'
-	    beq build_live_set_ret
+	    beq build_live_set_ret_branch
     jmp build_live_set_bad
+build_live_set_call_branch:
+    jmp build_live_set_call
+build_live_set_skip_pair_branch:
+    jmp build_live_set_skip_pair
+build_live_set_single_branch:
+    jmp build_live_set_single
+build_live_set_ret_branch:
+    jmp build_live_set_ret
 build_live_set_call:
     iny
     lda (body_ptr),y
     cmp #'0'
-    bcc build_live_set_bad
+    bcc build_live_set_call_check_alpha
     cmp #'9'+1
+    bcc build_live_set_call_dec
+build_live_set_call_check_alpha:
+    cmp #'A'
+    bcc build_live_set_bad
+    cmp #'Z'+1
     bcs build_live_set_bad
     sec
+    sbc #'A'
+    clc
+    adc #10
+    bne build_live_set_call_index
+build_live_set_call_dec:
+    sec
     sbc #'0'
+build_live_set_call_index:
     tax
     lda live_flags,x
     bne build_live_set_call_done
@@ -2555,13 +2589,28 @@ load_ret_target_size:
 load_body_digit_index_to_x_or_fail:
     lda (body_ptr),y
     cmp #'0'
-    bcs :+
+    bcs load_body_digit_index_check_dec_hi
     jmp emit_live_bytes_for_export_x_bad
-:   cmp #'9'+1
-    bcc :+
+load_body_digit_index_check_dec_hi:
+    cmp #'9'+1
+    bcc load_body_digit_index_dec
+    cmp #'A'
+    bcs load_body_digit_index_check_hex_hi
     jmp emit_live_bytes_for_export_x_bad
-:   sec
+load_body_digit_index_check_hex_hi:
+    cmp #'Z'+1
+    bcc load_body_digit_index_hex
+    jmp emit_live_bytes_for_export_x_bad
+load_body_digit_index_dec:
+    sec
     sbc #'0'
+    tax
+    rts
+load_body_digit_index_hex:
+    sec
+    sbc #'A'
+    clc
+    adc #10
     tax
     rts
 

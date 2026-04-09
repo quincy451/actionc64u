@@ -83,11 +83,39 @@ cd /mnt/c/test/action/actionc64u
 ./tools/run_tool_abi_additive_pipeline.py --scenario comparisons --keep-workspace
 ```
 
+Run the current direct comparison-operator print proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario comparison_ops --keep-workspace
+```
+
+Run the current direct comparison-operator branch proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario comparison_ops_if_else --keep-workspace
+```
+
+Run the current direct comparison-operator loop proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario comparison_ops_loops --keep-workspace
+```
+
 Run the current arithmetic+comparison `IF/ELSE` proof end to end:
 
 ```sh
 cd /mnt/c/test/action/actionc64u
 ./tools/run_tool_abi_additive_pipeline.py --scenario comparison_else --keep-workspace
+```
+
+Run the current direct comparison-operator branch-call proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario comparison_ops_branch_calls --keep-workspace
 ```
 
 Run the current branch-local procedure-call proof end to end:

@@ -68,8 +68,16 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `PrintIE((20 - 5) / 3)`
 - [x] arithmetic/comparison mixes in print-expression chains:
   `PrintIE((2 + 3) * 4 = 20)` and `PrintIE((2 + 3 * 4) > 10)`
+- [x] direct comparison operator print-expression chains:
+  `PrintIE(2 <> 3)`, `PrintIE(2 < 3)`, `PrintIE(3 <= 3)`, `PrintIE(4 >= 3)`
 - [x] arithmetic/comparison conditions inside `IF ... THEN ... ELSE ... FI`:
   `IF 2 + 3 * 4 > 10 THEN ... ELSE ... FI`
+- [x] direct comparison operator conditions inside `IF ... THEN ... FI`:
+  `IF 2 <> 3 THEN ... FI`, `IF 2 < 3 THEN ... FI`, `IF 3 <= 3 THEN ... FI`, `IF 4 >= 3 THEN ... FI`
+- [x] direct comparison operator conditions inside loop forms:
+  `DO ... UNTIL 3 <= 3 OD` and `WHILE 2 >= 3 DO ... OD`
+- [x] direct comparison operator conditions driving local branch calls:
+  `IF 2 < 3 THEN HELLO() FI` and `IF 2 >= 3 THEN ... ELSE ... FI`
 - [x] multiple local procedures in one module:
   `PROC HELLO() ...` and `PROC MAIN() ...`
 - [x] local user procedure calls:
@@ -214,6 +222,14 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `b p0p1ayi2r`
 - [x] current widened arithmetic/comparison object emission:
   `b p0p1azi2p3p4qzp5p6gzu0r`
+- [x] current widened direct-comparison object emission:
+  `b p0p1nzp2p3lzp4p5gp6qzp7p8lp9qzpApBgpCqzpDpElpFqzr`
+- [x] current widened direct-comparison `IF` object emission:
+  `b p0p1nhe0vp2p3lhe1vp4p5gp6qhe2vp7p8lp9qhe3vpApBgpCqhe4vpDpElpFqhe5vr`
+- [x] current widened direct-comparison loop object emission:
+  `b de0p0p1gp2qtodp3p4lp5qfe1xe2r`
+- [x] current widened direct-comparison branch-call object emission:
+  `b p0p1lhc0vp2p3lp4qhe1we2vr`
 - [x] current widened arithmetic/comparison `IF/ELSE` object emission:
   `b p0p1ap2ghe0we1ve2r`
 - [x] current widened branch-call object emission:

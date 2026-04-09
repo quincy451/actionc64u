@@ -65,8 +65,20 @@ class TestToolAbiPipeline(unittest.TestCase):
     def test_comparisons_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("comparisons", "14\n5\n1\n1\nTOOL7\n", 91, 72)
 
+    def test_comparison_ops_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("comparison_ops", "1\n1\n1\n1\n0\n0\n", 144, 91)
+
+    def test_comparison_ops_if_else_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("comparison_ops_if_else", "NE\nLT\nLE\nGE\n", 197, 149)
+
+    def test_comparison_ops_loop_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("comparison_ops_loops", "DO\nDONE\n", 102, 76)
+
     def test_comparison_else_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("comparison_else", "YES\nDONE\n", 81, 62)
+
+    def test_comparison_ops_branch_call_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("comparison_ops_branch_calls", "HELLO\nOK\n", 113, 77)
 
     def test_branch_call_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("branch_calls", "HELLO\nDONE\n", 110, 69)

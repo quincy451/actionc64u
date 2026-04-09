@@ -110,6 +110,18 @@ class TestToolAbiPipeline(unittest.TestCase):
     def test_many_string_nested_loops_external_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("many_string_nested_loops_external", "TOOL7\nA\nB\nC\nD\nE\nF\nG\nH\nI\nJ\n", 138, 144)
 
+    def test_many_string_branch_shared_transitive_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("many_string_branch_shared_transitive", "MID1\nEND\nMID2\nEND\nA\nB\nC\nD\nE\nF\nG\nH\nI\nJ\nK\nL\n", 140, 181)
+
+    def test_many_string_do_until_shared_transitive_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("many_string_do_until_shared_transitive", "MID1\nEND\nMID2\nEND\nA\nB\nC\nD\nE\nF\nG\nH\nI\nJ\n", 120, 152)
+
+    def test_many_string_nested_branch_shared_transitive_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("many_string_nested_branch_shared_transitive", "MID1\nEND\nMID2\nEND\nA\nB\nC\nD\nE\nF\nG\nH\n", 151, 178)
+
+    def test_many_int_nested_loops_if_else_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("many_int_nested_loops_if_else", "14\n15\n", 106, 75)
+
     def test_branch_call_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("branch_calls", "HELLO\nDONE\n", 110, 69)
 

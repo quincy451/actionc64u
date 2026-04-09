@@ -66,8 +66,16 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `IF 1 = 1 THEN W() PrintE("A") ... PrintE("L") ELSE PrintE("BAD") FI`
 - [x] also loads high string-index transitive branch-local unresolved-external output:
   `IF 1 = 1 THEN W() PrintE("A") ... PrintE("L") ELSE PrintE("BAD") FI` with `W -> Z`
+- [x] also loads high string-index shared-transitive branch-local unresolved-external output:
+  `IF 1 = 1 THEN W() Q() PrintE("A") ... PrintE("L") ELSE PrintE("BAD") FI` with `W -> Z` and `Q -> Z`
+- [x] also loads high string-index shared-transitive loop output:
+  `DO W() Q() PrintE("A") ... PrintE("J") UNTIL 1 = 1 OD` with `W -> Z` and `Q -> Z`
+- [x] also loads high string-index nested shared-transitive branch output:
+  `IF 1 = 1 THEN IF 2 + 3 * 4 > 10 THEN W() Q() PrintE("A") ... PrintE("H") ELSE ... FI ELSE ... FI`
 - [x] also loads high string-index nested-loop unresolved-external output:
   `DO WHILE 1 = 0 DO PrintE("BAD") OD W() PrintE("A") ... PrintE("J") UNTIL 1 = 1 OD`
+- [x] also loads compact high int-index nested-loop `IF/ELSE` output:
+  `DO WHILE 1 = 0 DO OD IF 1 = 0 THEN PrintIE(8) PrintIE(9) ELSE PrintIE(14) PrintIE(15) FI UNTIL 1 = 1 OD`
 - [x] also loads arithmetic/comparison `IF/ELSE` `ACTC` output for:
   `IF 2 + 3 * 4 > 10 THEN ... ELSE ... FI`
 - [x] also loads direct comparison-operator branch and loop `ACTC` output for:
@@ -175,7 +183,11 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
 - [x] emits a high integer-index `DO ... UNTIL ... OD` + `IF/ELSE` slice `BIN/MAIN.AVM` of `134` bytes
 - [x] emits a high string-index branch-external slice `BIN/MAIN.AVM` of `155` bytes
 - [x] emits a high string-index transitive branch-external slice `BIN/MAIN.AVM` of `162` bytes
+- [x] emits a high string-index shared-transitive branch-external slice `BIN/MAIN.AVM` of `181` bytes
+- [x] emits a high string-index shared-transitive `DO ... UNTIL ... OD` slice `BIN/MAIN.AVM` of `152` bytes
+- [x] emits a high string-index nested shared-transitive branch slice `BIN/MAIN.AVM` of `178` bytes
 - [x] emits a high string-index nested-loop external slice `BIN/MAIN.AVM` of `144` bytes
+- [x] emits a compact high int-index nested-loop `IF/ELSE` slice `BIN/MAIN.AVM` of `75` bytes
 - [x] emits a direct-comparison branch slice `BIN/MAIN.AVM` of `149` bytes
 - [x] emits a direct-comparison loop slice `BIN/MAIN.AVM` of `76` bytes
 - [x] emits a direct-comparison branch-call slice `BIN/MAIN.AVM` of `77` bytes

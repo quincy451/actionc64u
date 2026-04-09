@@ -181,11 +181,39 @@ cd /mnt/c/test/action/actionc64u
 ./tools/run_tool_abi_additive_pipeline.py --scenario many_string_branch_transitive --keep-workspace
 ```
 
+Run the current high string-index shared-transitive branch proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario many_string_branch_shared_transitive --keep-workspace
+```
+
+Run the current high string-index shared-transitive `DO ... UNTIL ... OD` proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario many_string_do_until_shared_transitive --keep-workspace
+```
+
+Run the current high string-index nested shared-transitive branch proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario many_string_nested_branch_shared_transitive --keep-workspace
+```
+
 Run the current high string-index nested-loop external proof end to end:
 
 ```sh
 cd /mnt/c/test/action/actionc64u
 ./tools/run_tool_abi_additive_pipeline.py --scenario many_string_nested_loops_external --keep-workspace
+```
+
+Run the current compact high int-index nested-loop `IF/ELSE` proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario many_int_nested_loops_if_else --keep-workspace
 ```
 
 Run the current branch-local procedure-call proof end to end:

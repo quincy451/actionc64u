@@ -88,8 +88,16 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `IF 1 = 1 THEN W() PrintE("A") ... PrintE("L") ELSE PrintE("BAD") FI`
 - [x] high string indices mixed with transitive externals under branch control:
   `IF 1 = 1 THEN W() PrintE("A") ... PrintE("L") ELSE PrintE("BAD") FI` with `W -> Z`
+- [x] high string indices mixed with shared transitive externals under branch control:
+  `IF 1 = 1 THEN W() Q() PrintE("A") ... PrintE("L") ELSE PrintE("BAD") FI` with `W -> Z` and `Q -> Z`
+- [x] high string indices mixed with shared transitive externals inside loop control:
+  `DO W() Q() PrintE("A") ... PrintE("J") UNTIL 1 = 1 OD` with `W -> Z` and `Q -> Z`
+- [x] high string indices mixed with nested branch + shared transitive externals:
+  `IF 1 = 1 THEN IF 2 + 3 * 4 > 10 THEN W() Q() PrintE("A") ... PrintE("H") ELSE ... FI ELSE ... FI`
 - [x] high string indices mixed with nested-loop external control:
   `DO WHILE 1 = 0 DO PrintE("BAD") OD W() PrintE("A") ... PrintE("J") UNTIL 1 = 1 OD`
+- [x] compact high int indices inside nested loop + `IF/ELSE` control:
+  `DO WHILE 1 = 0 DO OD IF 1 = 0 THEN PrintIE(8) PrintIE(9) ELSE PrintIE(14) PrintIE(15) FI UNTIL 1 = 1 OD`
 - [x] arithmetic/comparison conditions inside `IF ... THEN ... ELSE ... FI`:
   `IF 2 + 3 * 4 > 10 THEN ... ELSE ... FI`
 - [x] direct comparison operator conditions inside `IF ... THEN ... FI`:

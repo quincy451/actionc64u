@@ -230,6 +230,18 @@ class TestToolAbiPipeline(unittest.TestCase):
     def test_nested_if_return_transitive_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("nested_if_return_transitive", "START\nMID\nEND\n", 117, 121)
 
+    def test_do_until_return_branch_mixed_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("do_until_return_branch_mixed", "START\nTOOL7\n", 126, 99)
+
+    def test_nested_do_until_return_external_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("nested_do_until_return_external", "START\nTOOL7\n", 89, 76)
+
+    def test_while_return_transitive_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("while_return_transitive", "START\nMID\nEND\n", 73, 81)
+
+    def test_while_nested_do_until_return_transitive_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("while_nested_do_until_return_transitive", "START\nMID\nEND\n", 89, 91)
+
 
 if __name__ == "__main__":
     unittest.main()

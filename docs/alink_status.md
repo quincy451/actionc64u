@@ -92,6 +92,10 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `IF HELLO() RETURN FI`, `IF W() RETURN FI`, `WHILE HELLO() W() RETURN OD`
 - [x] also loads explicit early-return control flow with transitive externals under nested branches:
   `IF ... THEN IF ... THEN W() RETURN FI ... FI` with `W -> Z`
+- [x] also loads explicit early-return mixed branch/local-external loop control:
+  `DO IF ... THEN W() ELSE HELLO() FI RETURN UNTIL ... OD`
+- [x] also loads explicit early-return nested-loop control with transitive externals:
+  `WHILE ... DO DO W() RETURN UNTIL ... OD OD` with `W -> Z`
 - [x] also loads `DO ... UNTIL ... OD` loop `ACTC` output for:
   `DO ... UNTIL 1 = 1 OD`
 - [x] also loads local-call plus unresolved-external loop `ACTC` output for:
@@ -165,6 +169,10 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
 - [x] emits an early-return external `DO ... UNTIL ... OD` slice `BIN/MAIN.AVM` of `66` bytes
 - [x] emits an early-return `WHILE` local/external slice `BIN/MAIN.AVM` of `85` bytes
 - [x] emits a nested early-return transitive-external `IF` slice `BIN/MAIN.AVM` of `121` bytes
+- [x] emits an early-return mixed branch/local-external `DO ... UNTIL ... OD` slice `BIN/MAIN.AVM` of `99` bytes
+- [x] emits an early-return nested `DO ... UNTIL ... OD` external slice `BIN/MAIN.AVM` of `76` bytes
+- [x] emits an early-return transitive-external `WHILE` slice `BIN/MAIN.AVM` of `81` bytes
+- [x] emits an early-return nested `WHILE`/`DO` transitive-external slice `BIN/MAIN.AVM` of `91` bytes
 - [x] emits a `DO ... UNTIL ... OD` slice `BIN/MAIN.AVM` of `47` bytes
 - [x] emits a call/external `DO ... UNTIL ... OD` slice `BIN/MAIN.AVM` of `73` bytes
 - [x] emits a branch `DO ... UNTIL ... OD` slice `BIN/MAIN.AVM` of `73` bytes
@@ -258,6 +266,14 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
 - [x] current harness runtime output for the early-return `WHILE` local/external slice:
   `START`, `HELLO`, `TOOL7`
 - [x] current harness runtime output for the nested early-return transitive-external `IF` slice:
+  `START`, `MID`, `END`
+- [x] current harness runtime output for the early-return mixed branch/local-external `DO ... UNTIL ... OD` slice:
+  `START`, `TOOL7`
+- [x] current harness runtime output for the early-return nested `DO ... UNTIL ... OD` external slice:
+  `START`, `TOOL7`
+- [x] current harness runtime output for the early-return transitive-external `WHILE` slice:
+  `START`, `MID`, `END`
+- [x] current harness runtime output for the early-return nested `WHILE`/`DO` transitive-external slice:
   `START`, `MID`, `END`
 - [x] current harness runtime output for the `DO ... UNTIL ... OD` slice:
   `BODY`, `DONE`

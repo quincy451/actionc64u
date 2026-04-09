@@ -273,6 +273,14 @@ cd /mnt/c/test/action/actionc64u
 ./tools/run_tool_abi_additive_pipeline.py --scenario nested_if_return_transitive --keep-workspace
 ```
 
+Run the current mixed early-return loop proofs end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario do_until_return_branch_mixed --keep-workspace
+./tools/run_tool_abi_additive_pipeline.py --scenario while_return_transitive --keep-workspace
+```
+
 Run the current `DO ... UNTIL ... OD` loop proof end to end:
 
 ```sh

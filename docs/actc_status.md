@@ -116,6 +116,10 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `IF HELLO() RETURN FI`, `IF W() RETURN FI`, `WHILE HELLO() W() RETURN OD`
 - [x] explicit early return with transitive external closure inside nested control flow:
   `IF ... THEN IF ... THEN W() RETURN FI ... FI` with `W -> Z`
+- [x] explicit early return inside mixed nested loop/branch control flow:
+  `DO IF ... THEN W() ELSE HELLO() FI RETURN UNTIL ... OD`
+- [x] explicit early return inside nested loop forms with transitive externals:
+  `WHILE ... DO DO W() RETURN UNTIL ... OD OD` with `W -> Z`
 - [x] `DO ... UNTIL ... OD` loop control flow:
   `DO ... UNTIL 1 = 1 OD`
 - [x] local and unresolved-external calls inside `DO ... UNTIL ... OD`:

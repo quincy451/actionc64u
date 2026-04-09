@@ -3161,10 +3161,14 @@ emit_current_object_vars_or_fail:
 emit_current_object_vars_loop:
     cpx var_count
     beq emit_current_object_vars_done
+    txa
+    pha
     lda var_init_lo,x
     jsr append_payload_byte
     lda var_init_hi,x
     jsr append_payload_byte
+    pla
+    tax
     inx
     bne emit_current_object_vars_loop
 emit_current_object_vars_done:

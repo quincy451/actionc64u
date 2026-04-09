@@ -350,13 +350,13 @@ store_module_var_from_scan_ptr_or_fail:
     lda #<msg_bad_var
     ldy #>msg_bad_var
     jmp fail_with_ptr
-:   sty hex_work
+:   sty compare_char
     jsr find_var_index_from_declared
     bcc store_module_var_from_scan_ptr_or_fail_bad
     lda #$00
     sta expr_value_lo
     sta expr_term_lo
-    ldy hex_work
+    ldy compare_char
     jsr skip_inline_spaces_at_scan_y
     lda (scan_ptr),y
     beq store_module_var_from_scan_ptr_or_fail_store

@@ -53,7 +53,7 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
 
 - [ ] broader runtime-emitted integer expression chains beyond the already-proven narrow path
 - [ ] larger statement/control-flow surface beyond the current `IF`/`ELSE`/`WHILE ... DO ... OD`/`DO ... UNTIL ... OD`/nested-loop/branch-combined path
-- [ ] broader stateful variable surface beyond the current module-scope `INT`/direct `=` slice
+- [ ] broader stateful variable surface beyond the current multi-var module-scope `INT`/read/write/control slice
 - [ ] broader procedure/function surface
 - [ ] full historical ACTION! source compatibility
 
@@ -115,6 +115,14 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `WHILE X<2 DO ... OD`
 - [x] module-scope integer variables driving local/external calls under control flow:
   `IF X=1 THEN HELLO() ...`, `IF X=2 THEN W() FI`, `WHILE X<1 DO W() ... OD`
+- [x] multiple module-scope integer variables in one module:
+  `INT X=[0]`, `INT Y=[2]`, `PrintIE(X)`, `PrintIE(Y)`, `X=Y+1`
+- [x] variable-to-variable arithmetic assignment:
+  `X=X+Y`
+- [x] multiple module-scope integer variables driving `WHILE ... DO ... OD`:
+  `WHILE X<Y DO ... OD`
+- [x] multiple module-scope integer variables driving local/external calls under branch control:
+  `IF X<Y THEN HELLO() W() FI`
 - [x] direct comparison operator conditions inside `IF ... THEN ... FI`:
   `IF 2 <> 3 THEN ... FI`, `IF 2 < 3 THEN ... FI`, `IF 3 <= 3 THEN ... FI`, `IF 4 >= 3 THEN ... FI`
 - [x] direct comparison operator conditions inside loop forms:

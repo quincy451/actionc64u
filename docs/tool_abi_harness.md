@@ -788,6 +788,14 @@ That now includes a widening set of stable scenarios:
   `HELLO`, `TOOL7`
 - module-scope integer variable `WHILE` + external call:
   `TOOL7`, `DONE`
+- multiple module-scope integer vars in one module:
+  `0`, `2`, `3`
+- multiple module-scope integer vars under `WHILE` control:
+  `0`, `1`, `2`
+- multiple module-scope integer vars driving local/external branch calls:
+  `HELLO`, `TOOL7`
+- variable-to-variable arithmetic assignment:
+  `3`
 - arithmetic/comparison condition with `IF/ELSE`:
   `YES`, `DONE`
 - branch-local procedure call:

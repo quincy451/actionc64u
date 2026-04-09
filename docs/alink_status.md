@@ -407,6 +407,12 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
 - [x] current harness runtime output for the dense mixed nested-loop + shared-transitive slice:
   `MID2`, `END`, `A` through `P`
 - [x] emits a dense mixed nested-loop + shared-transitive slice `BIN/MAIN.AVM` of `223` bytes
+- [x] current harness runtime output for the dense early-return nested mixed-loop + shared-transitive slice:
+  `MID1`, `END`, `MID2`, `END`, `A` through `P`
+- [x] emits a dense early-return nested mixed-loop + shared-transitive slice `BIN/MAIN.AVM` of `226` bytes
+- [x] current harness runtime output for the dense branch-gated early-return nested mixed-loop + shared-transitive slice:
+  `MID1`, `END`, `MID2`, `END`, `A` through `P`
+- [x] emits a dense branch-gated early-return nested mixed-loop + shared-transitive slice `BIN/MAIN.AVM` of `251` bytes
 
 ## Current Biggest Blockers
 

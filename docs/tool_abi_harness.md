@@ -250,6 +250,20 @@ cd /mnt/c/test/action/actionc64u
 ./tools/run_tool_abi_additive_pipeline.py --scenario dense_mixed_nested_shared_transitive --keep-workspace
 ```
 
+Run the current dense early-return nested mixed-loop shared-transitive proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario dense_return_nested_mixed_shared_transitive --keep-workspace
+```
+
+Run the current dense branch-gated early-return nested mixed-loop shared-transitive proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario dense_return_branch_nested_mixed_shared_transitive --keep-workspace
+```
+
 Run the current branch-local procedure-call proof end to end:
 
 ```sh

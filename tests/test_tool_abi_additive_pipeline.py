@@ -308,6 +308,12 @@ class TestToolAbiPipeline(unittest.TestCase):
     def test_dense_mixed_nested_shared_transitive_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("dense_mixed_nested_shared_transitive", "MID2\nEND\nA\nB\nC\nD\nE\nF\nG\nH\nI\nJ\nK\nL\nM\nN\nO\nP\n", 181, 223)
 
+    def test_dense_return_nested_mixed_shared_transitive_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("dense_return_nested_mixed_shared_transitive", "MID1\nEND\nMID2\nEND\nA\nB\nC\nD\nE\nF\nG\nH\nI\nJ\nK\nL\nM\nN\nO\nP\n", 182, 226)
+
+    def test_dense_return_branch_nested_mixed_shared_transitive_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("dense_return_branch_nested_mixed_shared_transitive", "MID1\nEND\nMID2\nEND\nA\nB\nC\nD\nE\nF\nG\nH\nI\nJ\nK\nL\nM\nN\nO\nP\n", 208, 251)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -51,6 +51,12 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `INT X=[0]`, `PrintIE(X)`, `X=X+1`, `PrintIE(X)`
 - [x] also loads module-scope integer storage/read/write under loop control:
   `DO PrintIE(X) X=X+1 UNTIL X=2 OD`
+- [x] also loads module-scope integer storage/read/write under branch control:
+  `IF X=1 THEN ... ELSE ... FI`
+- [x] also loads module-scope integer storage/read/write under `WHILE` control:
+  `WHILE X<2 DO ... OD`
+- [x] also loads module-scope integer storage/read/write driving local/external calls:
+  `IF X=1 THEN HELLO() ...`, `IF X=2 THEN W() FI`, `WHILE X<1 DO W() ... OD`
 - [x] also loads direct comparison-operator `ACTC` output for:
   `PrintIE(2 <> 3)`, `PrintIE(2 < 3)`, `PrintIE(3 <= 3)`, `PrintIE(4 >= 3)`
 - [x] also loads high string-index `ACTC` output through `F`:

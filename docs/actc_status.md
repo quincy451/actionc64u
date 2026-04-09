@@ -109,6 +109,12 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `INT X=[0]`, `PrintIE(X)`, `X=X+1`, `PrintIE(X)`
 - [x] module-scope integer variable state carried through loop control:
   `DO PrintIE(X) X=X+1 UNTIL X=2 OD`
+- [x] module-scope integer variables driving branch control:
+  `IF X=1 THEN ... ELSE ... FI`
+- [x] module-scope integer variables driving `WHILE ... DO ... OD`:
+  `WHILE X<2 DO ... OD`
+- [x] module-scope integer variables driving local/external calls under control flow:
+  `IF X=1 THEN HELLO() ...`, `IF X=2 THEN W() FI`, `WHILE X<1 DO W() ... OD`
 - [x] direct comparison operator conditions inside `IF ... THEN ... FI`:
   `IF 2 <> 3 THEN ... FI`, `IF 2 < 3 THEN ... FI`, `IF 3 <= 3 THEN ... FI`, `IF 4 >= 3 THEN ... FI`
 - [x] direct comparison operator conditions inside loop forms:

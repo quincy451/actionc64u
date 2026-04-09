@@ -1236,6 +1236,7 @@ layout_payload_pending_next:
     inx
     bne layout_payload_pending_next
 layout_payload_root_vars:
+    jsr reload_root_object_state_preserve_layout_or_fail
     lda current_bit_lo
     sta code_limit_data
     jsr layout_current_object_vars_or_fail
@@ -1575,6 +1576,7 @@ emit_payload_pending_next:
     inx
     bne emit_payload_pending_next
 emit_payload_root_vars:
+    jsr reload_root_object_state_preserve_layout_or_fail
     lda #$36
     sta debug_phase
     jsr emit_current_object_vars_or_fail
@@ -3166,6 +3168,18 @@ emit_current_object_vars_loop:
     inx
     bne emit_current_object_vars_loop
 emit_current_object_vars_done:
+    rts
+
+reload_root_object_state_preserve_layout_or_fail:
+    lda current_bit_lo
+    sta saved_state_lo
+    lda current_bit_hi
+    sta saved_state_hi
+    jsr load_current_object_link_state_or_fail
+    lda saved_state_lo
+    sta current_bit_lo
+    lda saved_state_hi
+    sta current_bit_hi
     rts
 
 load_current_var_offsets_from_pending_x:

@@ -71,6 +71,18 @@ class TestToolAbiPipeline(unittest.TestCase):
     def test_int_vars_do_until_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("int_vars_do_until", "0\n1\nDONE\n", 73, 54)
 
+    def test_int_vars_if_else_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("int_vars_if_else", "YES\nDONE\n", 96, 80)
+
+    def test_int_vars_while_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("int_vars_while", "0\n1\nDONE\n", 73, 57)
+
+    def test_int_vars_branch_calls_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("int_vars_branch_calls", "HELLO\nTOOL7\n", 131, 101)
+
+    def test_int_vars_while_external_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("int_vars_while_external", "TOOL7\nDONE\n", 76, 72)
+
     def test_comparison_ops_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("comparison_ops", "1\n1\n1\n1\n0\n0\n", 144, 91)
 

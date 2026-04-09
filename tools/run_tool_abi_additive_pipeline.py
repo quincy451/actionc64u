@@ -189,6 +189,176 @@ SCENARIOS = {
         ),
         "expected_console": "0\n1\nDONE\n",
     },
+    "int_vars_if_else": {
+        "out_fs_name": "harness-actc-alink-avmrun-int-vars-if-else",
+        "source": (
+            'MODULE MAIN\r'
+            'INT X=[1]\r'
+            'PROC MAIN()\r'
+            'IF X=1 THEN\r'
+            'PrintE("YES")\r'
+            'ELSE\r'
+            'PrintE("NO")\r'
+            'FI\r'
+            'X=X+1\r'
+            'IF X=2 THEN\r'
+            'PrintE("DONE")\r'
+            'FI\r'
+            'RETURN\r'
+        ),
+        "expected_avo": (
+            "AVO1\n"
+            "x main 0 52\n"
+            "b L0p0qhe0we1vL0p1aS0L0p2qhe2vr\n"
+            "s YES\n"
+            "s NO\n"
+            "s DONE\n"
+            "i 1\n"
+            "i 1\n"
+            "i 2\n"
+            "v x 1\n"
+            "k 2\n"
+            "n main\n"
+        ),
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 68, 0, 0, 0, 1, 54, 0, 19, 54, 0, 17,
+                1, 0, 22, 24, 19, 0, 97, 56, 0, 73, 16, 255, 25, 25, 0,
+                97, 60, 0, 73, 16, 255, 19, 54, 0, 17, 1, 0, 20, 18, 54,
+                0, 19, 54, 0, 17, 2, 0, 22, 24, 51, 0, 97, 63, 0, 73, 16,
+                255, 73, 32, 255, 1, 0, 89, 69, 83, 0, 78, 79, 0, 68, 79,
+                78, 69, 0,
+            ]
+        ),
+        "expected_console": "YES\nDONE\n",
+    },
+    "int_vars_while": {
+        "out_fs_name": "harness-actc-alink-avmrun-int-vars-while",
+        "source": (
+            'MODULE MAIN\r'
+            'INT X=[0]\r'
+            'PROC MAIN()\r'
+            'WHILE X<2 DO\r'
+            'PrintIE(X)\r'
+            'X=X+1\r'
+            'OD\r'
+            'PrintE("DONE")\r'
+            'RETURN\r'
+        ),
+        "expected_avo": (
+            "AVO1\n"
+            "x main 0 36\n"
+            "b dL0p0lfL0zL0p1aS0xe0r\n"
+            "s DONE\n"
+            "i 2\n"
+            "i 1\n"
+            "v x 0\n"
+            "k 6\n"
+            "n main\n"
+        ),
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 45, 0, 0, 0, 1, 38, 0, 19, 38, 0, 17,
+                2, 0, 28, 24, 29, 0, 19, 38, 0, 73, 49, 255, 19, 38, 0,
+                17, 1, 0, 20, 18, 38, 0, 25, 0, 0, 97, 40, 0, 73, 16, 255,
+                73, 32, 255, 0, 0, 68, 79, 78, 69, 0,
+            ]
+        ),
+        "expected_console": "0\n1\nDONE\n",
+    },
+    "int_vars_branch_calls": {
+        "out_fs_name": "harness-actc-alink-avmrun-int-vars-branch-calls",
+        "sources": {
+            "MAIN": (
+                'MODULE MAIN\r'
+                'INT X=[1]\r'
+                'PROC HELLO()\r'
+                'PrintE("HELLO")\r'
+                'RETURN\r'
+                'PROC BYE()\r'
+                'PrintE("BYE")\r'
+                'RETURN\r'
+                'PROC MAIN()\r'
+                'IF X=1 THEN\r'
+                'HELLO()\r'
+                'ELSE\r'
+                'BYE()\r'
+                'FI\r'
+                'X=X+1\r'
+                'IF X=2 THEN\r'
+                'W()\r'
+                'FI\r'
+                'RETURN\r'
+            ),
+        },
+        "compile_modules": ["MAIN"],
+        "expected_avo": (
+            "AVO1\n"
+            "x hello 0 7\n"
+            "x bye 7 7\n"
+            "x main 14 43\n"
+            "b e0r\n"
+            "b e1r\n"
+            "b L0p0qhc0wc1vL0p1aS0L0p2qhu0vr\n"
+            "u w\n"
+            "s HELLO\n"
+            "s BYE\n"
+            "i 1\n"
+            "i 1\n"
+            "i 2\n"
+            "v x 1\n"
+            "k 2\n"
+            "n main\n"
+        ),
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 89, 0, 14, 0, 1, 72, 0, 97, 74, 0, 73,
+                16, 255, 72, 97, 80, 0, 73, 16, 255, 72, 19, 72, 0, 17,
+                1, 0, 22, 24, 30, 0, 69, 0, 0, 25, 33, 0, 69, 7, 0, 19,
+                72, 0, 17, 1, 0, 20, 18, 72, 0, 19, 72, 0, 17, 2, 0, 22,
+                24, 56, 0, 69, 59, 0, 73, 32, 255, 97, 84, 0, 73, 0, 255,
+                17, 7, 0, 73, 49, 255, 72, 1, 0, 72, 69, 76, 76, 79, 0,
+                66, 89, 69, 0, 84, 79, 79, 76, 0,
+            ]
+        ),
+        "expected_console": "HELLO\nTOOL7\n",
+    },
+    "int_vars_while_external": {
+        "out_fs_name": "harness-actc-alink-avmrun-int-vars-while-external",
+        "source": (
+            'MODULE MAIN\r'
+            'INT X=[0]\r'
+            'PROC MAIN()\r'
+            'WHILE X<1 DO\r'
+            'W()\r'
+            'X=X+1\r'
+            'OD\r'
+            'PrintE("DONE")\r'
+            'RETURN\r'
+        ),
+        "expected_avo": (
+            "AVO1\n"
+            "x main 0 33\n"
+            "b dL0p0lfu0L0p1aS0xe0r\n"
+            "u w\n"
+            "s DONE\n"
+            "i 1\n"
+            "i 1\n"
+            "v x 0\n"
+            "k 2\n"
+            "n main\n"
+        ),
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 60, 0, 0, 0, 1, 48, 0, 19, 48, 0, 17,
+                1, 0, 28, 24, 26, 0, 69, 35, 0, 19, 48, 0, 17, 1, 0, 20,
+                18, 48, 0, 25, 0, 0, 97, 50, 0, 73, 16, 255, 73, 32, 255,
+                97, 55, 0, 73, 0, 255, 17, 7, 0, 73, 49, 255, 72, 0, 0,
+                68, 79, 78, 69, 0, 84, 79, 79, 76, 0,
+            ]
+        ),
+        "expected_console": "TOOL7\nDONE\n",
+    },
     "comparison_ops": {
         "out_fs_name": "harness-actc-alink-avmrun-comparison-ops",
         "source": (

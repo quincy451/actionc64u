@@ -60,6 +60,10 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `IF 2 + 3 * 4 > 10 THEN W() ELSE ... FI`
 - [x] also loads nested branch-local unresolved-external `ACTC` output for:
   `IF 1 = 1 THEN IF 2 + 3 * 4 > 10 THEN W() ELSE ... FI ELSE OUTER() FI`
+- [x] also loads transitive unresolved-external `ACTC` output across modules:
+  `MAIN -> W -> Z`
+- [x] also loads transitive unresolved-external control-flow `ACTC` output:
+  `IF 2 + 3 * 4 > 10 THEN W() ...` with `W -> Z`
 - [x] also loads single-branch `IF` control-flow `ACTC` output for:
   `IF 1 = 0 THEN ... FI` and `IF 1 = 1 THEN ... FI`
 - [x] also loads `ELSE` control-flow `ACTC` output for:
@@ -69,6 +73,7 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
 - [x] also loads nested `ELSE` control-flow `ACTC` output for:
   `IF 1 = 1 THEN IF 1 = 0 THEN ... ELSE ... FI ELSE ... FI`
 - [x] resolves the current widened child-object closure including `OBJ/W.AVO`
+- [x] resolves the current widened transitive child-object closure including `OBJ/W.AVO` and `OBJ/Z.AVO`
 - [x] emits a widened `BIN/MAIN.AVM` of `76` bytes on that slice
 - [x] emits a precedence-slice `BIN/MAIN.AVM` of `31` bytes
 - [x] emits an arithmetic/comparison slice `BIN/MAIN.AVM` of `72` bytes
@@ -78,6 +83,8 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
 - [x] emits a nested branch-call `BIN/MAIN.AVM` of `102` bytes
 - [x] emits a branch-external `BIN/MAIN.AVM` of `74` bytes
 - [x] emits a nested branch-external `BIN/MAIN.AVM` of `104` bytes
+- [x] emits a transitive-external `BIN/MAIN.AVM` of `66` bytes
+- [x] emits a transitive-branch-external `BIN/MAIN.AVM` of `93` bytes
 - [x] emits an `IF` slice `BIN/MAIN.AVM` of `65` bytes
 - [x] emits an `ELSE` slice `BIN/MAIN.AVM` of `60` bytes
 - [x] emits a nested-`IF` slice `BIN/MAIN.AVM` of `77` bytes
@@ -102,6 +109,10 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `TOOL7`, `DONE`
 - [x] current harness runtime output for the nested branch-external slice:
   `TOOL7`, `DONE`
+- [x] current harness runtime output for the transitive-external slice:
+  `START`, `MID`, `END`, `DONE`
+- [x] current harness runtime output for the transitive-branch-external slice:
+  `START`, `MID`, `END`, `DONE`
 - [x] current harness runtime output for the local-procedure slice:
   `ONE`, `TWO`
 - [x] current harness runtime output for the `IF` slice:

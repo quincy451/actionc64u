@@ -118,6 +118,20 @@ cd /mnt/c/test/action/actionc64u
 ./tools/run_tool_abi_additive_pipeline.py --scenario nested_branch_external --keep-workspace
 ```
 
+Run the current transitive unresolved-external proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario transitive_external --keep-workspace
+```
+
+Run the current transitive unresolved-external branch proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario transitive_branch_external --keep-workspace
+```
+
 Run the current local-procedure-call proof end to end:
 
 ```sh
@@ -156,10 +170,10 @@ cd /mnt/c/test/action/actionc64u
 That script:
 
 - clones a clean harness workspace from the current manual-pipeline fs tree
-- writes the selected scenario source
+- writes the selected scenario source set and `ACTION.PROJ` manifest
 - runs `ACTC`, `ALINK`, and `AVMRUN` under the harness
 - verifies:
-  - exact `OBJ/MAIN.AVO` text
+  - exact `OBJ/<NAME>.AVO` text for every compiled module in the scenario
   - exact `BIN/MAIN.AVM` bytes
   - exact runtime console output
 
@@ -318,6 +332,10 @@ That now includes at least two stable scenarios:
   `TOOL7`, `DONE`
 - nested branch-local unresolved-external call:
   `TOOL7`, `DONE`
+- transitive unresolved-external closure across modules:
+  `START`, `MID`, `END`, `DONE`
+- transitive unresolved-external closure inside branch control flow:
+  `START`, `MID`, `END`, `DONE`
 - local user procedure call:
   `ONE`, `TWO`
 - single-branch `IF` control flow:

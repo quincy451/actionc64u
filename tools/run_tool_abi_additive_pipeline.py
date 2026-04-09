@@ -404,6 +404,148 @@ SCENARIOS = {
         ),
         "expected_console": "TOOL7\nDONE\n",
     },
+    "transitive_external": {
+        "out_fs_name": "harness-actc-alink-avmrun-transitive-external",
+        "sources": {
+            "MAIN": (
+                'MODULE MAIN\r'
+                'PROC MAIN()\r'
+                'PrintE("START")\r'
+                'W()\r'
+                'PrintE("DONE")\r'
+                'RETURN\r'
+            ),
+            "W": (
+                'MODULE W\r'
+                'PROC W()\r'
+                'PrintE("MID")\r'
+                'Z()\r'
+                'RETURN\r'
+            ),
+            "Z": (
+                'MODULE Z\r'
+                'PROC Z()\r'
+                'PrintE("END")\r'
+                'RETURN\r'
+            ),
+        },
+        "compile_modules": ["Z", "W", "MAIN"],
+        "expected_objects": {
+            "MAIN": (
+                "AVO1\n"
+                "x main 0 16\n"
+                "b e0u0e1r\n"
+                "u w\n"
+                "s START\n"
+                "s DONE\n"
+                "k 2\n"
+                "n main\n"
+            ),
+            "W": (
+                "AVO1\n"
+                "x w 0 10\n"
+                "b e0u0r\n"
+                "u z\n"
+                "s MID\n"
+                "k 2\n"
+                "n w\n"
+            ),
+            "Z": (
+                "AVO1\n"
+                "x z 0 7\n"
+                "b e0r\n"
+                "s END\n"
+                "k 2\n"
+                "n z\n"
+            ),
+        },
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 54, 0, 0, 0, 1, 35, 0, 97, 35, 0, 73,
+                16, 255, 69, 18, 0, 97, 41, 0, 73, 16, 255, 73, 32, 255,
+                97, 46, 0, 73, 16, 255, 69, 28, 0, 72, 97, 50, 0, 73, 16,
+                255, 72, 83, 84, 65, 82, 84, 0, 68, 79, 78, 69, 0, 77, 73,
+                68, 0, 69, 78, 68, 0,
+            ]
+        ),
+        "expected_console": "START\nMID\nEND\nDONE\n",
+    },
+    "transitive_branch_external": {
+        "out_fs_name": "harness-actc-alink-avmrun-transitive-branch-external",
+        "sources": {
+            "MAIN": (
+                'MODULE MAIN\r'
+                'PROC MAIN()\r'
+                'IF 2 + 3 * 4 > 10 THEN\r'
+                'PrintE("START")\r'
+                'W()\r'
+                'ELSE\r'
+                'PrintE("BAD")\r'
+                'FI\r'
+                'PrintE("DONE")\r'
+                'RETURN\r'
+            ),
+            "W": (
+                'MODULE W\r'
+                'PROC W()\r'
+                'PrintE("MID")\r'
+                'Z()\r'
+                'RETURN\r'
+            ),
+            "Z": (
+                'MODULE Z\r'
+                'PROC Z()\r'
+                'PrintE("END")\r'
+                'RETURN\r'
+            ),
+        },
+        "compile_modules": ["Z", "W", "MAIN"],
+        "expected_objects": {
+            "MAIN": (
+                "AVO1\n"
+                "x main 0 39\n"
+                "b p0p1ap2ghe0u0we1ve2r\n"
+                "u w\n"
+                "s START\n"
+                "s BAD\n"
+                "s DONE\n"
+                "i 2\n"
+                "i 12\n"
+                "i 10\n"
+                "k 2\n"
+                "n main\n"
+            ),
+            "W": (
+                "AVO1\n"
+                "x w 0 10\n"
+                "b e0u0r\n"
+                "u z\n"
+                "s MID\n"
+                "k 2\n"
+                "n w\n"
+            ),
+            "Z": (
+                "AVO1\n"
+                "x z 0 7\n"
+                "b e0r\n"
+                "s END\n"
+                "k 2\n"
+                "n z\n"
+            ),
+        },
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 81, 0, 0, 0, 1, 58, 0, 17, 2, 0, 17,
+                12, 0, 20, 17, 10, 0, 29, 24, 26, 0, 97, 58, 0, 73, 16,
+                255, 69, 41, 0, 25, 32, 0, 97, 64, 0, 73, 16, 255, 97,
+                68, 0, 73, 16, 255, 73, 32, 255, 97, 73, 0, 73, 16, 255,
+                69, 51, 0, 72, 97, 77, 0, 73, 16, 255, 72, 83, 84, 65,
+                82, 84, 0, 66, 65, 68, 0, 68, 79, 78, 69, 0, 77, 73, 68,
+                0, 69, 78, 68, 0,
+            ]
+        ),
+        "expected_console": "START\nMID\nEND\nDONE\n",
+    },
     "procedures": {
         "out_fs_name": "harness-actc-alink-avmrun-procedures",
         "source": (
@@ -626,21 +768,37 @@ def build_current_tools() -> None:
         run([str(ROOT / "tools" / script)], cwd=ROOT)
 
 
-def prepare_workspace(base_fs: Path, out_fs: Path, source: str) -> Path:
+def scenario_sources(scenario: dict) -> dict[str, str]:
+    if "sources" in scenario:
+        return {name.upper(): source for name, source in scenario["sources"].items()}
+    return {"MAIN": scenario["source"]}
+
+
+def prepare_workspace(base_fs: Path, out_fs: Path, scenario: dict) -> Path:
     project_root = out_fs / "IMAGES" / "ACTION.DNP" / "PROJ3"
+    compile_modules = list(scenario_sources(scenario))
     shutil.rmtree(out_fs, ignore_errors=True)
     shutil.copytree(base_fs, out_fs)
-    (project_root / "src" / "main.act").write_text(source, encoding="ascii")
-    for stale in (
-        project_root / "obj" / "MAIN.AVO",
-        project_root / "obj" / "main.avo",
+    manifest = "ACTION PROJECT\r" + "".join(f"{module}.ACT\r" for module in scenario_sources(scenario))
+    (project_root / "ACTION.PROJ").write_text(manifest, encoding="ascii")
+    for module, source in scenario_sources(scenario).items():
+        (project_root / "src" / f"{module.lower()}.act").write_text(source, encoding="ascii")
+    stale_paths = [
         project_root / "bin" / "MAIN.AVM",
         project_root / "bin" / "main.avm",
-        project_root / "MAIN.AVO",
-        project_root / "main.avo",
         project_root / "MAIN.AVM",
         project_root / "main.avm",
-    ):
+    ]
+    for module in compile_modules:
+        stale_paths.extend(
+            [
+                project_root / "obj" / f"{module}.AVO",
+                project_root / "obj" / f"{module.lower()}.avo",
+                project_root / f"{module}.AVO",
+                project_root / f"{module.lower()}.avo",
+            ]
+        )
+    for stale in stale_paths:
         if stale.exists():
             stale.unlink()
     return project_root
@@ -681,12 +839,12 @@ def find_last_op(summary: dict, kind: str) -> dict:
     return matches[-1]
 
 
-def verify_actc(project_root: Path, summary: dict, expected_avo: str) -> None:
+def verify_actc(project_root: Path, summary: dict, module: str, expected_avo: str) -> None:
     require(summary["exit_status"] == 0, f"ACTC exited nonzero: {summary['exit_status']}")
     save_op = find_last_op(summary, "save")
-    require(save_op["path"] == "OBJ/MAIN.AVO", f"unexpected ACTC save path: {save_op['path']!r}")
+    require(save_op["path"] == f"OBJ/{module}.AVO", f"unexpected ACTC save path: {save_op['path']!r}")
     require(save_op["actual_len"] == len(expected_avo.encode("ascii")), f"unexpected ACTC object size: {save_op['actual_len']}")
-    output_path = project_root / "obj" / "MAIN.AVO"
+    output_path = project_root / "obj" / f"{module}.AVO"
     require(output_path.is_file(), f"missing ACTC output: {output_path}")
     text = output_path.read_text(encoding="ascii", errors="replace")
     require(text == expected_avo, f"unexpected ACTC object text:\n{text}")
@@ -725,16 +883,24 @@ def main() -> int:
         build_current_tools()
 
     out_fs = args.out_fs if args.out_fs is not None else (UDOS_ROOT / "build" / scenario["out_fs_name"])
-    project_root = prepare_workspace(args.base_fs, out_fs, scenario["source"])
+    project_root = prepare_workspace(args.base_fs, out_fs, scenario)
+    compile_modules = [module.upper() for module in scenario.get("compile_modules", ["MAIN"])]
+    raw_expected_objects = scenario["expected_objects"] if "expected_objects" in scenario else {"MAIN": scenario["expected_avo"]}
+    expected_objects = {
+        module.upper(): expected
+        for module, expected in raw_expected_objects.items()
+    }
 
-    actc = run_harness(
-        ACTC_PRG,
-        project_root,
-        "MAIN",
-        ACTC_LABELS,
-        ["--op-dump-cstr", "target_path:32", "--op-dump-cstr", "content_buffer:256"],
-    )
-    verify_actc(project_root, actc, scenario["expected_avo"])
+    for module in compile_modules:
+        require(module in expected_objects, f"missing expected object text for {module}")
+        actc = run_harness(
+            ACTC_PRG,
+            project_root,
+            module,
+            ACTC_LABELS,
+            ["--op-dump-cstr", "target_path:32", "--op-dump-cstr", "content_buffer:256"],
+        )
+        verify_actc(project_root, actc, module, expected_objects[module])
 
     alink = run_harness(
         ALINK_PRG,

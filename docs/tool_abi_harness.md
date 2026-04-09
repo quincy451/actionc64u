@@ -321,6 +321,34 @@ cd /mnt/c/test/action/actionc64u
 ./tools/run_tool_abi_additive_pipeline.py --scenario while_branch_external --keep-workspace
 ```
 
+Run the current nested `WHILE` proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario nested_while --keep-workspace
+```
+
+Run the current nested `WHILE` + local/external call proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario nested_while_calls --keep-workspace
+```
+
+Run the current nested `WHILE` + mixed branch proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario nested_while_branch_mixed --keep-workspace
+```
+
+Run the current `WHILE` + shared-transitive external proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario while_shared_transitive --keep-workspace
+```
+
 That script:
 
 - clones a clean harness workspace from the current manual-pipeline fs tree
@@ -505,6 +533,14 @@ That now includes at least two stable scenarios:
 - `WHILE` + branch-local call:
   `DONE`
 - `WHILE` + branch-external call:
+  `DONE`
+- nested `WHILE`:
+  `DONE`
+- nested `WHILE` + local/external call:
+  `DONE`
+- nested `WHILE` + mixed branch local/external content:
+  `DONE`
+- `WHILE` + shared-transitive external reuse:
   `DONE`
 - transitive unresolved-external closure inside branch control flow:
   `START`, `MID`, `END`, `DONE`

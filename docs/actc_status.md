@@ -130,6 +130,10 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
 - [x] `IF ... THEN ... ELSE ... FI` inside top-tested `WHILE ... DO ... OD`
 - [x] local branch calls inside top-tested `WHILE ... DO ... OD`
 - [x] unresolved-external branch calls inside top-tested `WHILE ... DO ... OD`
+- [x] nested top-tested `WHILE ... DO ... OD`
+- [x] local and unresolved-external calls inside nested top-tested `WHILE ... DO ... OD`
+- [x] mixed local/external branch content inside nested top-tested `WHILE ... DO ... OD`
+- [x] shared transitive unresolved-external reuse inside top-tested `WHILE ... DO ... OD`
 - [x] compiler body-op stride widened to support the current nested-loop surface:
   `BODY_OPS_STRIDE = 48`
 - [x] compiler integer literal pool widened for the current nested-loop + nested-branch surface:
@@ -170,6 +174,14 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `b dp0p1qfp2p3ap4ghc0wc1vxe2r`
 - [x] current widened `WHILE` + branch-external object emission:
   `b dp0p1qfp2p3ap4ghu0we0vxe1r`
+- [x] current widened nested `WHILE` object emission:
+  `b dp0p1qfe0dp2p3qfe1xxe2r`
+- [x] current widened nested `WHILE` + call/external object emission:
+  `b dp0p1qfc0dp2p3qfu0xxe1r`
+- [x] current widened nested `WHILE` + mixed branch local/external object emission:
+  `b dp0p1qfp2p3ap4ghu0we1vdp5p6qfp7p8qhc0we2vxxe3r`
+- [x] current widened `WHILE` + shared-transitive object emission:
+  `b dp0p1qfu0u1xe0r`
 - [x] current widened additive object emission:
   `b e0u0p0p1ap2myp3p4mp5azr`
 - [x] current widened precedence object emission:
@@ -277,6 +289,14 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
 - [x] current harness runtime output for the `WHILE` + branch-call slice:
   `DONE`
 - [x] current harness runtime output for the `WHILE` + branch-external slice:
+  `DONE`
+- [x] current harness runtime output for the nested `WHILE` slice:
+  `DONE`
+- [x] current harness runtime output for the nested `WHILE` + call/external slice:
+  `DONE`
+- [x] current harness runtime output for the nested `WHILE` + mixed branch local/external slice:
+  `DONE`
+- [x] current harness runtime output for the `WHILE` + shared-transitive slice:
   `DONE`
 
 ## Current Biggest Blockers

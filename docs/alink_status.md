@@ -110,6 +110,10 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
 - [x] also loads `IF ... THEN ... ELSE ... FI` inside top-tested `WHILE ... DO ... OD`
 - [x] also loads local branch calls inside top-tested `WHILE ... DO ... OD`
 - [x] also loads unresolved-external branch calls inside top-tested `WHILE ... DO ... OD`
+- [x] also loads nested top-tested `WHILE ... DO ... OD`
+- [x] also loads local/external calls inside nested top-tested `WHILE ... DO ... OD`
+- [x] also loads mixed local/external branch content inside nested top-tested `WHILE ... DO ... OD`
+- [x] also loads shared transitive unresolved-external reuse inside top-tested `WHILE ... DO ... OD`
 - [x] resolves the current widened child-object closure including `OBJ/W.AVO`
 - [x] resolves the current widened transitive child-object closure including `OBJ/W.AVO` and `OBJ/Z.AVO`
 - [x] resolves sibling child objects from the root:
@@ -154,6 +158,10 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
 - [x] emits a `WHILE` + branch slice `BIN/MAIN.AVM` of `78` bytes
 - [x] emits a `WHILE` + branch-call slice `BIN/MAIN.AVM` of `86` bytes
 - [x] emits a `WHILE` + branch-external slice `BIN/MAIN.AVM` of `87` bytes
+- [x] emits a nested `WHILE` slice `BIN/MAIN.AVM` of `76` bytes
+- [x] emits a nested `WHILE` + call/external slice `BIN/MAIN.AVM` of `89` bytes
+- [x] emits a nested `WHILE` + mixed branch local/external slice `BIN/MAIN.AVM` of `141` bytes
+- [x] emits a `WHILE` + shared-transitive slice `BIN/MAIN.AVM` of `86` bytes
 - [x] harness proof exists through:
   `ACTC -> ALINK -> AVMRUN`
 - [x] current harness runtime output for that widened slice:
@@ -229,6 +237,14 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
 - [x] current harness runtime output for the `WHILE` + branch-call slice:
   `DONE`
 - [x] current harness runtime output for the `WHILE` + branch-external slice:
+  `DONE`
+- [x] current harness runtime output for the nested `WHILE` slice:
+  `DONE`
+- [x] current harness runtime output for the nested `WHILE` + call/external slice:
+  `DONE`
+- [x] current harness runtime output for the nested `WHILE` + mixed branch local/external slice:
+  `DONE`
+- [x] current harness runtime output for the `WHILE` + shared-transitive slice:
   `DONE`
 
 ## Current Biggest Blockers

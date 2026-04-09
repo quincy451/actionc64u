@@ -980,6 +980,7 @@ layout_external_object_from_x_or_fail:
     lda current_export_offsets_hi,y
     sta pending_offsets_hi,x
     jsr queue_current_external_symbols_or_fail
+    ldx saved_pending_index
     lda string_use_mask
     sta pending_string_use_masks,x
     lda #$00

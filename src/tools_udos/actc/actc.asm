@@ -1737,7 +1737,11 @@ find_or_store_external_from_declared_add:
     bcc :+
     sec
     rts
-:   jsr set_external_ptr_from_x
+:   txa
+    pha
+    jsr set_external_ptr_from_x
+    pla
+    tax
     ldy #$00
 find_or_store_external_from_declared_copy_loop:
     lda declared_module_name,y

@@ -77,6 +77,12 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `MAIN -> W -> Z`
 - [x] transitive unresolved-external calls inside arithmetic/comparison-driven control flow:
   `IF 2 + 3 * 4 > 10 THEN W() ...` with `W -> Z`
+- [x] multiple sibling unresolved-external calls from one procedure:
+  `W()` and `Z()`
+- [x] child-module sibling unresolved-external calls:
+  `W()` with `Z()` and `Q()`
+- [x] local procedure calls mixed with transitive unresolved externals inside branch control flow:
+  `IF ... THEN LOCAL() W() ...` with `W -> Z`
 - [x] single-branch control flow:
   `IF 1 = 0 THEN ... FI` and `IF 1 = 1 THEN ... FI`
 - [x] `ELSE` control flow:
@@ -115,6 +121,12 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `b e0u0e1r`
 - [x] current widened transitive-branch-external root object emission:
   `b p0p1ap2ghe0u0we1ve2r`
+- [x] current widened sibling-external root object emission:
+  `b e0u0u1e1r`
+- [x] current widened child-sibling-external object emission:
+  `b e0u0u1r`
+- [x] current widened branch-local + transitive-external object emission:
+  `b p0p1ap2ghc0u0we1ve2r`
 - [x] harness proof exists through:
   `ACTC -> ALINK -> AVMRUN`
 - [x] current harness runtime output for that widened slice:
@@ -139,6 +151,12 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `START`, `MID`, `END`, `DONE`
 - [x] current harness runtime output for the transitive-branch-external slice:
   `START`, `MID`, `END`, `DONE`
+- [x] current harness runtime output for the sibling-external slice:
+  `START`, `MID1`, `MID2`, `DONE`
+- [x] current harness runtime output for the child-sibling-external slice:
+  `START`, `MID`, `END1`, `END2`, `DONE`
+- [x] current harness runtime output for the branch-local + transitive-external slice:
+  `LOCAL`, `MID`, `END`, `DONE`
 - [x] current harness runtime output for the local-procedure slice:
   `ONE`, `TWO`
 - [x] current harness runtime output for the `IF` slice:

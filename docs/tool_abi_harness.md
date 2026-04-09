@@ -132,6 +132,27 @@ cd /mnt/c/test/action/actionc64u
 ./tools/run_tool_abi_additive_pipeline.py --scenario transitive_branch_external --keep-workspace
 ```
 
+Run the current sibling unresolved-external proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario sibling_externals --keep-workspace
+```
+
+Run the current child-sibling unresolved-external proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario child_sibling_externals --keep-workspace
+```
+
+Run the current branch-local plus transitive unresolved-external proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario branch_transitive_local --keep-workspace
+```
+
 Run the current local-procedure-call proof end to end:
 
 ```sh
@@ -336,6 +357,12 @@ That now includes at least two stable scenarios:
   `START`, `MID`, `END`, `DONE`
 - transitive unresolved-external closure inside branch control flow:
   `START`, `MID`, `END`, `DONE`
+- sibling unresolved-external calls from the root:
+  `START`, `MID1`, `MID2`, `DONE`
+- sibling unresolved-external calls from a child module:
+  `START`, `MID`, `END1`, `END2`, `DONE`
+- local call plus transitive unresolved-external branch:
+  `LOCAL`, `MID`, `END`, `DONE`
 - local user procedure call:
   `ONE`, `TWO`
 - single-branch `IF` control flow:

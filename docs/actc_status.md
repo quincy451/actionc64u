@@ -400,6 +400,10 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `DONE`
 - [x] current harness runtime output for the `WHILE` + shared-transitive slice:
   `DONE`
+- [x] current harness runtime output for the dense shared-transitive branch + early-return slice:
+  `MID1`, `END`, `MID2`, `END`, `A` through `P`
+- [x] current harness runtime output for the dense mixed nested-loop + shared-transitive slice:
+  `MID2`, `END`, `A` through `P`
 
 ## Current Biggest Blockers
 

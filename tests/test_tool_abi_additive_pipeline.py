@@ -116,6 +116,9 @@ class TestToolAbiPipeline(unittest.TestCase):
     def test_many_string17_branch_shared_transitive_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("many_string17_branch_shared_transitive", "MID1\nEND\nMID2\nEND\nA\nB\nC\nD\nE\nF\nG\nH\nI\nJ\nK\nL\nM\nN\nO\nP\n", 165, 213)
 
+    def test_dense_return_branch_shared_transitive_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("dense_return_branch_shared_transitive", "MID1\nEND\nMID2\nEND\nA\nB\nC\nD\nE\nF\nG\nH\nI\nJ\nK\nL\nM\nN\nO\nP\n", 175, 227)
+
     def test_many_string_do_until_shared_transitive_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("many_string_do_until_shared_transitive", "MID1\nEND\nMID2\nEND\nA\nB\nC\nD\nE\nF\nG\nH\nI\nJ\n", 120, 152)
 
@@ -301,6 +304,9 @@ class TestToolAbiPipeline(unittest.TestCase):
 
     def test_while_nested_do_until_return_transitive_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("while_nested_do_until_return_transitive", "START\nMID\nEND\n", 89, 91)
+
+    def test_dense_mixed_nested_shared_transitive_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("dense_mixed_nested_shared_transitive", "MID2\nEND\nA\nB\nC\nD\nE\nF\nG\nH\nI\nJ\nK\nL\nM\nN\nO\nP\n", 181, 223)
 
 
 if __name__ == "__main__":

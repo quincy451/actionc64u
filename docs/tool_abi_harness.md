@@ -201,6 +201,13 @@ cd /mnt/c/test/action/actionc64u
 ./tools/run_tool_abi_additive_pipeline.py --scenario many_string17_branch_shared_transitive --keep-workspace
 ```
 
+Run the current dense shared-transitive branch + early-return proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario dense_return_branch_shared_transitive --keep-workspace
+```
+
 Run the current high string-index shared-transitive `DO ... UNTIL ... OD` proof end to end:
 
 ```sh
@@ -234,6 +241,13 @@ Run the current high string-index nested-loop `IF/ELSE` proof end to end:
 ```sh
 cd /mnt/c/test/action/actionc64u
 ./tools/run_tool_abi_additive_pipeline.py --scenario many_string_nested_loops_if_else --keep-workspace
+```
+
+Run the current dense mixed nested-loop shared-transitive proof end to end:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario dense_mixed_nested_shared_transitive --keep-workspace
 ```
 
 Run the current branch-local procedure-call proof end to end:

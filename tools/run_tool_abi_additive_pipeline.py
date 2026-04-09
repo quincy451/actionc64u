@@ -1445,6 +1445,169 @@ SCENARIOS = {
         ),
         "expected_console": "MID1\nEND\nMID2\nEND\nA\nB\nC\nD\nE\nF\nG\nH\nI\nJ\nK\nL\nM\nN\nO\nP\n",
     },
+    "dense_return_branch_shared_transitive": {
+        "out_fs_name": "harness-actc-alink-avmrun-dense-return-branch-shared-transitive",
+        "sources": {
+            "MAIN": (
+                'MODULE MAIN\r'
+                'PROC MAIN()\r'
+                'IF 1 = 1 THEN\r'
+                'W()\r'
+                'Q()\r'
+                'PrintE("A")\r'
+                'PrintE("B")\r'
+                'PrintE("C")\r'
+                'PrintE("D")\r'
+                'PrintE("E")\r'
+                'PrintE("F")\r'
+                'PrintE("G")\r'
+                'PrintE("H")\r'
+                'PrintE("I")\r'
+                'PrintE("J")\r'
+                'PrintE("K")\r'
+                'PrintE("L")\r'
+                'PrintE("M")\r'
+                'PrintE("N")\r'
+                'PrintE("O")\r'
+                'PrintE("P")\r'
+                'RETURN\r'
+                'ELSE\r'
+                'PrintE("BAD")\r'
+                'FI\r'
+                'PrintE("TAIL")\r'
+                'RETURN\r'
+            ),
+            "W": (
+                'MODULE W\r'
+                'PROC W()\r'
+                'PrintE("MID1")\r'
+                'Z()\r'
+                'RETURN\r'
+            ),
+            "Q": (
+                'MODULE Q\r'
+                'PROC Q()\r'
+                'PrintE("MID2")\r'
+                'Z()\r'
+                'RETURN\r'
+            ),
+            "Z": (
+                'MODULE Z\r'
+                'PROC Z()\r'
+                'PrintE("END")\r'
+                'RETURN\r'
+            ),
+        },
+        "compile_modules": ["Z", "W", "Q", "MAIN"],
+        "expected_objects": {
+            "MAIN": (
+                "AVO1\n"
+                "x main 0 129\n"
+                "b p0p1qhu0u1e0e1e2e3e4e5e6e7e8e9eAeBeCeDeEeFrweGveHr\n"
+                "u w\n"
+                "u q\n"
+                "s A\n"
+                "s B\n"
+                "s C\n"
+                "s D\n"
+                "s E\n"
+                "s F\n"
+                "s G\n"
+                "s H\n"
+                "s I\n"
+                "s J\n"
+                "s K\n"
+                "s L\n"
+                "s M\n"
+                "s N\n"
+                "s O\n"
+                "s P\n"
+                "s BAD\n"
+                "s TAIL\n"
+                "i 1\n"
+                "i 1\n"
+                "k 2\n"
+                "n main\n"
+            ),
+            "W": (
+                "AVO1\n"
+                "x w 0 10\n"
+                "b e0u0r\n"
+                "u z\n"
+                "s MID1\n"
+                "k 2\n"
+                "n w\n"
+            ),
+            "Q": (
+                "AVO1\n"
+                "x q 0 10\n"
+                "b e0u0r\n"
+                "u z\n"
+                "s MID2\n"
+                "k 2\n"
+                "n q\n"
+            ),
+            "Z": (
+                "AVO1\n"
+                "x z 0 7\n"
+                "b e0r\n"
+                "s END\n"
+                "k 2\n"
+                "n z\n"
+            ),
+        },
+        "expected_avo": (
+            "AVO1\n"
+            "x main 0 129\n"
+            "b p0p1qhu0u1e0e1e2e3e4e5e6e7e8e9eAeBeCeDeEeFrweGveHr\n"
+            "u w\n"
+            "u q\n"
+            "s A\n"
+            "s B\n"
+            "s C\n"
+            "s D\n"
+            "s E\n"
+            "s F\n"
+            "s G\n"
+            "s H\n"
+            "s I\n"
+            "s J\n"
+            "s K\n"
+            "s L\n"
+            "s M\n"
+            "s N\n"
+            "s O\n"
+            "s P\n"
+            "s BAD\n"
+            "s TAIL\n"
+            "i 1\n"
+            "i 1\n"
+            "k 2\n"
+            "n main\n"
+        ),
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 215, 0, 0, 0, 1, 160, 0, 17, 1, 0,
+                17, 1, 0, 22, 24, 118, 0, 69, 133, 0, 69, 143, 0, 97,
+                160, 0, 73, 16, 255, 97, 162, 0, 73, 16, 255, 97, 164,
+                0, 73, 16, 255, 97, 166, 0, 73, 16, 255, 97, 168, 0, 73,
+                16, 255, 97, 170, 0, 73, 16, 255, 97, 172, 0, 73, 16,
+                255, 97, 174, 0, 73, 16, 255, 97, 176, 0, 73, 16, 255,
+                97, 178, 0, 73, 16, 255, 97, 180, 0, 73, 16, 255, 97,
+                182, 0, 73, 16, 255, 97, 184, 0, 73, 16, 255, 97, 186,
+                0, 73, 16, 255, 97, 188, 0, 73, 16, 255, 97, 190, 0, 73,
+                16, 255, 25, 130, 0, 25, 124, 0, 97, 192, 0, 73, 16, 255,
+                97, 196, 0, 73, 16, 255, 73, 32, 255, 97, 201, 0, 73, 16,
+                255, 69, 153, 0, 72, 97, 206, 0, 73, 16, 255, 69, 153, 0,
+                72, 97, 211, 0, 73, 16, 255, 72, 65, 0, 66, 0, 67, 0, 68,
+                0, 69, 0, 70, 0, 71, 0, 72, 0, 73, 0, 74, 0, 75, 0, 76,
+                0, 77, 0, 78, 0, 79, 0, 80, 0, 66, 65, 68, 0, 84, 65, 73,
+                76, 0, 77, 73, 68, 49, 0, 77, 73, 68, 50, 0, 69, 78, 68,
+                0,
+            ]
+        ),
+        "expected_console": "MID1\nEND\nMID2\nEND\nA\nB\nC\nD\nE\nF\nG\nH\nI\nJ\nK\nL\nM\nN\nO\nP\n",
+    },
     "many_string_do_until_shared_transitive": {
         "out_fs_name": "harness-actc-alink-avmrun-many-string-do-until-shared-transitive",
         "sources": {
@@ -5139,6 +5302,170 @@ SCENARIOS = {
             ]
         ),
         "expected_console": "START\nMID\nEND\n",
+    },
+    "dense_mixed_nested_shared_transitive": {
+        "out_fs_name": "harness-actc-alink-avmrun-dense-mixed-nested-shared-transitive",
+        "sources": {
+            "MAIN": (
+                'MODULE MAIN\r'
+                'PROC MAIN()\r'
+                'DO\r'
+                'WHILE 1 = 0 DO\r'
+                'W()\r'
+                'PrintE("BAD")\r'
+                'OD\r'
+                'Q()\r'
+                'PrintE("A")\r'
+                'PrintE("B")\r'
+                'PrintE("C")\r'
+                'PrintE("D")\r'
+                'PrintE("E")\r'
+                'PrintE("F")\r'
+                'PrintE("G")\r'
+                'PrintE("H")\r'
+                'PrintE("I")\r'
+                'PrintE("J")\r'
+                'PrintE("K")\r'
+                'PrintE("L")\r'
+                'PrintE("M")\r'
+                'PrintE("N")\r'
+                'PrintE("O")\r'
+                'PrintE("P")\r'
+                'UNTIL 1 = 1\r'
+                'OD\r'
+                'RETURN\r'
+            ),
+            "W": (
+                'MODULE W\r'
+                'PROC W()\r'
+                'PrintE("MID1")\r'
+                'Z()\r'
+                'RETURN\r'
+            ),
+            "Q": (
+                'MODULE Q\r'
+                'PROC Q()\r'
+                'PrintE("MID2")\r'
+                'Z()\r'
+                'RETURN\r'
+            ),
+            "Z": (
+                'MODULE Z\r'
+                'PROC Z()\r'
+                'PrintE("END")\r'
+                'RETURN\r'
+            ),
+        },
+        "compile_modules": ["Z", "W", "Q", "MAIN"],
+        "expected_objects": {
+            "MAIN": (
+                "AVO1\n"
+                "x main 0 132\n"
+                "b ddp0p1qfu0e0xu1e1e2e3e4e5e6e7e8e9eAeBeCeDeEeFeGp2p3qtor\n"
+                "u w\n"
+                "u q\n"
+                "s BAD\n"
+                "s A\n"
+                "s B\n"
+                "s C\n"
+                "s D\n"
+                "s E\n"
+                "s F\n"
+                "s G\n"
+                "s H\n"
+                "s I\n"
+                "s J\n"
+                "s K\n"
+                "s L\n"
+                "s M\n"
+                "s N\n"
+                "s O\n"
+                "s P\n"
+                "i 1\n"
+                "i 0\n"
+                "i 1\n"
+                "i 1\n"
+                "k 2\n"
+                "n main\n"
+            ),
+            "W": (
+                "AVO1\n"
+                "x w 0 10\n"
+                "b e0u0r\n"
+                "u z\n"
+                "s MID1\n"
+                "k 2\n"
+                "n w\n"
+            ),
+            "Q": (
+                "AVO1\n"
+                "x q 0 10\n"
+                "b e0u0r\n"
+                "u z\n"
+                "s MID2\n"
+                "k 2\n"
+                "n q\n"
+            ),
+            "Z": (
+                "AVO1\n"
+                "x z 0 7\n"
+                "b e0r\n"
+                "s END\n"
+                "k 2\n"
+                "n z\n"
+            ),
+        },
+        "expected_avo": (
+            "AVO1\n"
+            "x main 0 132\n"
+            "b ddp0p1qfu0e0xu1e1e2e3e4e5e6e7e8e9eAeBeCeDeEeFeGp2p3qtor\n"
+            "u w\n"
+            "u q\n"
+            "s BAD\n"
+            "s A\n"
+            "s B\n"
+            "s C\n"
+            "s D\n"
+            "s E\n"
+            "s F\n"
+            "s G\n"
+            "s H\n"
+            "s I\n"
+            "s J\n"
+            "s K\n"
+            "s L\n"
+            "s M\n"
+            "s N\n"
+            "s O\n"
+            "s P\n"
+            "i 1\n"
+            "i 0\n"
+            "i 1\n"
+            "i 1\n"
+            "k 2\n"
+            "n main\n"
+        ),
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 211, 0, 0, 0, 1, 161, 0, 17, 1, 0,
+                17, 0, 0, 22, 24, 22, 0, 69, 134, 0, 97, 161, 0, 73, 16,
+                255, 25, 0, 0, 69, 144, 0, 97, 165, 0, 73, 16, 255, 97,
+                167, 0, 73, 16, 255, 97, 169, 0, 73, 16, 255, 97, 171, 0,
+                73, 16, 255, 97, 173, 0, 73, 16, 255, 97, 175, 0, 73, 16,
+                255, 97, 177, 0, 73, 16, 255, 97, 179, 0, 73, 16, 255, 97,
+                181, 0, 73, 16, 255, 97, 183, 0, 73, 16, 255, 97, 185, 0,
+                73, 16, 255, 97, 187, 0, 73, 16, 255, 97, 189, 0, 73, 16,
+                255, 97, 191, 0, 73, 16, 255, 97, 193, 0, 73, 16, 255, 97,
+                195, 0, 73, 16, 255, 17, 1, 0, 17, 1, 0, 22, 24, 0, 0, 73,
+                32, 255, 97, 197, 0, 73, 16, 255, 69, 154, 0, 72, 97, 202,
+                0, 73, 16, 255, 69, 154, 0, 72, 97, 207, 0, 73, 16, 255,
+                72, 66, 65, 68, 0, 65, 0, 66, 0, 67, 0, 68, 0, 69, 0, 70,
+                0, 71, 0, 72, 0, 73, 0, 74, 0, 75, 0, 76, 0, 77, 0, 78,
+                0, 79, 0, 80, 0, 77, 73, 68, 49, 0, 77, 73, 68, 50, 0, 69,
+                78, 68, 0,
+            ]
+        ),
+        "expected_console": "MID2\nEND\nA\nB\nC\nD\nE\nF\nG\nH\nI\nJ\nK\nL\nM\nN\nO\nP\n",
     },
 }
 

@@ -2670,6 +2670,201 @@ SCENARIOS = {
         ),
         "expected_console": "SEVEN\nEIGHT\nNINE\n",
     },
+    "external10_child_queue": {
+        "out_fs_name": "harness-actc-alink-avmrun-external10-child-queue",
+        "sources": {
+            "MAIN": (
+                'MODULE MAIN\r'
+                'PROC MAIN()\r'
+                'W0()\r'
+                'W1()\r'
+                'W2()\r'
+                'W3()\r'
+                'W4()\r'
+                'W5()\r'
+                'W6()\r'
+                'W7()\r'
+                'W8()\r'
+                'W9()\r'
+                'RETURN\r'
+            ),
+            "W0": (
+                'MODULE W0\r'
+                'PROC W0()\r'
+                'PrintE("0")\r'
+                'RETURN\r'
+            ),
+            "W1": (
+                'MODULE W1\r'
+                'PROC W1()\r'
+                'PrintE("1")\r'
+                'RETURN\r'
+            ),
+            "W2": (
+                'MODULE W2\r'
+                'PROC W2()\r'
+                'PrintE("2")\r'
+                'RETURN\r'
+            ),
+            "W3": (
+                'MODULE W3\r'
+                'PROC W3()\r'
+                'PrintE("3")\r'
+                'RETURN\r'
+            ),
+            "W4": (
+                'MODULE W4\r'
+                'PROC W4()\r'
+                'PrintE("4")\r'
+                'RETURN\r'
+            ),
+            "W5": (
+                'MODULE W5\r'
+                'PROC W5()\r'
+                'PrintE("5")\r'
+                'RETURN\r'
+            ),
+            "W6": (
+                'MODULE W6\r'
+                'PROC W6()\r'
+                'PrintE("6")\r'
+                'RETURN\r'
+            ),
+            "W7": (
+                'MODULE W7\r'
+                'PROC W7()\r'
+                'PrintE("7")\r'
+                'RETURN\r'
+            ),
+            "W8": (
+                'MODULE W8\r'
+                'PROC W8()\r'
+                'PrintE("8")\r'
+                'RETURN\r'
+            ),
+            "W9": (
+                'MODULE W9\r'
+                'PROC W9()\r'
+                'PrintE("9")\r'
+                'RETURN\r'
+            ),
+        },
+        "compile_modules": ["MAIN", "W0", "W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8", "W9"],
+        "expected_objects": {
+            "MAIN": (
+                "AVO1\n"
+                "x main 0 31\n"
+                "b u0u1u2u3u4u5u6u7u8u9r\n"
+                "u w0\n"
+                "u w1\n"
+                "u w2\n"
+                "u w3\n"
+                "u w4\n"
+                "u w5\n"
+                "u w6\n"
+                "u w7\n"
+                "u w8\n"
+                "u w9\n"
+                "k 0\n"
+                "n main\n"
+            ),
+            "W0": (
+                "AVO1\n"
+                "x w0 0 7\n"
+                "b e0r\n"
+                "s 0\n"
+                "k 2\n"
+                "n w0\n"
+            ),
+            "W1": (
+                "AVO1\n"
+                "x w1 0 7\n"
+                "b e0r\n"
+                "s 1\n"
+                "k 2\n"
+                "n w1\n"
+            ),
+            "W2": (
+                "AVO1\n"
+                "x w2 0 7\n"
+                "b e0r\n"
+                "s 2\n"
+                "k 2\n"
+                "n w2\n"
+            ),
+            "W3": (
+                "AVO1\n"
+                "x w3 0 7\n"
+                "b e0r\n"
+                "s 3\n"
+                "k 2\n"
+                "n w3\n"
+            ),
+            "W4": (
+                "AVO1\n"
+                "x w4 0 7\n"
+                "b e0r\n"
+                "s 4\n"
+                "k 2\n"
+                "n w4\n"
+            ),
+            "W5": (
+                "AVO1\n"
+                "x w5 0 7\n"
+                "b e0r\n"
+                "s 5\n"
+                "k 2\n"
+                "n w5\n"
+            ),
+            "W6": (
+                "AVO1\n"
+                "x w6 0 7\n"
+                "b e0r\n"
+                "s 6\n"
+                "k 2\n"
+                "n w6\n"
+            ),
+            "W7": (
+                "AVO1\n"
+                "x w7 0 7\n"
+                "b e0r\n"
+                "s 7\n"
+                "k 2\n"
+                "n w7\n"
+            ),
+            "W8": (
+                "AVO1\n"
+                "x w8 0 7\n"
+                "b e0r\n"
+                "s 8\n"
+                "k 2\n"
+                "n w8\n"
+            ),
+            "W9": (
+                "AVO1\n"
+                "x w9 0 7\n"
+                "b e0r\n"
+                "s 9\n"
+                "k 2\n"
+                "n w9\n"
+            ),
+        },
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 123, 0, 0, 0, 1, 103, 0, 69, 33, 0,
+                69, 40, 0, 69, 47, 0, 69, 54, 0, 69, 61, 0, 69, 68, 0,
+                69, 75, 0, 69, 82, 0, 69, 89, 0, 69, 96, 0, 73, 32, 255,
+                97, 103, 0, 73, 16, 255, 72, 97, 105, 0, 73, 16, 255, 72,
+                97, 107, 0, 73, 16, 255, 72, 97, 109, 0, 73, 16, 255, 72,
+                97, 111, 0, 73, 16, 255, 72, 97, 113, 0, 73, 16, 255, 72,
+                97, 115, 0, 73, 16, 255, 72, 97, 117, 0, 73, 16, 255, 72,
+                97, 119, 0, 73, 16, 255, 72, 97, 121, 0, 73, 16, 255, 72,
+                48, 0, 49, 0, 50, 0, 51, 0, 52, 0, 53, 0, 54, 0, 55, 0,
+                56, 0, 57, 0,
+            ]
+        ),
+        "expected_console": "0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n",
+    },
     "bool_not_external": {
         "out_fs_name": "harness-actc-alink-avmrun-bool-not-external",
         "sources": {

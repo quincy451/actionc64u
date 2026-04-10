@@ -21,6 +21,9 @@ VAR_MAX = 16
 .ifndef EXPORT_MAX
 EXPORT_MAX = 8
 .endif
+.ifndef EXTERNAL_MAX
+EXTERNAL_MAX = 8
+.endif
 
 IMPORT_PRINT_STR  = $01
 IMPORT_PRINT_LINE = $02
@@ -3433,7 +3436,7 @@ find_or_store_external_from_declared_next:
     bne find_or_store_external_from_declared_loop
 find_or_store_external_from_declared_add:
     ldx extern_count_data
-    cpx #8
+    cpx #EXTERNAL_MAX
     bcc :+
     sec
     rts
@@ -4200,7 +4203,7 @@ hex_work:
 export_names:
     .res 25 * EXPORT_MAX
 external_names:
-    .res 200
+    .res 25 * EXTERNAL_MAX
 var_names:
     .res 25 * VAR_MAX
 bss_end:

@@ -116,6 +116,8 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `PROC SHOW(Z) INT A ... INT O`, `O=Z+2`, `PrintIE(O)`
 - [x] also loads harness local procedure export tables beyond the old `8`-proc ceiling:
   `PROC MAIN() P7() P8() P9() RETURN` with `PROC P0() ... PROC P9()`, proving linker parse/live-set/emit of `c8`, `c9`, and `cA`
+- [x] also resolves a harness root with more than eight child objects and more than seven pending queue entries:
+  `MAIN -> W0 .. W9`, proving parse/queue/link/emit across `10` child modules in one image
 - [x] also loads digit-bearing symbol names in compiler-emitted object metadata:
   `v v0 1`, `v n1 0`, `v x2 0`, and `x add1 ...`
 - [x] also resolves digit-bearing external module/proc names:

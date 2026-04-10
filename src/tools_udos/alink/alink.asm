@@ -21,6 +21,12 @@ VAR_MAX = 16
 .ifndef EXPORT_MAX
 EXPORT_MAX = 8
 .endif
+.ifndef EXTERNAL_MAX
+EXTERNAL_MAX = 8
+.endif
+.ifndef PENDING_SYMBOL_MAX
+PENDING_SYMBOL_MAX = 7
+.endif
 .if STRING_LITERAL_MAX > 32
 .error "STRING_LITERAL_MAX > 32 not supported"
 .endif
@@ -30,7 +36,6 @@ AVM_VERSION = 2
 AVM_FLAG_ACHERON = 1
 AVM_HEADER_SIZE = 12
 
-PENDING_SYMBOL_MAX = 7
 OPCODE_PUSH16 = $11
 OPCODE_STORE = $12
 OPCODE_LOAD = $13
@@ -341,9 +346,9 @@ set_var_ptr_from_x_done:
     rts
 
 set_pending_ptr_from_x:
-    lda #<manifest_buffer
+    lda #<pending_names
     sta export_ptr
-    lda #>manifest_buffer
+    lda #>pending_names
     sta export_ptr+1
 set_pending_ptr_from_x_loop:
     cpx #$00
@@ -669,7 +674,7 @@ parse_external_symbols_done:
 
 copy_external_symbol_line_or_fail:
     lda external_count
-    cmp #8
+    cmp #EXTERNAL_MAX
     bcc :+
     lda #<msg_bad_avo
     ldy #>msg_bad_avo
@@ -3880,11 +3885,13 @@ body_ops_data:
 manifest_entry:
     .res 32
 external_names:
-    .res 200
+    .res 25 * EXTERNAL_MAX
 external_count:
     .res 1
 pending_count:
     .res 1
+pending_names:
+    .res 25 * PENDING_SYMBOL_MAX
 pending_offsets_lo:
     .res PENDING_SYMBOL_MAX
 pending_offsets_hi:

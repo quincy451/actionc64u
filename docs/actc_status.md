@@ -151,8 +151,16 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `PROC ADD(X,Y) RETURN X+Y`, `PrintIE(ADD(2,3))`
 - [x] unresolved-external procedure parameters:
   `PrintIE(W(5))` with `PROC W(N) RETURN N+2`
+- [x] multiple unresolved-external procedure parameters:
+  `PrintIE(W(2,3))` with `PROC W(X,Y) RETURN X+Y`
+- [x] nested call results reused as later call arguments:
+  `PrintIE(W(INC(2+3)))`
 - [x] composed boolean conditions with `AND`, `OR`, and `NOT`:
   `IF (X<Y AND W()=7) OR Z()=1 THEN ... FI` and `IF NOT(Z()=1) THEN ... FI`
+- [x] local/external arg-bearing calls inside branch and loop control:
+  `IF 1 = 1 THEN PrintIE(INC(2+3)) ELSE ... FI` and `WHILE X < 2 DO PrintIE(W(X+5)) X=X+1 OD`
+- [x] composed boolean predicates driven by arg-bearing local/external calls:
+  `IF (X<Y AND W(5)=7) OR Z(1)=1 THEN ... FI` and `IF (INC(X)=2 AND W(Y+5)=9) OR NOT(Z(1)=1) THEN ... FI`
 - [x] local user procedure calls inside `IF ... THEN ... ELSE ... FI`:
   `IF 1 = 1 THEN HELLO() ELSE BYE() FI`
 - [x] arithmetic/comparison-driven local procedure calls inside `IF ... THEN ... ELSE ... FI`:

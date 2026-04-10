@@ -128,8 +128,26 @@ class TestToolAbiPipeline(unittest.TestCase):
     def test_external_args_basic_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("external_args_basic", "7\n", 45, 37)
 
+    def test_external_args_multi_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("external_args_multi", "5\n", 51, 45)
+
+    def test_nested_call_arg_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("nested_call_arg", "8\n", 87, 57)
+
+    def test_if_local_args_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("if_local_args", "6\n", 105, 64)
+
+    def test_while_external_args_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("while_external_args", "7\n8\n", 77, 66)
+
     def test_bool_compound_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("bool_compound", "OK\n", 137, 99)
+
+    def test_bool_compound_args_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("bool_compound_args", "OK\n", 149, 123)
+
+    def test_bool_local_external_args_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("bool_local_external_args", "OK\n", 205, 151)
 
     def test_bool_not_external_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("bool_not_external", "OK\n", 77, 59)

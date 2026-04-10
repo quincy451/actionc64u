@@ -68,6 +68,22 @@ Current harness build widening knobs:
 - `ACTC`: `STRING_LITERAL_MAX=32`
 - `ALINK`: `STRING_LITERAL_MAX=32`
 
+Recent harness-proven widening additions now covered by named scenarios:
+
+- `external_args_multi`: unresolved-external multi-arg calls like `PrintIE(W(2,3))`
+- `nested_call_arg`: nested call results reused as later call arguments like `PrintIE(W(INC(2+3)))`
+- `if_local_args`: local arg-bearing calls under `IF ... THEN ... ELSE ... FI`
+- `while_external_args`: external arg-bearing calls under `WHILE ... DO ... OD`
+- `bool_compound_args`: compound boolean predicates using external arg calls
+- `bool_local_external_args`: compound boolean predicates mixing local and external arg calls
+
+Use any one of them with:
+
+```sh
+cd /mnt/c/test/action/actionc64u
+./tools/run_tool_abi_additive_pipeline.py --scenario <name> --keep-workspace
+```
+
 Run the current additive widening proof end to end:
 
 ```sh

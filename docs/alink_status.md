@@ -118,6 +118,8 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `v v0 1`, `v n1 0`, `v x2 0`, and `x add1 ...`
 - [x] also resolves digit-bearing external module/proc names:
   `MAIN -> W1`
+- [x] harness linker object loading now accepts compiler-emitted `.AVO` objects beyond the old `255`-byte ceiling:
+  `large_object_proc_local_inits` proves a `291`-byte `MAIN.AVO`
 - [x] also loads direct comparison-operator `ACTC` output for:
   `PrintIE(2 <> 3)`, `PrintIE(2 < 3)`, `PrintIE(3 <= 3)`, `PrintIE(4 >= 3)`
 - [x] also loads high string-index `ACTC` output through `F`:

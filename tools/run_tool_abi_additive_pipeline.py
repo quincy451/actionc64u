@@ -2512,6 +2512,91 @@ SCENARIOS = {
         ),
         "expected_console": "7\n",
     },
+    "large_object_proc_local_inits": {
+        "out_fs_name": "harness-actc-alink-avmrun-large-object-proc-local-inits",
+        "source": (
+            'MODULE MAIN\r'
+            'PROC SHOW(Z)\r'
+            'INT A=[0]\r'
+            'INT B=[1]\r'
+            'INT C=[2]\r'
+            'INT D=[3]\r'
+            'INT E=[4]\r'
+            'INT F=[5]\r'
+            'INT G=[6]\r'
+            'INT H=[7]\r'
+            'INT I=[8]\r'
+            'INT J=[9]\r'
+            'INT K=[10]\r'
+            'INT L=[11]\r'
+            'INT M=[12]\r'
+            'INT N=[13]\r'
+            'INT O=[14]\r'
+            'O=Z+O\r'
+            'PrintIE(O)\r'
+            'RETURN\r'
+            'PROC MAIN()\r'
+            'SHOW(2)\r'
+            'RETURN\r'
+        ),
+        "expected_avo": (
+            "AVO1\n"
+            "x show 0 110\n"
+            "x main 110 7\n"
+            "b S0p0S1p1S2p2S3p3S4p4S5p5S6p6S7p7S8p8S9p9SApASBpBSCpCSDpDSEpESFL0LFaSFLFzr\n"
+            "b pFc0r\n"
+            "i 0\n"
+            "i 1\n"
+            "i 2\n"
+            "i 3\n"
+            "i 4\n"
+            "i 5\n"
+            "i 6\n"
+            "i 7\n"
+            "i 8\n"
+            "i 9\n"
+            "i 10\n"
+            "i 11\n"
+            "i 12\n"
+            "i 13\n"
+            "i 14\n"
+            "i 2\n"
+            "v z 0\n"
+            "v a 0\n"
+            "v b 0\n"
+            "v c 0\n"
+            "v d 0\n"
+            "v e 0\n"
+            "v f 0\n"
+            "v g 0\n"
+            "v h 0\n"
+            "v i 0\n"
+            "v j 0\n"
+            "v k 0\n"
+            "v l 0\n"
+            "v m 0\n"
+            "v n 0\n"
+            "v o 0\n"
+            "k 6\n"
+            "n main\n"
+        ),
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 151, 0, 110, 0, 1, 119, 0, 18, 119, 0,
+                17, 0, 0, 18, 121, 0, 17, 1, 0, 18, 123, 0, 17, 2, 0, 18,
+                125, 0, 17, 3, 0, 18, 127, 0, 17, 4, 0, 18, 129, 0, 17, 5,
+                0, 18, 131, 0, 17, 6, 0, 18, 133, 0, 17, 7, 0, 18, 135, 0,
+                17, 8, 0, 18, 137, 0, 17, 9, 0, 18, 139, 0, 17, 10, 0, 18,
+                141, 0, 17, 11, 0, 18, 143, 0, 17, 12, 0, 18, 145, 0, 17,
+                13, 0, 18, 147, 0, 17, 14, 0, 18, 149, 0, 19, 119, 0, 19,
+                149, 0, 20, 18, 149, 0, 19, 149, 0, 73, 49, 255, 72, 17,
+                2, 0, 69, 0, 0, 73, 32, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0,
+            ]
+        ),
+        "expected_console": "16\n",
+    },
     "bool_not_external": {
         "out_fs_name": "harness-actc-alink-avmrun-bool-not-external",
         "sources": {

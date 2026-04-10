@@ -203,6 +203,9 @@ class TestToolAbiPipeline(unittest.TestCase):
     def test_digit_external_module_names_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("digit_external_module_names", "7\n", 39, 25)
 
+    def test_large_object_proc_local_inits_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("large_object_proc_local_inits", "16\n", 291, 163)
+
     def test_bool_not_external_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("bool_not_external", "OK\n", 77, 59)
 

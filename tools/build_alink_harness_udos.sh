@@ -27,7 +27,7 @@ fi
 
 python3 "$ROOT_DIR/tools/generate_udos_service_inc.py" --labels "$LABELS" --output "$INC"
 
-ca65 -g -D BODY_OPS_STRIDE=96 -D INT_LITERAL_MAX=32 -D STRING_LITERAL_MAX=32 -o "$OBJ" "$SRC" -I "$BUILD_DIR"
+ca65 -g -D SOURCE_LIMIT=511 -D BODY_OPS_STRIDE=96 -D INT_LITERAL_MAX=32 -D STRING_LITERAL_MAX=32 -o "$OBJ" "$SRC" -I "$BUILD_DIR"
 ld65 -C "$CFG" -o "$BIN" "$OBJ" -Ln "$CURRENT_LABELS" -m "$CURRENT_MAP"
 printf '\x00\x09' > "$PRG"
 cat "$BIN" >> "$PRG"

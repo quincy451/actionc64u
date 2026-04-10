@@ -66,6 +66,7 @@ Current harness build widening knobs:
 
 - `ACTC`: `SOURCE_LIMIT=511`
 - `ACTC`: `STRING_LITERAL_MAX=32`
+- `ALINK`: `SOURCE_LIMIT=511`
 - `ALINK`: `STRING_LITERAL_MAX=32`
 
 Recent harness-proven widening additions now covered by named scenarios:
@@ -92,6 +93,7 @@ Recent harness-proven widening additions now covered by named scenarios:
 - `var16_proc_slots`: one proc parameter plus 15 proc-local vars allocated through slot `F`, like `PROC SHOW(Z) INT A ... INT O` with `O=Z+2`
 - `digit_symbol_names`: digit-bearing var/proc/param/local names like `INT V0=[1]`, `PROC ADD1(N1)`, `INT X2=[N1+1]`
 - `digit_external_module_names`: digit-bearing external module/proc names like `MAIN -> W1`
+- `large_object_proc_local_inits`: dense proc-local initializer objects beyond the old `255`-byte linker load ceiling, proving a `291`-byte `MAIN.AVO`
 - `if_return_external_args_multi`: multi-arg external calls under branch-gated early return
 - `do_until_return_branch_args_mixed`: mixed local/external multi-arg calls under `DO ... UNTIL ... OD` early return
 - `while_nested_do_until_return_args_transitive`: nested mixed-loop early return with multi-arg transitive external calls

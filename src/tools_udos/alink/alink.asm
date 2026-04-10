@@ -3,7 +3,9 @@
 .export start
 
 MANIFEST_LIMIT = 191
+.ifndef SOURCE_LIMIT
 SOURCE_LIMIT = 255
+.endif
 .ifndef BODY_OPS_STRIDE
 BODY_OPS_STRIDE = 48
 .endif

@@ -212,6 +212,12 @@ class TestToolAbiPipeline(unittest.TestCase):
     def test_external10_child_queue_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("external10_child_queue", "0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n", 102, 135)
 
+    def test_loop9_do_until_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("loop9_do_until", "DEEP\n", 185, 116)
+
+    def test_loop9_while_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("loop9_while", "DONE\n", 194, 153)
+
     def test_bool_not_external_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("bool_not_external", "OK\n", 77, 59)
 

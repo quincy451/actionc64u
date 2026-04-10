@@ -24,6 +24,9 @@ EXPORT_MAX = 8
 .ifndef EXTERNAL_MAX
 EXTERNAL_MAX = 8
 .endif
+.ifndef LOOP_MAX
+LOOP_MAX = 8
+.endif
 
 IMPORT_PRINT_STR  = $01
 IMPORT_PRINT_LINE = $02
@@ -1099,7 +1102,7 @@ push_while_loop_kind_or_fail:
 
 push_loop_kind_a_or_fail:
     ldx loop_depth_data
-    cpx #8
+    cpx #LOOP_MAX
     bcc :+
     jmp collect_proc_body_ops_bad_proc
 :   sta loop_kind_stack,x
@@ -4155,7 +4158,7 @@ proc_local_var_base_data:
 loop_depth_data:
     .res 1
 loop_kind_stack:
-    .res 8
+    .res LOOP_MAX
 expr_saved_lo:
     .res 1
 expr_compare_lo:

@@ -27,6 +27,9 @@ EXTERNAL_MAX = 8
 .ifndef PENDING_SYMBOL_MAX
 PENDING_SYMBOL_MAX = 7
 .endif
+.ifndef LOOP_MAX
+LOOP_MAX = 8
+.endif
 .if STRING_LITERAL_MAX > 32
 .error "STRING_LITERAL_MAX > 32 not supported"
 .endif
@@ -2659,7 +2662,7 @@ load_while_loop_start_target_offset_skip:
 	    jmp load_while_loop_start_target_offset_loop
 load_while_loop_start_target_offset_push_do:
 	    ldx compare_char
-	    cpx #$08
+	    cpx #LOOP_MAX
 	    bcs load_while_loop_start_target_offset_fail
 	    lda current_bit_lo
 	    sta loop_offsets_lo,x
@@ -2938,7 +2941,7 @@ load_until_loop_start_target_offset_skip:
 	    jmp load_until_loop_start_target_offset_loop
 load_until_loop_start_target_offset_push_do:
 	    ldx compare_char
-	    cpx #$08
+	    cpx #LOOP_MAX
 	    bcs load_until_loop_start_target_offset_fail
 	    lda current_bit_lo
 	    sta loop_offsets_lo,x
@@ -3871,9 +3874,9 @@ root_string_offsets_lo:
 root_string_offsets_hi:
     .res STRING_LITERAL_MAX
 loop_offsets_lo:
-    .res 8
+    .res LOOP_MAX
 loop_offsets_hi:
-    .res 8
+    .res LOOP_MAX
 live_flags:
     .res EXPORT_MAX
 string_use_mask:

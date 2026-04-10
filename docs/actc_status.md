@@ -190,6 +190,8 @@ Current lowering note:
   `PROC MAIN() P7() P8() P9() RETURN` with `PROC P0() ... PROC P9()`, proving `c8`, `c9`, and `cA` body-op emission
 - [x] harness unresolved-external symbol tables reach the current digit-bearing `10`-entry fanout:
   `PROC MAIN() W0() ... W9() RETURN`, proving `u w0` through `u w9` emission in one root object
+- [x] harness loop nesting reaches `9` deep across both loop forms:
+  nested `DO ... UNTIL ... OD` printing `DEEP` and nested `WHILE 0=1 DO ... OD` falling through to `DONE`
 - [x] identifiers can include digits after the first character across vars, proc names, params, and locals:
   `INT V0=[1]`, `PROC ADD1(N1)`, `INT X2=[N1+1]`, `ADD1(5)`
 - [x] digit-bearing module/proc names compile through command-line module selection and module-header validation:
@@ -284,6 +286,8 @@ Current lowering note:
   `EXPORT_MAX = 16`
 - [x] harness `ACTC` unresolved-external table widened beyond the old `8`-symbol ceiling for wide root fanout:
   `EXTERNAL_MAX = 16`
+- [x] harness `ACTC` loop-kind stack widened beyond the old `8`-deep nesting ceiling:
+  `LOOP_MAX = 16`
 - [x] current widened control-flow object emission:
   `b p0p1qhe0vp2p3qhe1ve2r`
 - [x] current widened `ELSE` object emission:

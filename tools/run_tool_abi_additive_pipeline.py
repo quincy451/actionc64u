@@ -3009,6 +3009,139 @@ SCENARIOS = {
         ),
         "expected_console": "DONE\n",
     },
+    "string36_high_index": {
+        "out_fs_name": "harness-actc-alink-avmrun-string36-high-index",
+        "source": (
+            'MODULE MAIN\r'
+            'PROC F()\r'
+            + ''.join(f'PrintE("{value}")\r' for value in "0123456789ABCDEFGHIJKLMNOPQRSTUVWXY")
+            + 'RETURN\r'
+            'PROC MAIN()\r'
+            'PrintE("Z")\r'
+            'RETURN\r'
+        ),
+        "expected_avo": (
+            "AVO1\n"
+            "x f 0 211\n"
+            "x main 211 7\n"
+            "b e0e1e2e3e4e5e6e7e8e9eAeBeCeDeEeFeGeHeIeJeKeLeMeNeOePeQeReSeTeUeVeWeXeYr\n"
+            "b eZr\n"
+            "s 0\n"
+            "s 1\n"
+            "s 2\n"
+            "s 3\n"
+            "s 4\n"
+            "s 5\n"
+            "s 6\n"
+            "s 7\n"
+            "s 8\n"
+            "s 9\n"
+            "s A\n"
+            "s B\n"
+            "s C\n"
+            "s D\n"
+            "s E\n"
+            "s F\n"
+            "s G\n"
+            "s H\n"
+            "s I\n"
+            "s J\n"
+            "s K\n"
+            "s L\n"
+            "s M\n"
+            "s N\n"
+            "s O\n"
+            "s P\n"
+            "s Q\n"
+            "s R\n"
+            "s S\n"
+            "s T\n"
+            "s U\n"
+            "s V\n"
+            "s W\n"
+            "s X\n"
+            "s Y\n"
+            "s Z\n"
+            "k 2\n"
+            "n main\n"
+        ),
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 11, 0, 0, 0, 1, 9, 0, 97, 9, 0, 73,
+                16, 255, 73, 32, 255, 90, 0,
+            ]
+        ),
+        "expected_console": "Z\n",
+    },
+    "int36_high_index": {
+        "out_fs_name": "harness-actc-alink-avmrun-int36-high-index",
+        "source": (
+            'MODULE MAIN\r'
+            'PROC F()\r'
+            + ''.join(f'PrintIE({value})\r' for value in range(31))
+            + 'RETURN\r'
+            + 'PROC G()\r'
+            + ''.join(f'PrintIE({value})\r' for value in range(31, 35))
+            + 'RETURN\r'
+            'PROC MAIN()\r'
+            'PrintIE(35)\r'
+            'RETURN\r'
+        ),
+        "expected_avo": (
+            "AVO1\n"
+            "x f 0 187\n"
+            "x g 187 25\n"
+            "x main 212 7\n"
+            "b p0zp1zp2zp3zp4zp5zp6zp7zp8zp9zpAzpBzpCzpDzpEzpFzpGzpHzpIzpJzpKzpLzpMzpNzpOzpPzpQzpRzpSzpTzpUzr\n"
+            "b pVzpWzpXzpYzr\n"
+            "b pZzr\n"
+            "i 0\n"
+            "i 1\n"
+            "i 2\n"
+            "i 3\n"
+            "i 4\n"
+            "i 5\n"
+            "i 6\n"
+            "i 7\n"
+            "i 8\n"
+            "i 9\n"
+            "i 10\n"
+            "i 11\n"
+            "i 12\n"
+            "i 13\n"
+            "i 14\n"
+            "i 15\n"
+            "i 16\n"
+            "i 17\n"
+            "i 18\n"
+            "i 19\n"
+            "i 20\n"
+            "i 21\n"
+            "i 22\n"
+            "i 23\n"
+            "i 24\n"
+            "i 25\n"
+            "i 26\n"
+            "i 27\n"
+            "i 28\n"
+            "i 29\n"
+            "i 30\n"
+            "i 31\n"
+            "i 32\n"
+            "i 33\n"
+            "i 34\n"
+            "i 35\n"
+            "k 6\n"
+            "n main\n"
+        ),
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 9, 0, 0, 0, 1, 9, 0, 17, 35, 0, 73,
+                49, 255, 73, 32, 255,
+            ]
+        ),
+        "expected_console": "35\n",
+    },
     "bool_not_external": {
         "out_fs_name": "harness-actc-alink-avmrun-bool-not-external",
         "sources": {

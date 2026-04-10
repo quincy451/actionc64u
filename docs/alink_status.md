@@ -128,10 +128,10 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `large_object_proc_local_inits` proves a `291`-byte `MAIN.AVO`
 - [x] also loads direct comparison-operator `ACTC` output for:
   `PrintIE(2 <> 3)`, `PrintIE(2 < 3)`, `PrintIE(3 <= 3)`, `PrintIE(4 >= 3)`
-- [x] also loads high string-index `ACTC` output through `F`:
-  `PrintE("A")` through `PrintE("P")`
-- [x] also loads high integer-index `ACTC` output through `J`:
-  `PrintIE(0)` through `PrintIE(19)`
+- [x] also loads high string-index `ACTC` output through `Z` with dead-stripped locals:
+  `PROC F() PrintE("0") ... PrintE("Y") RETURN` and `PROC MAIN() PrintE("Z") RETURN`
+- [x] also loads high integer-index `ACTC` output through `Z` with dead-stripped locals:
+  `PROC F() PrintIE(0..30) RETURN`, `PROC G() PrintIE(31..34) RETURN`, `PROC MAIN() PrintIE(35) RETURN`
 - [x] also loads high string-index `IF/ELSE` control-flow `ACTC` output:
   `IF 1 = 0 THEN ... ELSE PrintE("I") ... PrintE("P") FI`
 - [x] also loads high string-index `DO ... UNTIL ... OD` control-flow `ACTC` output:

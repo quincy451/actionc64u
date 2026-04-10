@@ -76,10 +76,10 @@ Current lowering note:
   `PrintIE((2 + 3) * 4 = 20)` and `PrintIE((2 + 3 * 4) > 10)`
 - [x] direct comparison operator print-expression chains:
   `PrintIE(2 <> 3)`, `PrintIE(2 < 3)`, `PrintIE(3 <= 3)`, `PrintIE(4 >= 3)`
-- [x] string-literal pool indices widened through `F` on the harness line:
-  `PrintE("A")` through `PrintE("P")`
-- [x] integer-literal pool indices widened through `J` on the harness line:
-  `PrintIE(0)` through `PrintIE(19)`
+- [x] string-literal pool indices widened through `Z` on the harness line with dead-stripped locals:
+  `PROC F() PrintE("0") ... PrintE("Y") RETURN` and `PROC MAIN() PrintE("Z") RETURN`
+- [x] integer-literal pool indices widened through `Z` on the harness line with dead-stripped locals:
+  `PROC F() PrintIE(0..30) RETURN`, `PROC G() PrintIE(31..34) RETURN`, `PROC MAIN() PrintIE(35) RETURN`
 - [x] high string-index control flow under `IF/ELSE`:
   `IF 1 = 0 THEN ... ELSE PrintE("I") ... PrintE("P") FI`
 - [x] high string-index loop bodies:
@@ -280,8 +280,10 @@ Current lowering note:
   `INT_LITERAL_MAX = 10`
 - [x] harness `ACTC` source-load limit widened beyond one page for dense source scenarios:
   `SOURCE_LIMIT = 511`
-- [x] harness `ACTC` string-literal pool widened beyond the old `16`-literal ceiling for dense module graphs:
-  `STRING_LITERAL_MAX = 32`
+- [x] harness `ACTC` integer-literal pool widened through base-36 slot `Z` for dense local dead-strip proofs:
+  `INT_LITERAL_MAX = 36`
+- [x] harness `ACTC` string-literal pool widened through base-36 slot `Z` for dense module graphs:
+  `STRING_LITERAL_MAX = 36`
 - [x] harness `ACTC` local export/proc table widened beyond the old `8`-proc ceiling for dense modules:
   `EXPORT_MAX = 16`
 - [x] harness `ACTC` unresolved-external table widened beyond the old `8`-symbol ceiling for wide root fanout:

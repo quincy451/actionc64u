@@ -27,6 +27,12 @@ EXTERNAL_MAX = 8
 .ifndef LOOP_MAX
 LOOP_MAX = 8
 .endif
+.if STRING_LITERAL_MAX > 36
+.error "STRING_LITERAL_MAX > 36 not supported"
+.endif
+.if INT_LITERAL_MAX > 36
+.error "INT_LITERAL_MAX > 36 not supported"
+.endif
 
 IMPORT_PRINT_STR  = $01
 IMPORT_PRINT_LINE = $02

@@ -191,6 +191,12 @@ class TestToolAbiPipeline(unittest.TestCase):
     def test_proc_local_param_loop_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("proc_local_param_loop", "0\n1\n", 101, 61)
 
+    def test_var16_module_slots_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("var16_module_slots", "10\n15\n16\n", 154, 75)
+
+    def test_var16_proc_slots_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("var16_proc_slots", "7\n", 168, 73)
+
     def test_bool_not_external_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("bool_not_external", "OK\n", 77, 59)
 

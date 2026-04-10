@@ -22,6 +22,7 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
 Current lowering note:
 
 - [x] proc-local `INT` declarations currently lower to proc-scoped static slots plus declaration-site runtime init stores; this is not a stack-frame model yet
+- [x] current harness-proven variable slot ceiling is `16`, aligned with the current VM local-slot count
 
 ## Proven Narrow Source Surface
 
@@ -181,6 +182,10 @@ Current lowering note:
   `TICK()` then `TICK()` prints `0`, `1`, `0`, `1`
 - [x] proc-local integer initializers can read proc parameters and drive loop control:
   `PROC COUNT(N) INT X=[N] DO ... UNTIL X=2 OD`
+- [x] module-scope integer storage/read/write reaches the current slot-`F` ceiling:
+  `INT A=[0] ... INT P=[15]`, `PrintIE(K)`, `PrintIE(P)`, `P=P+1`
+- [x] proc-local integer storage/read/write reaches the current slot-`F` ceiling with params plus locals:
+  `PROC SHOW(Z) INT A ... INT O`, `O=Z+2`, `PrintIE(O)`
 - [x] local user procedure calls inside `IF ... THEN ... ELSE ... FI`:
   `IF 1 = 1 THEN HELLO() ELSE BYE() FI`
 - [x] arithmetic/comparison-driven local procedure calls inside `IF ... THEN ... ELSE ... FI`:

@@ -14,7 +14,7 @@ INT_LITERAL_MAX = 10
 STRING_LITERAL_MAX = 8
 .endif
 .ifndef VAR_MAX
-VAR_MAX = 8
+VAR_MAX = 16
 .endif
 .if STRING_LITERAL_MAX > 32
 .error "STRING_LITERAL_MAX > 32 not supported"

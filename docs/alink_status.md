@@ -110,6 +110,10 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `TICK()` then `TICK()` prints `0`, `1`, `0`, `1`
 - [x] also loads proc-local integer initializers driven by proc parameters under loop control:
   `PROC COUNT(N) INT X=[N] DO ... UNTIL X=2 OD`
+- [x] also loads module-scope integer storage/read/write at the current slot-`F` ceiling:
+  `INT A=[0] ... INT P=[15]`, `PrintIE(K)`, `PrintIE(P)`, `P=P+1`
+- [x] also loads proc-local integer storage/read/write at the current slot-`F` ceiling with params plus locals:
+  `PROC SHOW(Z) INT A ... INT O`, `O=Z+2`, `PrintIE(O)`
 - [x] also loads direct comparison-operator `ACTC` output for:
   `PrintIE(2 <> 3)`, `PrintIE(2 < 3)`, `PrintIE(3 <= 3)`, `PrintIE(4 >= 3)`
 - [x] also loads high string-index `ACTC` output through `F`:

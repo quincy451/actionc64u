@@ -101,6 +101,24 @@ class TestToolAbiPipeline(unittest.TestCase):
     def test_int_vars_multi_add_rhs_var_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("int_vars_multi_add_rhs_var", "3\n", 54, 35)
 
+    def test_return_local_basic_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("return_local_basic", "2\n", 54, 25)
+
+    def test_return_local_add_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("return_local_add", "5\n", 80, 33)
+
+    def test_return_external_basic_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("return_external_basic", "7\n", 38, 25)
+
+    def test_return_assign_local_var_expr_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("return_assign_local_var_expr", "1\n", 69, 37)
+
+    def test_return_condition_external_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("return_condition_external", "OK\n", 54, 38)
+
+    def test_return_external_add_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("return_external_add", "8\n", 46, 29)
+
     def test_comparison_ops_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("comparison_ops", "1\n1\n1\n1\n0\n0\n", 144, 91)
 

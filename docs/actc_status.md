@@ -54,7 +54,7 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
 - [ ] broader runtime-emitted integer expression chains beyond the already-proven narrow path
 - [ ] larger statement/control-flow surface beyond the current `IF`/`ELSE`/`WHILE ... DO ... OD`/`DO ... UNTIL ... OD`/nested-loop/branch-combined path
 - [ ] broader stateful variable surface beyond the current multi-var module-scope `INT`/read/write/control slice
-- [ ] broader procedure/function surface
+- [ ] broader procedure/function surface beyond the current zero-arg integer return/call slice
 - [ ] full historical ACTION! source compatibility
 
 ## Harness-Proven Current Widening Line
@@ -137,6 +137,14 @@ It is narrower and easier to update than the broad [action_matrix.md](/mnt/c/tes
   `PROC HELLO() ...` and `PROC MAIN() ...`
 - [x] local user procedure calls:
   `HELLO()`
+- [x] explicit integer return values from zero-arg local procedures:
+  `PROC TWO() RETURN 2`
+- [x] expression-position local procedure calls with returned values:
+  `PrintIE(TWO())`, `PrintIE(TWO()+THREE())`
+- [x] expression-position unresolved-external calls with returned values:
+  `PrintIE(W())`, `PrintIE(W()+1)`
+- [x] returned values used in assignment and control flow:
+  `X=NEXT()` and `IF W()=7 THEN ... FI`
 - [x] local user procedure calls inside `IF ... THEN ... ELSE ... FI`:
   `IF 1 = 1 THEN HELLO() ELSE BYE() FI`
 - [x] arithmetic/comparison-driven local procedure calls inside `IF ... THEN ... ELSE ... FI`:

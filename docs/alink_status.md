@@ -37,6 +37,7 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
 - [ ] more robust final save/return path under the current dirty VICE debug line
 - [ ] larger body-op surface than the current arithmetic/procedure/branch/`WHILE`/nested-loop-combined slice
 - [ ] broader variable/data surface beyond the current multi-var module-scope integer storage/read/write/control slice
+- [ ] broader procedure/function surface beyond the current zero-arg integer return/call slice
 - [ ] full historical dead-strip/link behavior
 
 ## Harness-Proven Current Widening Line
@@ -69,6 +70,14 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `IF X<Y THEN W() Q() FI` with `W -> Z` and `Q -> Z`
 - [x] also loads multiple module-scope integer vars driving shared-transitive external closure under `WHILE` control:
   `WHILE X<Y DO W() Q() X=X+1 OD` with `W -> Z` and `Q -> Z`
+- [x] also loads zero-arg local procedures that return integer values:
+  `PROC TWO() RETURN 2`
+- [x] also loads expression-position local procedure calls with returned values:
+  `PrintIE(TWO())`, `PrintIE(TWO()+THREE())`
+- [x] also loads expression-position unresolved-external calls with returned values:
+  `PrintIE(W())`, `PrintIE(W()+1)`
+- [x] also loads returned values used in assignment and control flow:
+  `X=NEXT()` and `IF W()=7 THEN ... FI`
 - [x] also loads direct comparison-operator `ACTC` output for:
   `PrintIE(2 <> 3)`, `PrintIE(2 < 3)`, `PrintIE(3 <= 3)`, `PrintIE(4 >= 3)`
 - [x] also loads high string-index `ACTC` output through `F`:

@@ -712,6 +712,23 @@ collect_proc_body_ops_try_return:
     sta const_ptr+1
     jsr pattern_matches_scan_ptr_keyword
     bcs collect_proc_body_ops_try_assignment
+    jsr advance_scan_ptr_by_const_ptr
+    ldy #$00
+    jsr skip_inline_spaces_at_scan_y
+    lda (scan_ptr),y
+    beq collect_proc_body_ops_try_return_emit
+    cmp #10
+    beq collect_proc_body_ops_try_return_emit
+    cmp #13
+    beq collect_proc_body_ops_try_return_emit
+    jsr emit_runtime_sum_from_scan_y_or_fail
+    bcc :+
+    jmp collect_proc_body_ops_bad_literal
+: 
+    jsr require_line_end_at_scan_y
+    bcc collect_proc_body_ops_try_return_emit
+    jmp collect_proc_body_ops_bad_literal
+collect_proc_body_ops_try_return_emit:
     lda #'r'
     jsr append_body_op_no_arg_for_current_proc
     jmp collect_proc_body_ops_skip_line
@@ -1319,9 +1336,56 @@ emit_runtime_term_push_from_scan_y_or_fail:
 emit_runtime_term_push_literal:
     pla
     tay
+    jsr emit_runtime_call_term_from_scan_y_or_fail
+    bcc :+
     jsr parse_small_decimal_term_at_scan_y
     bcs emit_runtime_expr_push_fail
     jmp emit_current_expr_push_or_fail
+:   clc
+    rts
+
+emit_runtime_call_term_from_scan_y_or_fail:
+    jsr copy_symbol_from_scan_y
+    bcc :+
+    sec
+    rts
+:   jsr skip_inline_spaces_at_scan_y
+    lda (scan_ptr),y
+    cmp #'('
+    bne emit_runtime_call_term_from_scan_y_or_fail_fail
+    iny
+    jsr skip_inline_spaces_at_scan_y
+    lda (scan_ptr),y
+    cmp #')'
+    bne emit_runtime_call_term_from_scan_y_or_fail_fail
+    iny
+    tya
+    pha
+    jsr find_export_index_from_declared
+    bcc emit_runtime_call_term_from_scan_y_or_fail_local
+    jsr find_or_store_external_from_declared
+    bcs emit_runtime_call_term_from_scan_y_or_fail_fail_restore
+    lda #'u'
+    jsr append_body_op_for_current_proc
+    pla
+    tay
+    clc
+    rts
+emit_runtime_call_term_from_scan_y_or_fail_local:
+    cpx current_proc_index_data
+    beq emit_runtime_call_term_from_scan_y_or_fail_fail_restore
+    lda #'c'
+    jsr append_body_op_for_current_proc
+    pla
+    tay
+    clc
+    rts
+emit_runtime_call_term_from_scan_y_or_fail_fail_restore:
+    pla
+    tay
+emit_runtime_call_term_from_scan_y_or_fail_fail:
+    sec
+    rts
 
 emit_runtime_sum_from_scan_y_or_fail:
     jsr emit_runtime_term_push_from_scan_y_or_fail
@@ -1338,14 +1402,18 @@ emit_runtime_sum_from_scan_y_loop:
 emit_runtime_sum_from_scan_y_add:
     iny
     jsr emit_runtime_term_push_from_scan_y_or_fail
-    bcs emit_runtime_expr_push_fail
+    bcc :+
+    jmp emit_runtime_expr_push_fail
+: 
     lda #'a'
     jsr append_body_op_no_arg_for_current_proc
     jmp emit_runtime_sum_from_scan_y_loop
 emit_runtime_sum_from_scan_y_sub:
     iny
     jsr emit_runtime_term_push_from_scan_y_or_fail
-    bcs emit_runtime_expr_push_fail
+    bcc :+
+    jmp emit_runtime_expr_push_fail
+: 
     lda #'m'
     jsr append_body_op_no_arg_for_current_proc
     jmp emit_runtime_sum_from_scan_y_loop

@@ -800,6 +800,18 @@ That now includes a widening set of stable scenarios:
   `MID1`, `END`, `MID2`, `END`, `DONE`
 - variable-to-variable arithmetic assignment:
   `3`
+- local zero-arg integer return:
+  `2`
+- local zero-arg integer returns inside arithmetic:
+  `5`
+- unresolved-external zero-arg integer return:
+  `7`
+- returned values used in assignment:
+  `1`
+- returned values used in conditions:
+  `OK`
+- unresolved-external zero-arg integer returns inside arithmetic:
+  `8`
 - arithmetic/comparison condition with `IF/ELSE`:
   `YES`, `DONE`
 - branch-local procedure call:

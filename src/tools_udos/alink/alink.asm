@@ -45,9 +45,6 @@ AVM_VERSION = 2
 AVM_FLAG_ACHERON = 1
 AVM_HEADER_SIZE = 12
 PAYLOAD_LIMIT = CONTENT_BUFFER_SIZE - AVM_HEADER_SIZE
-.if PAYLOAD_LIMIT > 255
-.error "CONTENT_BUFFER_SIZE payload > 255 not supported"
-.endif
 
 OPCODE_PUSH16 = $11
 OPCODE_STORE = $12
@@ -73,6 +70,8 @@ file_params:
 scan_ptr:
     .res 2
 src_ptr:
+    .res 2
+payload_write_ptr:
     .res 2
 save_params = file_params
 const_ptr = svc_retptr
@@ -1262,6 +1261,8 @@ layout_payload_root_vars:
     jsr reload_root_object_state_preserve_layout_or_fail
     lda current_bit_lo
     sta code_limit_data
+    lda current_bit_hi
+    sta code_limit_data_hi
     jsr layout_current_object_vars_or_fail
     ldx #$00
 layout_payload_external_vars_next:
@@ -3238,10 +3239,22 @@ append_payload_byte:
     tya
     pha
     lda main_flags_hi
+    cmp #>PAYLOAD_LIMIT
+    bcc :+
     bne append_payload_byte_fail
-    ldy main_flags_lo
+    lda main_flags_lo
+    cmp #<PAYLOAD_LIMIT
+    bcs append_payload_byte_fail
+:   clc
+    lda #<(content_buffer + AVM_HEADER_SIZE)
+    adc main_flags_lo
+    sta payload_write_ptr
+    lda #>(content_buffer + AVM_HEADER_SIZE)
+    adc main_flags_hi
+    sta payload_write_ptr+1
+    ldy #$00
     txa
-    sta content_buffer,y
+    sta (payload_write_ptr),y
     pla
     tay
     inc main_flags_lo
@@ -3257,28 +3270,17 @@ append_payload_byte_fail:
 
 render_payload_as_binary_or_fail:
     lda main_flags_hi
-    beq :+
-    lda #<msg_too_large
-    ldy #>msg_too_large
-    jmp fail_with_ptr
-:   lda main_flags_lo
-.if PAYLOAD_LIMIT < 255
-    cmp #(PAYLOAD_LIMIT + 1)
+    cmp #>(PAYLOAD_LIMIT + 1)
     bcc :+
+    bne render_payload_as_binary_fail
+    lda main_flags_lo
+    cmp #<(PAYLOAD_LIMIT + 1)
+    bcc :+
+render_payload_as_binary_fail:
     lda #<msg_too_large
     ldy #>msg_too_large
     jmp fail_with_ptr
 : 
-.endif
-    ldx main_flags_lo
-    beq render_payload_as_binary_header
-    dex
-render_payload_as_binary_shift_loop:
-    lda content_buffer,x
-    sta content_buffer+AVM_HEADER_SIZE,x
-    dex
-    cpx #$FF
-    bne render_payload_as_binary_shift_loop
 render_payload_as_binary_header:
     lda #'A'
     sta content_buffer+0
@@ -3292,7 +3294,7 @@ render_payload_as_binary_header:
     sta content_buffer+4
     lda main_flags_lo
     sta content_buffer+5
-    lda #$00
+    lda main_flags_hi
     sta content_buffer+6
     ldx root_entry_export_index
     lda root_export_offsets_lo,x
@@ -3303,7 +3305,7 @@ render_payload_as_binary_header:
     sta content_buffer+9
     lda code_limit_data
     sta content_buffer+10
-    lda #$00
+    lda code_limit_data_hi
     sta content_buffer+11
 render_payload_as_binary_done:
     rts
@@ -3877,6 +3879,8 @@ debug_phase_zp:
 payload_bytes_data:
     .res 1
 code_limit_data:
+    .res 1
+code_limit_data_hi:
     .res 1
 entry_export_index:
     .res 1

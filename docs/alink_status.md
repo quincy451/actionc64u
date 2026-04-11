@@ -130,6 +130,8 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
   `PROC MAIN() T() ... T() PrintIE(X) RETURN` with `74` local calls, proving a `152`-char root body line
 - [x] harness linker payload buffer now emits binaries beyond the old `256`-byte image ceiling:
   `payload265_local_calls` proves a `265`-byte `BIN/MAIN.AVM`
+- [x] harness linker payload path now emits payloads beyond the old `255`-byte payload ceiling:
+  `payload269_local_calls` proves a `257`-byte payload in a `269`-byte `BIN/MAIN.AVM`
 - [x] also loads direct comparison-operator `ACTC` output for:
   `PrintIE(2 <> 3)`, `PrintIE(2 < 3)`, `PrintIE(3 <= 3)`, `PrintIE(4 >= 3)`
 - [x] also loads high string-index `ACTC` output through `Z` with dead-stripped locals:
@@ -302,6 +304,7 @@ It tracks the real linker slice separately from the broader [action_matrix.md](/
 - [x] emits a branch-shared-transitive `BIN/MAIN.AVM` of `100` bytes
 - [x] emits a dense local-call body slice `BIN/MAIN.AVM` of `256` bytes
 - [x] emits a widened payload-buffer slice `BIN/MAIN.AVM` of `265` bytes
+- [x] emits a widened over-`255` payload slice `BIN/MAIN.AVM` of `269` bytes
 - [x] emits an `IF` slice `BIN/MAIN.AVM` of `65` bytes
 - [x] emits an `ELSE` slice `BIN/MAIN.AVM` of `60` bytes
 - [x] emits a nested-`IF` slice `BIN/MAIN.AVM` of `77` bytes

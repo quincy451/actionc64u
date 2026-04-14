@@ -76,11 +76,31 @@ start:
     lda #$10
     sta actc_trace_byte
     jsr init_module_name
+    lda #$35
+    sta actc_trace_byte
     jsr build_manifest_entry
+    lda #$36
+    sta actc_trace_byte
+    lda #$37
+    sta actc_trace_byte
     jsr require_loaded_project
+    lda #$38
+    sta actc_trace_byte
+    lda #$39
+    sta actc_trace_byte
     jsr require_manifest_entry_tracked
+    lda #$3A
+    sta actc_trace_byte
+    lda #$3B
+    sta actc_trace_byte
     jsr build_target_path
+    lda #$3C
+    sta actc_trace_byte
+    lda #$3D
+    sta actc_trace_byte
     jsr load_source_file
+    lda #$3E
+    sta actc_trace_byte
     bcc source_loaded
     lda file_params+6
     cmp #tool_file_status_nofile
@@ -93,6 +113,8 @@ source_missing:
     ldy #>msg_no_file
     jmp fail_with_ptr
 source_loaded:
+    lda #$41
+    sta actc_trace_byte
     jsr parse_module_header_or_fail
     jsr collect_module_vars_or_fail
     jsr collect_proc_exports_or_fail
@@ -170,18 +192,28 @@ save_and_exit_clean_stack:
     jmp fail_with_ptr
 
 init_module_name:
+    lda #$30
+    sta actc_trace_byte
     ldx #svc_retptr
     jsr svc_program_get_cmdline_len
+    lda #$31
+    sta actc_trace_byte
     lda svc_retptr
     ora svc_retptr+1
     beq init_module_name_default
+    lda #$32
+    sta actc_trace_byte
     ldx #svc_retptr
     jsr svc_program_get_cmdline_ptr
+    lda #$33
+    sta actc_trace_byte
     lda svc_retptr
     sta src_ptr
     lda svc_retptr+1
     sta src_ptr+1
     jsr copy_module_arg
+    lda #$34
+    sta actc_trace_byte
     bcc init_module_name_done
     lda #<msg_bad_name
     ldy #>msg_bad_name
@@ -1026,10 +1058,14 @@ collect_proc_body_ops_done:
 append_body_op_for_current_proc:
     sta compare_char
     stx hex_work
+    lda #$A0
+    sta actc_trace_byte
     tya
     pha
     ldx current_proc_index_data
     jsr set_body_ptr_from_x
+    lda #$A1
+    sta actc_trace_byte
     ldy #$00
 append_body_op_for_current_proc_loop:
     lda (body_ptr),y
@@ -1046,6 +1082,8 @@ append_body_op_for_current_proc_loop:
     ldy #>msg_bad_call
     jmp fail_with_ptr
 append_body_op_for_current_proc_store:
+    lda #$A2
+    sta actc_trace_byte
     lda compare_char
     sta (body_ptr),y
     iny
@@ -1064,6 +1102,8 @@ append_body_op_for_current_proc_store_index:
     iny
     lda #$00
     sta (body_ptr),y
+    lda #$A3
+    sta actc_trace_byte
     pla
     tay
     rts

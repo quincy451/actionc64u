@@ -85,17 +85,9 @@ body_ptr = src_ptr
 
 start:
     jsr init_module_name
-    lda #$10
-    sta $03FC
     jsr build_manifest_entry
-    lda #$11
-    sta $03FC
     jsr require_loaded_project
-    lda #$12
-    sta $03FC
     jsr require_manifest_entry_tracked
-    lda #$13
-    sta $03FC
     jsr build_object_target_path
     jsr load_object_or_fail
     jsr parse_exports_or_fail
@@ -111,8 +103,6 @@ start:
     sta debug_phase_zp
     jsr build_binary_save_target_path
     jsr copy_target_path_to_binary_target_path
-    lda #$C1
-    sta binary_target_path+16
     lda #$42
     sta debug_phase_zp
     jsr save_source_buffer_to_target
@@ -214,6 +204,7 @@ require_avo1_header_or_fail:
     cmp #'1'
     beq require_avo1_header_done
 require_avo1_header_bad:
+    jsr snapshot_bad_avo_state
     lda #<msg_bad_avo
     ldy #>msg_bad_avo
     jmp fail_with_ptr
@@ -1375,6 +1366,8 @@ layout_external_object_from_x_or_fail:
     lda current_bit_hi
     sta saved_state_hi
     jsr load_current_object_link_state_or_fail
+    lda #$80
+    sta $03FC
     lda saved_state_hi
     sta current_bit_hi
     lda saved_state_lo
@@ -1409,6 +1402,8 @@ layout_external_object_strings_from_x_or_fail:
     sta saved_state_hi
     jsr copy_pending_symbol_to_module_name_from_x
     jsr load_current_object_link_state_or_fail
+    lda #$81
+    sta $03FC
     lda saved_state_hi
     sta current_bit_hi
     lda saved_state_lo
@@ -1494,6 +1489,8 @@ layout_external_object_vars_from_x_or_fail:
     sta saved_state_hi
     jsr copy_pending_symbol_to_module_name_from_x
     jsr load_current_object_link_state_or_fail
+    lda #$82
+    sta $03FC
     lda saved_state_hi
     sta current_bit_hi
     lda saved_state_lo
@@ -1730,7 +1727,6 @@ emit_external_object_code_from_x_or_fail:
     lda main_flags_hi
     sta saved_state_hi
     jsr load_current_object_link_state_or_fail
-    jsr snapshot_second_load_state
     lda #$52
     sta debug_phase_zp
     lda saved_state_hi
@@ -1811,57 +1807,42 @@ emit_external_object_vars_from_x_or_fail:
 
 load_current_object_link_state_or_fail:
     lda #$70
-    sta $03FC
     sta debug_phase_zp
     jsr build_object_target_path
     lda #$71
-    sta $03FC
     sta debug_phase_zp
     jsr load_object_or_fail
     lda #$72
-    sta $03FC
     sta debug_phase_zp
-    lda file_params+6
-    sta $03FD
     jsr require_loaded_source_not_truncated_or_fail
     lda #$73
-    sta $03FC
     sta debug_phase_zp
     jsr require_avo1_header_or_fail
     lda #$74
-    sta $03FC
     sta debug_phase_zp
     jsr parse_exports_or_fail
     lda #$75
-    sta $03FC
     sta debug_phase_zp
     jsr parse_body_ops_or_fail
     lda #$76
-    sta $03FC
     sta debug_phase_zp
     jsr parse_external_symbols_or_fail
     lda #$77
-    sta $03FC
     sta debug_phase_zp
     jsr parse_strings_or_fail
     lda #$78
-    sta $03FC
     sta debug_phase_zp
     jsr parse_ints_or_fail
     lda #$79
-    sta $03FC
     sta debug_phase_zp
     jsr parse_vars_or_fail
     lda #$7A
-    sta $03FC
     sta debug_phase_zp
     jsr compute_code_bytes
     lda #$7B
-    sta $03FC
     sta debug_phase_zp
     jsr build_live_set
     lda #$7C
-    sta $03FC
     sta debug_phase_zp
     rts
 
@@ -3532,6 +3513,8 @@ save_module_name_done:
     rts
 
 restore_module_name:
+    lda #$89
+    sta $03FC
     ldy #$00
 restore_module_name_loop:
     lda saved_module_name,y
@@ -3541,6 +3524,8 @@ restore_module_name_loop:
     cpy #25
     bcc restore_module_name_loop
 restore_module_name_done:
+    lda #$8A
+    sta $03FC
     rts
 
 copy_export_ptr_to_module_name:
@@ -3695,6 +3680,11 @@ copy_target_path_to_binary_target_path_done:
 save_source_buffer_to_target:
     lda #$C2
     sta binary_target_path+16
+    sta $03F0
+    lda #$00
+    sta $03F1
+    sta $03F2
+    sta $03F3
     lda #<target_path
     sta save_params+0
     lda #>target_path
@@ -3712,67 +3702,8 @@ save_source_buffer_to_target:
     sta save_params+5
     lda #tool_file_status_fail
     sta save_params+6
-    lda save_params+0
-    sta $03E8
-    lda save_params+1
-    sta $03E9
-    lda save_params+2
-    sta $03EA
-    lda save_params+3
-    sta $03EB
-    lda save_params+4
-    sta $03EC
-    lda save_params+5
-    sta $03ED
-    lda save_params+6
-    sta $03EE
-    tsx
-    stx compare_char
-    stx $03EF
-    lda #$C3
-    sta binary_target_path+16
-    ldx #$00
-save_source_buffer_to_target_snapshot_loop:
-    lda save_params,x
-    sta binary_target_path+17,x
-    inx
-    cpx #7
-    bcc save_source_buffer_to_target_snapshot_loop
-    lda $9580
-    sta binary_target_path+24
-    lda $9614
-    sta binary_target_path+25
-    lda $9615
-    sta binary_target_path+26
-    lda $9616
-    sta binary_target_path+27
-    lda $9617
-    sta binary_target_path+28
-    lda $CFF8
-    sta binary_target_path+29
-    lda $CFF9
-    sta binary_target_path+30
-    tsx
-    stx save_params+8
-    lda #$00
-    ldx #$00
-save_source_buffer_to_target_scrub_stack_loop:
-    cpx save_params+8
-    bcs save_source_buffer_to_target_scrub_stack_done
-    sta $0100,x
-    inx
-    bne save_source_buffer_to_target_scrub_stack_loop
-save_source_buffer_to_target_scrub_stack_done:
     ldx #save_params
     jsr svc_file_save_sc0
-    lda #$C4
-    sta binary_target_path+16
-    lda save_params+6
-    sta $03FD
-    tsx
-    stx $03FE
-    lda #$A2
-    sta $03FF
     lda save_params+6
     cmp #tool_file_status_ok
     beq save_source_buffer_to_target_ok
@@ -3782,30 +3713,21 @@ save_source_buffer_to_target_ok:
     clc
     rts
 
-snapshot_second_load_state:
-    lda #$A2
-    sta $03D0
+snapshot_bad_avo_state:
     ldx #$00
-snapshot_second_load_target_loop:
+snapshot_bad_avo_source_loop:
+    lda source_buffer,x
+    sta $03D0,x
+    inx
+    cpx #$10
+    bcc snapshot_bad_avo_source_loop
+    ldx #$00
+snapshot_bad_avo_target_loop:
     lda target_path,x
-    sta $03D1,x
+    sta $03E0,x
     inx
-    cpx #10
-    bcc snapshot_second_load_target_loop
-    ldx #$00
-snapshot_second_load_module_loop:
-    lda module_name,x
-    sta $03DB,x
-    inx
-    cpx #6
-    bcc snapshot_second_load_module_loop
-    ldx #$00
-snapshot_second_load_file_loop:
-    lda file_params,x
-    sta $03E1,x
-    inx
-    cpx #7
-    bcc snapshot_second_load_file_loop
+    cpx #$10
+    bcc snapshot_bad_avo_target_loop
     rts
 
 .include "../common/action_project_module_arg.inc"
@@ -3825,18 +3747,46 @@ print_line_ptr:
     jmp svc_console_newline
 
 fail_with_ptr:
+    sta svc_retptr
+    sty svc_retptr+1
     tsx
     stx $03FF
-    pha
-    tya
-    pha
+    lda svc_retptr
+    sta $03F8
+    lda svc_retptr+1
+    sta $03F9
+    ldy #$00
+fail_with_ptr_snapshot_loop:
+    lda (svc_retptr),y
+    sta $03D0,y
+    beq fail_with_ptr_snapshot_done
+    iny
+    cpy #$10
+    bcc fail_with_ptr_snapshot_loop
+fail_with_ptr_snapshot_done:
+    lda #$00
+    sta $03D0,y
+    lda svc_retptr
+    cmp #<msg_save_fail
+    bne fail_with_ptr_snapshot_meta
+    lda svc_retptr+1
+    cmp #>msg_save_fail
+    bne fail_with_ptr_snapshot_meta
+    ldx #$00
+fail_with_ptr_save_target_loop:
+    lda target_path,x
+    sta $03E0,x
+    beq fail_with_ptr_snapshot_meta
+    inx
+    cpx #$10
+    bcc fail_with_ptr_save_target_loop
+fail_with_ptr_snapshot_meta:
     lda debug_phase_zp
     sta $03FD
     lda debug_phase
     sta $03FE
-    pla
-    tay
-    pla
+    lda svc_retptr
+    ldy svc_retptr+1
     jsr print_line_ptr
     lda #$01
     sta svc_retptr
@@ -3993,6 +3943,10 @@ parse_word_temp_hi:
 truncated_flag:
     .res 1
 debug_phase_zp:
+    .res 1
+debug_sp_before_strings:
+    .res 1
+debug_sp_after_strings:
     .res 1
 payload_bytes_data:
     .res 1

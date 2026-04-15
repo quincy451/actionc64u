@@ -74,9 +74,7 @@ have_args:
     sta save_params+2
     lda #>marker_text
     sta save_params+3
-    lda #$00
-    sta save_params+4
-    sta save_params+5
+    jsr set_save_len_from_source
     lda #tool_file_status_fail
     sta save_params+6
     ldx #save_params
@@ -96,9 +94,7 @@ have_args:
     sta save_params+2
     lda #>readme_text
     sta save_params+3
-    lda #$00
-    sta save_params+4
-    sta save_params+5
+    jsr set_save_len_from_source
     lda #tool_file_status_fail
     sta save_params+6
     ldx #save_params
@@ -118,9 +114,7 @@ have_args:
     sta save_params+2
     lda #>main_text
     sta save_params+3
-    lda #$00
-    sta save_params+4
-    sta save_params+5
+    jsr set_save_len_from_source
     lda #tool_file_status_fail
     sta save_params+6
     ldx #save_params
@@ -171,6 +165,23 @@ mkdir_ptr_allow_exists:
     rts
 mkdir_ptr_ok:
     clc
+    rts
+
+set_save_len_from_source:
+    lda save_params+2
+    sta src_ptr
+    lda save_params+3
+    sta src_ptr+1
+    ldy #$00
+set_save_len_loop:
+    lda (src_ptr),y
+    beq set_save_len_done
+    iny
+    bne set_save_len_loop
+set_save_len_done:
+    sty save_params+4
+    lda #$00
+    sta save_params+5
     rts
 
 copy_first_arg:
@@ -339,7 +350,8 @@ suffix_main:
     .asciiz "/SRC/MAIN.ACT"
 
 marker_text:
-    .byte "ACTION PROJECT", 13, 0
+    .byte "ACTION PROJECT", 13
+    .byte "MAIN.ACT", 13, 0
 
 readme_text:
     .byte "ACTION PROJECT READY", 13

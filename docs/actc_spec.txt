@@ -1,0 +1,311 @@
+ACTC SPEC
+
+Purpose
+
+ACTC is the ActionC64U compiler front end. Its completed job is to take one
+tracked Action source module from a project workspace, parse and validate it,
+lower it into the ActionC64U object model, and emit one deterministic object
+file in AVO format for ALINK to consume.
+
+ACTC is not the final-image builder. In the completed toolchain:
+
+- ACTC compiles source to OBJ/<MODULE>.AVO
+- ALINK links OBJ/<MODULE>.AVO plus dependent objects to BIN/<MODULE>.AVM
+- AVMRUN loads and executes BIN/<MODULE>.AVM
+
+
+Workspace Contract
+
+ACTC is project-oriented and workspace-oriented.
+
+- The current directory is expected to be an Action project root.
+- ACTION.PROJ is the project manifest.
+- Source lives in SRC/.
+- Compiler output lives in OBJ/.
+- The module name is chosen from the command line or defaults to MAIN.
+- The compiler loads SRC/<MODULE>.ACT.
+- If a MODULE header is present in the source, it must match the requested
+  module name.
+
+
+Command Line
+
+The stable ACTC command line is intentionally small:
+
+- ACTC
+- ACTC <module>
+
+Rules:
+
+- No argument means MAIN.
+- <module> is a logical module name, not a full path.
+- ACTC resolves the source path from the current project as
+  SRC/<module>.ACT.
+- ACTC writes the object path as OBJ/<module>.AVO.
+
+
+Completed Language Surface
+
+The completed ACTC language target is the ActionC64U source language. It is
+Action-like and deliberately structured. The intended finished surface is:
+
+1. Source Unit Structure
+
+- optional MODULE <name> header
+- zero or more OVERLAY <name> ... ENDOVERLAY blocks
+- one or more PROC definitions
+- one designated entry procedure named MAIN for ordinary program entry
+- comments introduced by ;
+- ASCII source text
+
+2. Identifiers And Names
+
+- case-insensitive Action-style identifiers
+- digits allowed in identifiers after the first character
+- module names, procedure names, parameter names, local names, and manifest
+  entries all follow the same logical naming model
+
+3. Types
+
+- BYTE: 8-bit unsigned
+- CARD: 16-bit unsigned
+- INT: 16-bit signed
+- REAL: 32-bit REAL32 floating-point
+- REU BYTE ARRAY <name>(<length>): far-data byte arrays backed by the REU
+  abstraction
+
+The completed target does not currently promise records, pointers, or a fully
+general array system beyond the explicit REU BYTE ARRAY surface. Those remain
+out of scope unless they are specified separately later.
+
+4. Declarations
+
+- module-scope scalar declarations
+- procedure-local scalar declarations
+- multiple names in one declaration
+- parameter lists on procedures
+- local initialization from literals, expressions, or parameters
+- explicit REU BYTE ARRAY declarations at module scope
+
+5. Procedures And Calls
+
+- PROC <name>([params])
+- RETURN
+- RETURN <expr>
+- calls to local procedures in the same module
+- calls to external procedures resolved by ALINK
+- argument passing for integer and boolean-like values
+- return values for integer and boolean-like values
+
+6. Statements
+
+- assignment
+- procedure call as a statement
+- RETURN
+- IF ... THEN ... FI
+- IF ... THEN ... ELSE ... FI
+- WHILE <expr> DO ... OD
+- DO ... UNTIL <expr> OD
+- nested IF/ELSE and nested loops
+- early RETURN inside branches and loops
+
+7. Expressions
+
+- decimal integer literals
+- hexadecimal integer literals
+- REAL literals
+- variable references
+- parameter references
+- procedure-call expressions
+- REU reads:
+  - ReuPeek8(name, index)
+  - ReuPeek16(name, index)
+- explicit conversions:
+  - REAL(x)
+  - INT(r)
+- unary minus
+- arithmetic:
+  - +
+  - -
+  - *
+  - /
+- comparisons:
+  - =
+  - <>
+  - <
+  - <=
+  - >
+  - >=
+- boolean composition used in expression form:
+  - AND
+  - OR
+- parenthesized grouping
+
+Comparison and boolean results are represented as integer truth values 0 or 1.
+
+8. Built-In Source Operations
+
+- Print("literal")
+- PrintE("literal")
+- PrintI(expr)
+- PrintIE(expr)
+- PrintR(expr)
+- PrintRE(expr)
+- ReuPoke8(name, index, value)
+- ReuPoke16(name, index, value)
+- OverlayCall(name)
+
+These are source-level built-ins. ACTC lowers them either to direct body
+operations and literal data or to stable runtime imports for ALINK and AVMRUN.
+
+9. Overlay Model
+
+- overlays are named blocks declared at module scope
+- overlays are compiled as distinct logical bodies
+- only overlays that are reachable from the compiled program are emitted into
+  the object model
+- linked overlays are written into the final AVM overlay segment
+- runtime entry to an overlay uses OverlayCall(name), which resolves to the
+  overlay runtime surface
+
+10. REU Model
+
+- REU BYTE ARRAY declarations allocate logical far-data handles
+- accesses are handle plus byte offset operations
+- source syntax is typed in byte and word terms today
+- runtime symbols are stable across compiler, linker, and VM:
+  - rt.reu_alloc
+  - rt.reu_free
+  - rt.reu_peek8
+  - rt.reu_peek16
+  - rt.reu_peek32
+  - rt.reu_poke8
+  - rt.reu_poke16
+  - rt.reu_poke32
+  - rt.reu_copy
+
+
+Type And Semantic Rules
+
+The completed compiler is intended to preserve the current published rules:
+
+- BYTE range: 0..255
+- CARD range: 0..65535
+- INT range: -32768..32767
+- REAL format: REAL32, IEEE-754 binary32 layout
+- literals are range-checked on assignment
+- REAL literals are rounded to REAL32
+- mixed integer and REAL expressions promote integers to REAL
+- INT(r) truncates toward zero
+- assigning REAL directly to integer storage is rejected without INT(...)
+- divide by zero is a compile error
+- out-of-range assignment is a compile error
+- use of undeclared identifiers is a compile error
+- use of uninitialized values is a compile error
+
+
+Compiler Pipeline
+
+The completed ACTC processing model is:
+
+1. Parse the command line and choose the target module.
+2. Load and validate ACTION.PROJ.
+3. Confirm the module is a tracked project member.
+4. Load SRC/<MODULE>.ACT.
+5. Lex and parse the source.
+6. Validate the MODULE header against the requested module.
+7. Collect top-level declarations, procedure signatures, and overlay names.
+8. Build symbol tables for:
+   - module-scope data
+   - procedure parameters
+   - procedure-local data
+   - exports
+   - unresolved external references
+9. Type-check expressions and statements.
+10. Lower statements and expressions into the compiler's object-level body
+    representation.
+11. Build literal pools:
+    - string literals
+    - integer literals
+    - variable metadata
+12. Record runtime imports needed by the lowered code.
+13. Emit a deterministic AVO object to OBJ/<MODULE>.AVO.
+
+
+Object Output
+
+The completed ACTC output contract is a deterministic AVO object, not a final
+executable image.
+
+At minimum, each emitted object carries:
+
+- AVO header and version
+- logical module name
+- export table
+- unresolved external symbol list
+- lowered body operations
+- literal pools
+- variable metadata
+- payload bytes and payload length
+- enough size and offset metadata for ALINK to recover procedure boundaries and
+  live-set reachability
+
+ACTC is responsible for object correctness and determinism. ALINK is
+responsible for whole-program symbol resolution, dead-strip, final layout, and
+final AVM emission.
+
+
+Diagnostics
+
+ACTC is expected to reject at least these classes of error:
+
+- missing or unreadable project manifest
+- requested module not tracked in ACTION.PROJ
+- missing source file
+- malformed source text
+- MODULE name mismatch
+- duplicate declarations
+- duplicate exports
+- undeclared identifier use
+- illegal type conversion
+- illegal assignment range
+- divide by zero in constant or proven-invalid expressions
+- malformed overlay declarations
+- malformed procedure declarations
+- unsupported construct for the current compiler stage
+- object-save failure
+
+
+What ACTC Is Not
+
+The completed ACTC contract does not require:
+
+- native 6502 PRG output
+- direct executable packaging
+- a standalone C64 loader stub
+- runtime execution
+- whole-program dead-strip
+
+Those belong to ALINK, AVMRUN, or a separate future packager.
+
+
+Current Proven Status
+
+As of the current committed baseline, the UDOS-native ACTC implementation
+already proves a narrower but real subset:
+
+- project-aware module selection
+- MODULE header validation
+- deterministic OBJ/<MODULE>.AVO output
+- top-level export extraction
+- current arithmetic and comparison lowering
+- IF / ELSE / FI
+- WHILE ... DO ... OD
+- DO ... UNTIL ... OD
+- current local and external integer argument and return handling
+- current integer variable handling for module scope and procedure scope
+- current body_ops and payload emission
+- committed ACTC -> ALINK -> AVMRUN proof on the validated baseline
+
+The remaining gap is language-surface widening, better diagnostics, and
+continued object-model growth, not a redesign of the compiler's role.

@@ -1,0 +1,225 @@
+RUNTIME PROGRAMS SPEC
+
+Purpose
+
+This document describes the programs required to run an ActionC64U program when
+the linker does not emit a standalone Commodore PRG and instead emits an AVM
+program image.
+
+The short answer is:
+
+- ACTC builds objects
+- ALINK builds AVM programs
+- AVMRUN runs AVM programs
+
+If the final build product is BIN/<MODULE>.AVM, then AVMRUN.PRG is the runtime
+program required to execute it.
+
+
+Execution Model
+
+The ActionC64U toolchain is intentionally split into build-time and run-time
+stages.
+
+Build-time:
+
+- ACTC.PRG compiles SRC/<MODULE>.ACT to OBJ/<MODULE>.AVO
+- ALINK.PRG links OBJ/<MODULE>.AVO and its dependencies to BIN/<MODULE>.AVM
+
+Run-time:
+
+- AVMRUN.PRG loads BIN/<MODULE>.AVM
+- AVMRUN validates the image
+- AVMRUN initializes the VM/runtime state
+- AVMRUN transfers control to the program entry point
+
+So if the linker does not emit a directly bootable or directly SYS-able PRG,
+the missing piece is not another linker pass. The missing piece is the runtime
+launcher.
+
+
+Required Runtime Program
+
+1. AVMRUN.PRG
+
+AVMRUN.PRG is the required launcher and runtime host for linked AVM output.
+
+Its job is to:
+
+- accept an AVM filename as its command-line argument
+- load the file through the UDOS file ABI
+- validate:
+  - magic
+  - internal version
+  - flags
+  - payload length
+  - entry offset
+- prepare the VM state
+- dispatch execution to the supported VM engine
+- return control to UDOS when the program exits
+
+In practice, the run command is:
+
+- AVMRUN.PRG BIN/<MODULE>.AVM
+
+or, if already in BIN/:
+
+- AVMRUN.PRG <MODULE>.AVM
+
+
+What AVMRUN Provides
+
+AVMRUN is not just a file loader. It is the runtime environment for AVM
+programs.
+
+Its responsibilities include:
+
+- AVM header parsing
+- payload preparation
+- entry-point dispatch
+- Acheron-backed execution for the supported format/flag set
+- interpreted support for the currently implemented opcode subset
+- runtime intrinsic handling
+
+The currently documented intrinsic families include:
+
+- printing
+  - Print
+  - PrintE
+  - PrintI
+  - PrintIE
+- process exit
+  - Exit
+- REU services
+  - ReuAlloc
+  - ReuFree
+  - ReuPeek8
+  - ReuPoke8
+  - ReuPeek16
+  - ReuPoke16
+- console services
+  - ConIn
+  - ConOut
+- file services
+  - FileOpenRead
+  - FileCloseRead
+  - FileRead8
+  - FileOpenWrite
+  - FileCloseWrite
+  - FileWrite8
+  - FileDelete
+
+The point is that ALINK does not need to emit a native machine-language PRG for
+the program to be runnable. The AVM plus AVMRUN pair is the intended completed
+execution model.
+
+
+Optional Supporting Runtime Programs
+
+2. AVMINFO.PRG
+
+AVMINFO.PRG is not required to execute a program, but it is the standard
+inspection and validation helper for AVM output.
+
+Its job is to:
+
+- load a candidate .AVM file
+- confirm the AVM header is present
+- report whether the file is structurally valid enough to be recognized as an
+  AVM image
+
+Use cases:
+
+- smoke-check a linked image before running it
+- distinguish BAD AVM from launch-path failures
+- validate packaging or file-copy results
+
+
+Programs Not Required At Runtime
+
+These tools are not required once BIN/<MODULE>.AVM already exists:
+
+- ACTC.PRG
+- ALINK.PRG
+- object files in OBJ/
+- source files in SRC/
+- developer-side link maps or status reports
+
+Those are build-time artifacts or build-time tools.
+
+
+Runtime Files Not Required As Separate Sidecars
+
+Once ALINK has successfully linked the program, the runtime library is expected
+to be folded into the AVM image by symbol resolution and dead-strip.
+
+That means the finished AVM should not require separate loose runtime module
+files at program launch time.
+
+In other words:
+
+- runtime modules are link-time inputs
+- AVMRUN is the run-time launcher
+- the linked AVM is the run-time payload
+
+
+Environment Required At Runtime
+
+To run an AVM image, the system still needs the ActionC64U execution
+environment:
+
+- a booted UDOS environment
+- the resident services AVMRUN expects to use
+- AVMRUN.PRG available on a launchable path
+- the target .AVM file on a readable mounted filesystem
+
+So the minimum practical runtime set is:
+
+- UDOS system
+- AVMRUN.PRG
+- <PROGRAM>.AVM
+
+
+What If A Standalone Commodore PRG Is Desired
+
+A native standalone PRG for a generic Commodore machine is a different product
+than the current AVM output.
+
+That would require an additional packaging strategy such as:
+
+- embedding AVMRUN plus the AVM payload into one PRG
+- generating a native loader stub that contains or locates the AVM image
+- or generating direct native machine code instead of AVM
+
+That is not ALINK's core contract today.
+
+So the correct architectural statement is:
+
+- ALINK is responsible for the linked AVM image
+- AVMRUN is responsible for executing that image
+- a standalone PRG packager would be a separate later tool, not a hidden part
+  of ALINK
+
+
+Recommended Operator View
+
+For someone building and running ActionC64U programs, the tool responsibilities
+should be understood as:
+
+- ACTC.PRG: compile source to object
+- ALINK.PRG: link object closure to AVM
+- AVMRUN.PRG: execute the AVM
+- AVMINFO.PRG: inspect or validate the AVM
+
+
+Current Proven Status
+
+On the committed baseline, the real end-to-end proof already matches this
+architecture:
+
+- ACTC produces OBJ/<MODULE>.AVO
+- ALINK produces BIN/<MODULE>.AVM
+- AVMRUN executes BIN/<MODULE>.AVM and returns to UDOS
+
+That is the completed runtime model the rest of the toolchain is being built
+toward.

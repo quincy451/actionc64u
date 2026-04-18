@@ -1,0 +1,281 @@
+ALINK SPEC
+
+Purpose
+
+ALINK is the ActionC64U linker. Its completed job is to take one root Action
+object from the current project, load every object needed to satisfy the root
+program's reachable symbols, discard unreachable code and data, assign final
+layout, and emit one runnable AVM program image.
+
+ALINK is not the compiler front end and it is not the runtime launcher.
+
+- ACTC compiles source to OBJ/<MODULE>.AVO
+- ALINK links objects to BIN/<MODULE>.AVM
+- AVMRUN executes BIN/<MODULE>.AVM
+
+
+Workspace Contract
+
+ALINK is project-oriented and workspace-oriented.
+
+- The current directory is expected to be an Action project root.
+- ACTION.PROJ is the project manifest.
+- Object input lives in OBJ/.
+- Linked output lives in BIN/.
+- The linker chooses one logical module as the root.
+- The linker expects OBJ/<MODULE>.AVO to exist for the root.
+- Additional dependent objects are loaded from OBJ/ as needed.
+
+
+Supported Command Line
+
+The intended stable ALINK command line is intentionally small:
+
+- ALINK
+- ALINK <module>
+
+Rules:
+
+- No argument means MAIN.
+- <module> is a logical root module name, not a filename.
+- The root object path is resolved as OBJ/<module>.AVO.
+- The output path is resolved as BIN/<module>.AVM.
+
+This is a deliberate design choice. ALINK is meant to be a workspace-aware
+linker, not a generic Unix-style linker with many path flags. If extra flags
+are ever added later, they should be optional compatibility extras, not the
+core contract.
+
+
+Input Format
+
+ALINK consumes AVO objects emitted by ACTC.
+
+At minimum the linker expects each object to provide:
+
+- object magic and version
+- logical module name
+- export table
+- unresolved external symbol list
+- body operations
+- literal pools
+- variable metadata
+- payload bytes and payload length
+- procedure size and offset information sufficient for reachability analysis
+
+The object format is intentionally simple and deterministic so it can be
+generated and inspected on target.
+
+
+Completed Linker Responsibilities
+
+The completed linker is responsible for:
+
+1. Root Object Selection
+
+- choose the root module from the command line or MAIN
+- load OBJ/<MODULE>.AVO
+- reject missing or malformed root objects
+
+2. Dependency Discovery
+
+- parse unresolved external symbols from the root object
+- locate and load the objects that define those symbols
+- continue recursively until the reachable symbol closure is complete
+
+3. Symbol Resolution
+
+- resolve every imported symbol to exactly one export
+- reject unresolved imports
+- reject duplicate exports
+
+4. Reachability And Dead-Strip
+
+- seed the live set from the root entry procedure
+- follow body_ops call edges and object-level dependency edges
+- include only reachable procedures, literals, data, and overlays
+- exclude unused local procedures and unused child objects
+
+5. Final Layout
+
+- assign final offsets for code
+- assign final offsets for data and literal pools
+- assign final offsets for overlay segments
+- compute the final entry point
+
+6. Final Image Emission
+
+- write BIN/<MODULE>.AVM
+- write the AVM header and payload
+- set the correct internal format version and flags
+- preserve deterministic ordering and byte-for-byte repeatability
+
+7. Optional Developer Metadata
+
+- emit a link map or similar report describing:
+  - included objects
+  - resolved symbols
+  - stripped procedures or modules
+  - final addresses or offsets
+
+
+Completed Linking Pipeline
+
+The intended ALINK processing model is:
+
+1. Parse the command line and choose the root module.
+2. Load and validate ACTION.PROJ.
+3. Confirm the requested module is a tracked project member.
+4. Build OBJ/<MODULE>.AVO and load it.
+5. Validate the AVO header and version.
+6. Parse:
+   - exports
+   - body operations
+   - unresolved external symbol list
+   - string literals
+   - integer literals
+   - variable metadata
+   - payload bytes
+7. Determine the root entry procedure from the module name.
+8. Build the initial live set from that entry.
+9. For each unresolved external symbol reachable from the live set:
+   - locate the providing object
+   - load it
+   - validate it
+   - parse it
+   - merge its symbols and metadata
+10. Continue until the reachable closure is complete.
+11. Reject duplicate exports or unresolved imports.
+12. Assign final offsets to all included bodies, literal pools, data, and
+    overlays.
+13. Encode the final AVM image:
+   - AVM magic
+   - internal version
+   - flags
+   - entry offset
+   - payload length
+   - payload bytes
+   - overlay segment metadata if present
+14. Save BIN/<MODULE>.AVM.
+15. Optionally save a map/report for inspection.
+
+
+Final Output Contract
+
+ALINK emits a runnable AVM program image.
+
+The current format family uses:
+
+- file magic: AVM1
+- internal version field: currently version 2 on the current UDOS linker line
+- flags: currently includes the Acheron runtime flag
+
+The important distinction is:
+
+- the file container name remains AVM1
+- the internal version field may advance
+
+Consumers such as AVMRUN must validate both the magic and the version/flags.
+
+
+Dead-Strip Model
+
+The completed design goal is dead-strip linking.
+
+That means:
+
+- the root entry procedure is always kept
+- only procedures reachable from the entry remain
+- only objects required to satisfy reachable references are included
+- only overlays reachable from the live program remain
+- unused exports in loaded objects are allowed to drop out of the final image
+
+The present system already works in that direction through body_ops and export
+size metadata. The completed form should keep that model rather than reverting
+to whole-object concatenation.
+
+
+Runtime Symbol Surface
+
+ALINK is expected to resolve stable runtime symbols emitted by ACTC, including
+at least these logical families:
+
+- printing and formatting
+  - rt.print_str
+  - rt.print_line
+  - rt.format_int
+  - rt.print_f
+- REAL runtime
+  - rt.f_add
+  - rt.f_sub
+  - rt.f_mul
+  - rt.f_div
+  - rt.f_cmp
+  - rt.i_to_f
+  - rt.f_to_i
+- REU runtime
+  - rt.reu_alloc
+  - rt.reu_free
+  - rt.reu_peek8
+  - rt.reu_peek16
+  - rt.reu_peek32
+  - rt.reu_poke8
+  - rt.reu_poke16
+  - rt.reu_poke32
+  - rt.reu_copy
+- overlay runtime
+  - rt.ovl_load
+  - rt.ovl_call
+
+The exact implementation of these symbols may change, but the logical link-time
+names are part of the stable contract between ACTC, ALINK, and AVMRUN.
+
+
+What ALINK Does Not Do
+
+The completed ALINK contract does not require:
+
+- compiling source text
+- editing project manifests
+- launching the final program
+- producing a native Commodore PRG loader by default
+
+ALINK's core product is BIN/<MODULE>.AVM. If a future standalone PRG packager
+exists, that should be treated as a separate tool or an additional packaging
+stage.
+
+
+Failure Conditions
+
+ALINK is expected to reject at least these classes of error:
+
+- missing or unreadable project manifest
+- requested root module not tracked in ACTION.PROJ
+- missing root object
+- malformed or unsupported AVO object
+- duplicate export definitions
+- unresolved imports
+- malformed body_ops or malformed metadata
+- inconsistent export size/offset data
+- payload or literal overflow
+- output-save failure
+
+
+Current Proven Status
+
+As of the current committed baseline, the UDOS-native ALINK implementation
+already proves a narrower but real subset:
+
+- project-aware root selection
+- deterministic load of OBJ/<MODULE>.AVO
+- parse of export metadata, body_ops, unresolved external symbols, string
+  literals, integer literals, and variable metadata
+- live-set construction from the requested entry
+- current child-object closure
+- deterministic BIN/<MODULE>.AVM emission
+- committed ALINK -> AVMRUN proof
+- committed ACTC -> ALINK -> AVMRUN proof on the validated baseline
+
+The main remaining work is to widen the object surface as ACTC widens, improve
+developer diagnostics, and continue strengthening map/debug output without
+changing ALINK's basic role.

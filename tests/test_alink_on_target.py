@@ -17,6 +17,8 @@ class TestAlinkOnTarget(unittest.TestCase):
             ("rt_print_str.avo", "pstr.avo"),
             ("rt_print_line.avo", "plin.avo"),
             ("rt_format_int.avo", "fint.avo"),
+            ("rt_ovl_call.avo", "ovlc.avo"),
+            ("rt_ovl_load.avo", "ovll.avo"),
         ]
 
     def build_tool(self, script: Path) -> None:
@@ -113,6 +115,34 @@ class TestAlinkOnTarget(unittest.TestCase):
             self.assertEqual(link_result.returncode, 0, msg=link_result.stdout + link_result.stderr)
             map_text = self.read_text_output(drive / "main.map")
             self.assertIn("rt.format_int", map_text)
+
+    def test_overlay_object_links_overlay_segment(self) -> None:
+        self.build_tool(self.build_alink)
+        self.build_tool(self.build_vm)
+        main_object = self.compile_object("ovl_demo.act", "alink-ovl.avo")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            drive = Path(tmpdir)
+            self.stage_drive(drive, main_object)
+
+            link_result = self.run_cpm(drive, "alink.com")
+            self.assertEqual(link_result.returncode, 0, msg=link_result.stdout + link_result.stderr)
+
+            avm_data = (drive / "main.avm").read_bytes()
+            payload_len = int.from_bytes(avm_data[5:7], "little")
+            payload = avm_data[10 : 10 + payload_len]
+            self.assertIn(b"OVLT", payload)
+            self.assertIn(b"overlay:Math\x00", payload)
+
+            map_text = self.read_text_output(drive / "main.map")
+            self.assertIn("rt.ovl_call", map_text)
+            self.assertIn("rt.ovl_load", map_text)
+            self.assertIn("overlays:", map_text)
+            self.assertIn("Math", map_text)
+
+            run_result = self.run_cpm(drive, "vm.com", "main.avm")
+            self.assertEqual(run_result.returncode, 0, msg=run_result.stdout + run_result.stderr)
+            self.assertIn("42", run_result.stdout + run_result.stderr)
 
 
 if __name__ == "__main__":

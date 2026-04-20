@@ -9,6 +9,8 @@
 #define MAX_MODULES 12
 #define MAX_EXPORTS 8
 #define MAX_IMPORTS 8
+#define MAX_OVERLAYS 4
+#define MAX_OVERLAY_PAYLOAD 128
 #define MAX_SYMBOL_LEN 24
 #define AVM_HEADER_SIZE 10
 
@@ -16,6 +18,12 @@ typedef struct {
     char name[MAX_SYMBOL_LEN];
     uint16_t offset;
 } Symbol;
+
+typedef struct {
+    char name[MAX_SYMBOL_LEN];
+    uint16_t payload_len;
+    uint8_t payload[MAX_OVERLAY_PAYLOAD];
+} AvoOverlay;
 
 typedef struct {
     char module_name[MAX_SYMBOL_LEN];
@@ -26,6 +34,8 @@ typedef struct {
     Symbol exports[MAX_EXPORTS];
     uint8_t import_count;
     char imports[MAX_IMPORTS][MAX_SYMBOL_LEN];
+    uint8_t overlay_count;
+    AvoOverlay overlays[MAX_OVERLAYS];
 } AvoObject;
 
 typedef struct {
@@ -40,7 +50,10 @@ typedef struct {
 static char text_buffer[MAX_TEXT_BYTES];
 static uint8_t avm_buffer[MAX_AVM_BYTES];
 static IncludedModule included_modules[MAX_MODULES];
+static AvoOverlay linked_overlays[MAX_OVERLAYS];
+static uint16_t linked_overlay_bases[MAX_OVERLAYS];
 static uint8_t included_count;
+static uint8_t linked_overlay_count;
 static uint16_t linked_payload_len;
 static uint16_t map_len;
 static uint16_t main_entry_offset;
@@ -309,7 +322,7 @@ static void parse_imports(char** cursor, AvoObject* obj)
     }
 }
 
-static void parse_payload_hex(char** cursor, AvoObject* obj)
+static uint16_t parse_hex_bytes(char** cursor, uint8_t* out, uint16_t max_len, const char* too_large_message)
 {
     uint16_t len = 0;
     while (**cursor && (**cursor != '"'))
@@ -318,14 +331,59 @@ static void parse_payload_hex(char** cursor, AvoObject* obj)
         uint8_t lo;
         if (!(*cursor)[1])
             fatal("odd payload hex");
-        if (len >= MAX_OBJECT_PAYLOAD)
-            fatal("payload too large");
+        if (len >= max_len)
+            fatal(too_large_message);
         hi = hex_value((uint8_t)(*cursor)[0]);
         lo = hex_value((uint8_t)(*cursor)[1]);
-        obj->payload[len++] = (uint8_t)((hi << 4) | lo);
+        out[len++] = (uint8_t)((hi << 4) | lo);
         *cursor += 2;
     }
-    obj->payload_len = len;
+    return len;
+}
+
+static void parse_payload_hex(char** cursor, AvoObject* obj)
+{
+    obj->payload_len = parse_hex_bytes(cursor, obj->payload, MAX_OBJECT_PAYLOAD, "payload too large");
+}
+
+static void parse_overlays(char** cursor, AvoObject* obj)
+{
+    obj->overlay_count = 0;
+    if (**cursor == ']')
+    {
+        (*cursor)++;
+        return;
+    }
+
+    for (;;)
+    {
+        AvoOverlay* overlay;
+        if (obj->overlay_count >= MAX_OVERLAYS)
+            fatal("too many overlays");
+        overlay = &obj->overlays[obj->overlay_count];
+        memset(overlay, 0, sizeof(*overlay));
+
+        expect_literal(cursor, "{\"imports\":[");
+        if (**cursor != ']')
+            fatal("overlay imports unsupported");
+        (*cursor)++;
+        expect_literal(cursor, ",\"name\":\"");
+        parse_symbol_string(cursor, overlay->name);
+        expect_literal(cursor, "\",\"payload_hex\":\"");
+        overlay->payload_len = parse_hex_bytes(cursor, overlay->payload, MAX_OVERLAY_PAYLOAD, "overlay payload too large");
+        expect_literal(cursor, "\"}");
+
+        obj->overlay_count++;
+        if (**cursor == ',')
+        {
+            (*cursor)++;
+            continue;
+        }
+        if (**cursor != ']')
+            fatal("bad overlays");
+        (*cursor)++;
+        return;
+    }
 }
 
 static void parse_avo_text(char* text, AvoObject* obj)
@@ -347,9 +405,7 @@ static void parse_avo_text(char* text, AvoObject* obj)
     if (memcmp(cursor, ",\"overlays\":[", 13) == 0)
     {
         cursor += 13;
-        if (*cursor != ']')
-            fatal("overlays unsupported");
-        cursor++;
+        parse_overlays(&cursor, obj);
     }
     expect_literal(&cursor, ",\"payload_hex\":\"");
     parse_payload_hex(&cursor, obj);
@@ -417,6 +473,56 @@ static void include_module(const AvoObject* obj, const char* filename)
     copy_module_metadata(&included_modules[included_count], obj, filename, linked_payload_len);
     linked_payload_len = (uint16_t)(linked_payload_len + obj->payload_len);
     included_count++;
+}
+
+static void append_linked_byte(uint8_t value)
+{
+    if ((uint16_t)(AVM_HEADER_SIZE + linked_payload_len + 1u) > MAX_AVM_BYTES)
+        fatal("linked payload too large");
+    avm_buffer[AVM_HEADER_SIZE + linked_payload_len] = value;
+    linked_payload_len++;
+}
+
+static void append_linked_bytes(const uint8_t* data, uint16_t len)
+{
+    if ((uint16_t)(AVM_HEADER_SIZE + linked_payload_len + len) > MAX_AVM_BYTES)
+        fatal("linked payload too large");
+    memcpy(&avm_buffer[AVM_HEADER_SIZE + linked_payload_len], data, len);
+    linked_payload_len = (uint16_t)(linked_payload_len + len);
+}
+
+static void append_linked_u16(uint16_t value)
+{
+    append_linked_byte((uint8_t)(value & 0xff));
+    append_linked_byte((uint8_t)(value >> 8));
+}
+
+static void append_overlay_segment(const AvoObject* root)
+{
+    if (!root->overlay_count)
+        return;
+
+    linked_overlay_count = 0;
+    append_linked_bytes((const uint8_t*)"OVLT", 4);
+    append_linked_byte(root->overlay_count);
+
+    for (uint8_t i = 0; i < root->overlay_count; i++)
+    {
+        const AvoOverlay* overlay = &root->overlays[i];
+        uint8_t name_len = (uint8_t)strlen(overlay->name);
+        if (linked_overlay_count >= MAX_OVERLAYS)
+            fatal("too many linked overlays");
+        if (!name_len)
+            fatal("bad overlay name");
+
+        append_linked_byte(name_len);
+        append_linked_bytes((const uint8_t*)overlay->name, name_len);
+        append_linked_u16(overlay->payload_len);
+        linked_overlay_bases[linked_overlay_count] = linked_payload_len;
+        append_linked_bytes(overlay->payload, overlay->payload_len);
+        linked_overlays[linked_overlay_count] = *overlay;
+        linked_overlay_count++;
+    }
 }
 
 static void fcb_match_to_name(const FCB* fcb, char* out)
@@ -608,6 +714,20 @@ static void build_map(void)
             append_map_text(")\n");
         }
     }
+    if (linked_overlay_count)
+    {
+        append_map_text("\noverlays:\n");
+        for (uint8_t i = 0; i < linked_overlay_count; i++)
+        {
+            append_map_text("- ");
+            append_map_text(linked_overlays[i].name);
+            append_map_text(" base=0x");
+            append_map_hex16(linked_overlay_bases[i]);
+            append_map_text(" size=");
+            append_map_dec(linked_overlays[i].payload_len);
+            append_map_text("\n");
+        }
+    }
 }
 
 static void link_objects(const char* main_filename, const char* avm_filename, const char* map_filename)
@@ -618,6 +738,7 @@ static void link_objects(const char* main_filename, const char* avm_filename, co
     char symbol[MAX_SYMBOL_LEN];
 
     included_count = 0;
+    linked_overlay_count = 0;
     linked_payload_len = 0;
     load_avo(main_filename, &main_obj);
     main_entry_offset = main_obj.entry_offset;
@@ -638,6 +759,8 @@ static void link_objects(const char* main_filename, const char* avm_filename, co
             add_pending_imports(pending, &pending_count, &provider);
         }
     }
+
+    append_overlay_segment(&main_obj);
 
     memcpy(avm_buffer, "AVM1", 4);
     avm_buffer[4] = 1;

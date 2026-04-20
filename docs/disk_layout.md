@@ -14,7 +14,8 @@ same layout works on CP/M-65 and under `cpmemu`, which only exposes lowercase
 Under `cpmemu`, `actmon.com` uses embedded compile/run entry points for
 `COMPILE`, `RUN`, and `BUILD` because direct COM launches do not provide a CCP
 handoff path for running additional tools. On a fuller CP/M-65 system, `EDIT`
-can still chain to an external editor when `SUBMIT`/`CCP` support is present.
+can still chain to an external editor such as `bedit.com` when `CCP`-style
+handoff support is present.
 
 ## Library Manifests
 
@@ -28,7 +29,9 @@ bootstrap toolchain uses filename prefixes instead:
 Each manifest lives on disk and is read by `actc.com` during compile time. The
 compiler starts from the main program's logical imports, follows manifest
 imports recursively, emits a single runnable `.avm`, and writes a sidecar
-`.map` describing exactly which modules were included.
+`.map` describing exactly which modules were included. The constrained D64
+release image packs those same manifests into a single `libmods.dat` bundle to
+save directory entries and allocation blocks.
 
 ## Runtime `.avo` Objects For `alink.com`
 

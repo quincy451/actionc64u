@@ -152,7 +152,7 @@ check_any_command "C++ compiler" "yes" "install build-essential or clang" g++ cl
 check_command "cmake" "no" "cmake" "install package: cmake"
 check_pytest
 check_command "pdftotext" "no" "pdftotext" "install package: poppler-utils"
-check_all_commands "cpmtools" "no" "install package: cpmtools" cpmcp cpmls
+check_all_commands "cpmtools" "no" "install package: cpmtools" cpmcp cpmls cpmrm
 check_command "cc1541" "no" "cc1541" "install distro package if available, otherwise build and add to PATH"
 check_command "java" "no" "java" "install package: default-jre-headless"
 check_any_command "VICE" "no" "install package: vice (needs x64sc for later C64 validation)" x64sc vice

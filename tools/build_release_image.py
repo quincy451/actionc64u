@@ -61,8 +61,79 @@ def locate_core_file(root: Path, relative: str) -> Path:
     return path
 
 
+def remove_file(image: Path, target_name: str, *, cwd: Path) -> None:
+    subprocess.run(
+        ["cpmchattr", "-f", "c1541", str(image), "n", f"0:{target_name}"],
+        cwd=cwd,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    subprocess.run(
+        ["cpmrm", "-f", "c1541", str(image), f"0:{target_name}"],
+        cwd=cwd,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
 def inject_file(image: Path, source: Path, target_name: str, *, cwd: Path) -> None:
+    remove_file(image, target_name, cwd=cwd)
     run(["cpmcp", "-f", "c1541", str(image), str(source), f"0:{target_name}"], cwd=cwd)
+
+
+def list_image_files(image: Path, *, cwd: Path) -> list[str]:
+    listing = subprocess.run(
+        ["cpmls", "-f", "c1541", str(image)],
+        cwd=cwd,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if listing.returncode != 0:
+        raise RuntimeError(f"cpmls failed:\nstdout:\n{listing.stdout}\nstderr:\n{listing.stderr}")
+
+    files: list[str] = []
+    for line in listing.stdout.splitlines():
+        entry = line.strip()
+        if not entry or entry.endswith(":"):
+            continue
+        files.append(entry.lower())
+    return files
+
+
+def build_manifest_bundle(source_dir: Path, output_path: Path) -> None:
+    parts: list[str] = []
+    for manifest in sorted(source_dir.glob("*.mod")):
+        text = manifest.read_text(encoding="ascii").replace("\r\n", "\n").strip()
+        parts.append(f"FILE {manifest.name.lower()}\n{text}\nEND\n")
+    output_path.write_text("\n".join(parts), encoding="ascii")
+
+
+RELEASE_BASE_KEEP = {
+    "adm3adrv.com",
+    "adm3atst.com",
+    "bdos.sys",
+    "bedit.com",
+    "capsdrv.com",
+    "cbmfs.sys",
+    "ccp.sys",
+    "cls.com",
+    "devices.com",
+    "dinfo.com",
+    "dump.com",
+    "submit.com",
+    "vt52drv.com",
+    "vt52test.com",
+}
+
+
+def prune_base_image(image: Path, *, cwd: Path) -> None:
+    for filename in list_image_files(image, cwd=cwd):
+        if filename in RELEASE_BASE_KEEP:
+            continue
+        remove_file(image, filename, cwd=cwd)
 
 
 def build_release_image(*, no_build: bool) -> tuple[Path, Path]:
@@ -70,6 +141,7 @@ def build_release_image(*, no_build: bool) -> tuple[Path, Path]:
     require_tool("cpmcp")
     require_tool("cpmls")
     require_tool("cpmchattr")
+    require_tool("cpmrm")
 
     build_dir = root / "build"
     build_dir.mkdir(parents=True, exist_ok=True)
@@ -89,25 +161,35 @@ def build_release_image(*, no_build: bool) -> tuple[Path, Path]:
     ccp = locate_core_file(root, ".obj/src/+ccp/ccp")
     bdos = locate_core_file(root, ".obj/src/bdos/+bdos/bdos")
     optional_core = [
-        ("qe.com", cpm_root(root) / ".obj/apps/+qe/qe"),
-        ("submit.com", cpm_root(root) / ".obj/apps/+submit/submit"),
+        ("bedit.com", cpm_root(root) / ".obj/apps/+bedit/out.com"),
     ]
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
         normalize_diskdefs(root, tmp / "diskdefs")
+        manifest_bundle = tmp / "libmods.dat"
+        build_manifest_bundle(root / "src" / "tools_cpm" / "libmods", manifest_bundle)
 
-        inject_file(out_image, ccp, "ccp.sys", cwd=tmp)
+        prune_base_image(out_image, cwd=tmp)
+        base_files = set(list_image_files(out_image, cwd=tmp))
+        if "ccp.sys" not in base_files:
+            inject_file(out_image, ccp, "ccp.sys", cwd=tmp)
         run(["cpmchattr", "-f", "c1541", str(out_image), "sr", "0:ccp.sys"], cwd=tmp)
-        inject_file(out_image, bdos, "bdos.sys", cwd=tmp)
+        if "bdos.sys" not in base_files:
+            inject_file(out_image, bdos, "bdos.sys", cwd=tmp)
         run(["cpmchattr", "-f", "c1541", str(out_image), "sr", "0:bdos.sys"], cwd=tmp)
 
+        refreshed_files = set(list_image_files(out_image, cwd=tmp))
         for target_name, source in optional_core:
+            if target_name in refreshed_files:
+                continue
             if source.is_file():
                 inject_file(out_image, source, target_name, cwd=tmp)
-
+        inject_file(out_image, manifest_bundle, "libmods.dat", cwd=tmp)
         for source in sorted(stage_dir.iterdir()):
             if source.is_file():
+                if source.suffix.lower() == ".mod":
+                    continue
                 inject_file(out_image, source, source.name.lower(), cwd=tmp)
 
         listing = subprocess.run(

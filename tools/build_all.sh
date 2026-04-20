@@ -33,6 +33,7 @@ require_tool python3 "Install python3."
 require_tool cpmcp "Install cpmtools before building the release image."
 require_tool cpmls "Install cpmtools before building the release image."
 require_tool cpmchattr "Install cpmtools before building the release image."
+require_tool cpmrm "Install cpmtools before building the release image."
 require_command "pytest is unavailable. Install it or use a Python environment where 'python3 -m pytest' works." \
   python3 -m pytest --version
 require_command "llvm-mos is unavailable. See docs/setup_wsl.md and docs/blockers.md." \

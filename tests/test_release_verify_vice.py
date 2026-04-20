@@ -12,7 +12,7 @@ class TestReleaseVerifyVice(unittest.TestCase):
         self.transcript = self.root / "build" / "verify_transcript.txt"
 
     def test_release_verification_succeeds_in_vice(self) -> None:
-        for tool in ["x64sc", "cpmcp", "cpmls", "cpmchattr"]:
+        for tool in ["x64sc", "cpmcp", "cpmls", "cpmchattr", "cpmrm"]:
             if not shutil.which(tool):
                 self.skipTest(f"{tool} not found")
 

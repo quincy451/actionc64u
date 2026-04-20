@@ -21,10 +21,7 @@ if [[ ! -f "$REU_SRC" ]]; then
     exit 1
 fi
 if [[ -z "$OPT_LEVEL" ]]; then
-    OPT_LEVEL="-Os"
-    if [[ "$REU_BACKEND" == "hw" ]]; then
-        OPT_LEVEL="-Oz"
-    fi
+    OPT_LEVEL="-Oz"
 fi
 "$LLVM_BIN/mos-cpm65-clang" "$OPT_LEVEL" -DACTC_LIBRARY -c -o "$ACTC_OBJ" "$ACTC_SRC"
 "$LLVM_BIN/mos-cpm65-clang" "$OPT_LEVEL" -DVM_LIBRARY -c -o "$VM_OBJ" "$VM_SRC"

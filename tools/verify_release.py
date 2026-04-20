@@ -79,6 +79,7 @@ def is_unavailable_error(message: str) -> bool:
         "CP/M-65 images directory not found",
         "unable to connect to VICE",
         "failed to start VICE monitor session",
+        "timed out waiting for screen text 'A>'",
     ]
     return any(needle in message for needle in needles)
 
@@ -129,7 +130,7 @@ def collect_vm_run_transcript(
 def run_verification(*, no_build: bool, transcript_path: Path, boot_timeout: float, run_timeout: float) -> Path:
     root = repo_root()
     locate_x64sc()
-    for tool in ["cpmcp", "cpmls", "cpmchattr"]:
+    for tool in ["cpmcp", "cpmls", "cpmchattr", "cpmrm"]:
         require_tool(tool)
 
     build_dir = root / "build"

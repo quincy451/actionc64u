@@ -8,9 +8,8 @@ containing:
 - `actmon.com`
 - `actc.com`
 - `vm.com`
-- `qe.com`
-- `submit.com`
-- `lib*.mod` runtime manifests
+- `bedit.com`
+- `libmods.dat` packed runtime manifest bundle
 - `hello.act`
 - `math.act`
 - `if.act`

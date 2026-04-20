@@ -17,10 +17,7 @@ if [[ ! -f "$REU_SRC" ]]; then
     exit 1
 fi
 if [[ -z "$OPT_LEVEL" ]]; then
-    OPT_LEVEL="-Os"
-    if [[ "$REU_BACKEND" == "hw" ]]; then
-        OPT_LEVEL="-Oz"
-    fi
+    OPT_LEVEL="-Oz"
 fi
 "$LLVM_BIN/mos-cpm65-clang" "$OPT_LEVEL" -c -o "$REU_OBJ" "$REU_SRC"
 "$LLVM_BIN/mos-cpm65-clang" "$OPT_LEVEL" -o "$OUT_COM" "$SRC" "$REU_OBJ"

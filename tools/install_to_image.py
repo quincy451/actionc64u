@@ -29,11 +29,7 @@ def copy_into(dest: Path, source: Path, name: str | None = None) -> None:
 def clean_directory(dest: Path) -> None:
     if not dest.exists():
         return
-    for child in dest.iterdir():
-        if child.is_dir():
-            shutil.rmtree(child)
-        else:
-            child.unlink()
+    shutil.rmtree(dest)
 
 
 def main(argv: list[str] | None = None) -> int:

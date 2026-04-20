@@ -13,7 +13,7 @@ class TestReleaseImageBuild(unittest.TestCase):
         self.listing = self.root / "build" / "actionc64u_c64.dir.txt"
 
     def test_build_release_image_contains_expected_files(self) -> None:
-        for tool in ["cpmcp", "cpmls", "cpmchattr"]:
+        for tool in ["cpmcp", "cpmls", "cpmchattr", "cpmrm"]:
             if not shutil.which(tool):
                 self.skipTest(f"{tool} not found")
 

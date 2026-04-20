@@ -20,7 +20,7 @@
 #define MAX_MODULES 20
 #define MAX_MODULE_IMPORTS 2
 #define MAX_MODULE_PAYLOAD 48
-#define MAX_MANIFEST_BYTES 256
+#define MAX_MANIFEST_BYTES 2048
 #define MAX_MAP_BYTES 1024
 #define MAX_ROOT_IMPORTS 16
 #define OPCODE_CALLN 0x49
@@ -226,6 +226,7 @@ static const char* LIBRARY_FILES[] = {
     "libovll.mod",
     "libovlc.mod",
 };
+static const char LIBRARY_PACK_FILE[] = "libmods.dat";
 
 static void print_cstr(const char* s)
 {
@@ -696,17 +697,39 @@ static void copy_trimmed_ascii(char* out, uint16_t out_cap, const char* text)
     memcpy(out, trimmed, len + 1);
 }
 
-static void load_manifest_file(const char* filename)
+static bool file_exists_on_disk(const char* filename)
 {
+    FCB fcb;
+    parse_filename(&fcb, filename);
+    fcb.ex = 0;
+    fcb.cr = 0;
+    if (cpm_open_file(&fcb) != CPME_OK)
+        return false;
+    cpm_close_file(&fcb);
+    return true;
+}
+
+static bool manifest_already_loaded(const char* filename)
+{
+    for (uint8_t i = 0; i < module_count; i++)
+    {
+        if (strcmp(modules[i].filename, filename) == 0)
+            return true;
+    }
+    return false;
+}
+
+static void load_manifest_text(const char* filename, char* buffer)
+{
+    if (manifest_already_loaded(filename))
+        return;
     if (module_count >= MAX_MODULES)
         fatal("too many library manifests");
 
     DiskModule* module = &modules[module_count];
     memset(module, 0, sizeof(*module));
     strcpy(module->filename, filename);
-
-    read_text_file(filename, manifest_buffer, MAX_MANIFEST_BYTES, "cannot open library manifest");
-    char* cursor = manifest_buffer;
+    char* cursor = buffer;
 
     while (*cursor)
     {
@@ -759,18 +782,87 @@ static void load_manifest_file(const char* filename)
     module_count++;
 }
 
+static void load_manifest_file(const char* filename)
+{
+    read_text_file(filename, manifest_buffer, MAX_MANIFEST_BYTES, "cannot open library manifest");
+    load_manifest_text(filename, manifest_buffer);
+}
+
+static void load_manifest_pack_file(const char* filename)
+{
+    char current_name[13];
+    char current_text[256];
+    uint16_t current_len = 0;
+    current_name[0] = 0;
+
+    read_text_file(filename, manifest_buffer, MAX_MANIFEST_BYTES, "cannot open library manifest pack");
+    char* cursor = manifest_buffer;
+
+    while (*cursor)
+    {
+        char* line_start = cursor;
+        while (*cursor && (*cursor != '\n') && (*cursor != '\r'))
+            cursor++;
+        if (*cursor == '\r')
+            *cursor++ = 0;
+        if (*cursor == '\n')
+            *cursor++ = 0;
+
+        char* text = trim(line_start);
+        if (!*text)
+            continue;
+
+        if (starts_with_ascii(text, "FILE "))
+        {
+            if (current_name[0])
+            {
+                current_text[current_len] = 0;
+                load_manifest_text(current_name, current_text);
+            }
+            copy_trimmed_ascii(current_name, sizeof(current_name), text + 5);
+            current_len = 0;
+            continue;
+        }
+
+        if (starts_with_ascii(text, "END"))
+        {
+            if (current_name[0])
+            {
+                current_text[current_len] = 0;
+                load_manifest_text(current_name, current_text);
+            }
+            current_name[0] = 0;
+            current_len = 0;
+            continue;
+        }
+
+        if (!current_name[0])
+            fatal("bad library manifest pack");
+
+        size_t len = strlen(text);
+        if ((current_len + len + 2u) >= sizeof(current_text))
+            fatal("manifest pack entry too large");
+        memcpy(&current_text[current_len], text, len);
+        current_len = (uint16_t)(current_len + len);
+        current_text[current_len++] = '\n';
+    }
+
+    if (current_name[0])
+    {
+        current_text[current_len] = 0;
+        load_manifest_text(current_name, current_text);
+    }
+}
+
 static void load_library_manifests(void)
 {
     module_count = 0;
+    if (file_exists_on_disk(LIBRARY_PACK_FILE))
+        load_manifest_pack_file(LIBRARY_PACK_FILE);
     for (uint8_t i = 0; i < (sizeof(LIBRARY_FILES) / sizeof(LIBRARY_FILES[0])); i++)
     {
-        FCB fcb;
-        parse_filename(&fcb, LIBRARY_FILES[i]);
-        fcb.ex = 0;
-        fcb.cr = 0;
-        if (cpm_open_file(&fcb) != CPME_OK)
+        if (!file_exists_on_disk(LIBRARY_FILES[i]))
             continue;
-        cpm_close_file(&fcb);
         load_manifest_file(LIBRARY_FILES[i]);
     }
 }

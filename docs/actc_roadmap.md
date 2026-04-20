@@ -46,6 +46,8 @@ Current dirty-tree verification:
   variable slot path.
 - Declaration-only module-scope `REAL` support now records a 4-byte storage
   width in AVO variable metadata.
+- Current safety guards reject REAL initializers and integer-path REAL variable
+  reads/writes until REAL expression lowering exists.
 
 ## Object Emission
 

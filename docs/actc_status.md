@@ -37,6 +37,9 @@ Current lowering note:
 - [x] current harness-proven variable slot ceiling is `16`, aligned with the current VM local-slot count
 - [x] module-scope `REAL` declarations now emit 4-byte storage-width metadata;
   REAL32 expressions and runtime-library calls are not lowered yet
+- [x] `REAL` variables are guarded from the current 16-bit integer expression
+  path; initializers, integer-path reads, and integer-path writes are rejected
+  until REAL lowering lands
 
 ## Proven Narrow Source Surface
 
@@ -149,6 +152,8 @@ Current lowering note:
 - [x] module-scope `REAL` declarations emit a 4-byte variable slot without
   importing unused REAL runtime operators:
   `REAL X`, `PrintIE(7)`
+- [x] unsafe current-stage REAL use is rejected:
+  `REAL X=[0]`, `PrintIE(X)`, and `X=0` where `X` is REAL
 - [x] variable-to-variable arithmetic assignment:
   `X=X+Y`
 - [x] multiple module-scope integer variables driving `WHILE ... DO ... OD`:

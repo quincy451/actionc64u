@@ -56,6 +56,61 @@ class TestToolAbiPipeline(unittest.TestCase):
             self.assertEqual(actc_object_path.stat().st_size, expected_avo_size)
             self.assertEqual(alink_image_path.stat().st_size, expected_avm_size)
 
+    def run_actc_failure_source(self, source: str, expected_console_fragment: str) -> None:
+        for tool in ("cc", "ca65", "ld65", "make"):
+            if shutil.which(tool) is None:
+                self.skipTest(f"{tool} not found")
+
+        if not self.base_fs.is_dir():
+            self.skipTest(f"missing base fs tree: {self.base_fs}")
+
+        for script in ("build_tool_abi_harness.sh", "build_actc_harness_udos.sh"):
+            result = subprocess.run(
+                ["bash", str(self.root / "tools" / script)],
+                cwd=self.root,
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=120,
+            )
+            self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_fs = Path(tmpdir) / "harness-actc-fail"
+            shutil.copytree(self.base_fs, out_fs)
+            project_root = out_fs / "IMAGES" / "ACTION.DNP" / "PROJ3"
+            (project_root / "ACTION.PROJ").write_text("ACTION PROJECT\rMAIN.ACT\r", encoding="ascii")
+            (project_root / "src" / "main.act").write_text(source, encoding="ascii")
+
+            result = subprocess.run(
+                [
+                    str(self.root / "build" / "udos_tools" / "tool_abi_harness"),
+                    "--prg",
+                    str(self.root / "build" / "udos_tools" / "ACTC.PRG"),
+                    "--workspace",
+                    str(project_root),
+                    "--cmdline",
+                    "MAIN",
+                    "--services-inc",
+                    str(self.root / "build" / "udos_tools" / "udos_services.inc"),
+                    "--labels",
+                    str(self.root / "build" / "udos_tools" / "actc.current.labels"),
+                    "--max-steps",
+                    "4000000",
+                ],
+                cwd=self.root,
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=120,
+            )
+
+            output = result.stdout + result.stderr
+            self.assertNotEqual(result.returncode, 0, msg=output)
+            summary = json.loads(result.stdout)
+            self.assertNotEqual(summary["exit_status"], 0, msg=output)
+            self.assertIn(expected_console_fragment, summary.get("console", ""))
+
     def test_additive_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("additive", "HELLO\nTOOL7\n5459\n", 92, 76)
 
@@ -94,6 +149,24 @@ class TestToolAbiPipeline(unittest.TestCase):
 
     def test_real_decl_offsets_following_int_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("real_decl_offsets_following_int", "5\n", 48, 27)
+
+    def test_real_integer_print_is_rejected_until_real_lowering_exists(self) -> None:
+        self.run_actc_failure_source(
+            'MODULE MAIN\rREAL X\rPROC MAIN()\rPrintIE(X)\rRETURN\r',
+            "BAD LITERAL",
+        )
+
+    def test_real_initializer_is_rejected_until_real_lowering_exists(self) -> None:
+        self.run_actc_failure_source(
+            'MODULE MAIN\rREAL X=[0]\rPROC MAIN()\rPrintIE(7)\rRETURN\r',
+            "BAD VAR",
+        )
+
+    def test_real_integer_assignment_is_rejected_until_real_lowering_exists(self) -> None:
+        self.run_actc_failure_source(
+            'MODULE MAIN\rREAL X\rPROC MAIN()\rX=0\rRETURN\r',
+            "BAD VAR",
+        )
 
     def test_int_vars_multi_while_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("int_vars_multi_while", "0\n1\n2\n", 69, 54)

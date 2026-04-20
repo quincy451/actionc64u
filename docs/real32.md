@@ -113,6 +113,11 @@ The current UDOS-native compiler/linker slice only proves REAL declaration
 storage metadata: `REAL X` emits a 4-byte variable slot in the AVO object, and
 ALINK preserves that 4-byte width in the linked AVM data layout.
 
+Until REAL expression lowering exists, the UDOS-native compiler rejects REAL
+initializers and rejects using REAL variables in the current 16-bit integer
+expression path. This avoids false success where only the low word of a REAL32
+slot would be read or written.
+
 Full UDOS-native REAL32 literals, arithmetic, comparisons, conversions, and
 `PrintR` / `PrintRE` lowering remain future work. The host/reference compiler
 still has broader REAL behavior than the UDOS-native ACTC path.

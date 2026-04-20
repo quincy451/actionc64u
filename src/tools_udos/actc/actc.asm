@@ -387,6 +387,9 @@ store_module_var_from_scan_ptr_or_fail_save_name_done:
     beq store_module_var_from_scan_ptr_or_fail_store
     cmp #'='
     bne store_module_var_from_scan_ptr_or_fail_bad
+    lda decl_width_data
+    cmp #$02
+    bne store_module_var_from_scan_ptr_or_fail_bad
     iny
     jsr skip_inline_spaces_at_scan_y
     lda (scan_ptr),y
@@ -689,6 +692,12 @@ collect_proc_body_ops_after_space_check:
         beq :+
         jmp collect_proc_body_ops_bad_var
 : 
+        ldx assignment_target_index_data
+        lda var_width_data,x
+        cmp #$02
+        beq :+
+        jmp collect_proc_body_ops_bad_var
+:
         iny
         jsr skip_inline_spaces_at_scan_y
         lda (scan_ptr),y
@@ -953,6 +962,8 @@ collect_proc_body_ops_try_assignment:
     cmp #'='
     bne collect_proc_body_ops_try_local_call
     jsr find_var_index_from_declared
+    bcs collect_proc_body_ops_bad_var
+    jsr require_var_index_word_or_fail
     bcs collect_proc_body_ops_bad_var
     stx assignment_target_index_data
     iny
@@ -1497,6 +1508,12 @@ emit_runtime_term_push_from_scan_y_or_fail:
     pha
     jsr find_var_index_from_scan_y
     bcs emit_runtime_term_push_literal
+    jsr require_var_index_word_or_fail
+    bcc :+
+    pla
+    sec
+    rts
+:
     lda #'L'
     jsr append_body_op_for_current_proc
     pla
@@ -3348,6 +3365,16 @@ find_var_index_from_declared_done:
     clc
     rts
 
+require_var_index_word_or_fail:
+    lda var_width_data,x
+    cmp #$02
+    beq require_var_index_word_or_fail_ok
+    sec
+    rts
+require_var_index_word_or_fail_ok:
+    clc
+    rts
+
 find_current_proc_param_index_from_declared_for_proc_x:
     stx proc_index
     lda proc_param_count_data,x
@@ -3406,12 +3433,15 @@ find_current_proc_local_index_from_declared_for_proc_x_compare_loop:
     cmp declared_module_name,y
     bne find_current_proc_local_index_from_declared_for_proc_x_next
     lda declared_module_name,y
-    beq find_var_index_from_declared_done
+    beq find_current_proc_local_index_from_declared_for_proc_x_done
     iny
     bne find_current_proc_local_index_from_declared_for_proc_x_compare_loop
 find_current_proc_local_index_from_declared_for_proc_x_next:
     inc hex_work
     jmp find_current_proc_local_index_from_declared_for_proc_x_loop
+find_current_proc_local_index_from_declared_for_proc_x_done:
+    clc
+    rts
 find_current_proc_local_index_from_declared_for_proc_x_fail:
     sec
     rts

@@ -317,6 +317,8 @@ already proves a narrower but real subset:
 - current integer variable handling for module scope and procedure scope
 - current REAL declaration proof allocates 4-byte variable storage metadata but
   does not yet lower REAL32 literals or REAL operations
+- current UDOS-native REAL guards reject REAL initializers and integer-path use
+  of REAL variables until typed REAL lowering is implemented
 - current body_ops and payload emission
 - committed ACTC -> ALINK -> AVMRUN proof on the validated baseline
 

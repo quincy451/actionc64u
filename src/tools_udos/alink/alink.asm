@@ -840,6 +840,25 @@ parse_vars_loop:
     sta var_init_lo,x
     lda #$00
     sta var_init_hi,x
+    lda #$02
+    sta var_width,x
+    ldy #$00
+    lda (scan_ptr),y
+    cmp #' '
+    bne parse_vars_store_done
+    jsr advance_scan_ptr
+    jsr parse_decimal_byte_or_fail
+    cmp #$02
+    beq parse_vars_store_width
+    cmp #$04
+    beq parse_vars_store_width
+    lda #<msg_bad_avo
+    ldy #>msg_bad_avo
+    jmp fail_with_ptr
+parse_vars_store_width:
+    ldx var_count
+    sta var_width,x
+parse_vars_store_done:
     inc var_count
 parse_vars_next_line:
     jsr skip_current_line
@@ -1470,7 +1489,7 @@ layout_current_object_vars_loop:
     sta root_var_offsets_hi,x
     clc
     lda current_bit_lo
-    adc #$02
+    adc var_width,x
     sta current_bit_lo
     bcc :+
     inc current_bit_hi
@@ -1652,7 +1671,7 @@ add_current_var_bytes_to_layout_loop:
     beq add_current_var_bytes_to_layout_done
     clc
     lda current_bit_lo
-    adc #$02
+    adc var_width,x
     sta current_bit_lo
     bcc :+
     inc current_bit_hi
@@ -3275,10 +3294,24 @@ emit_current_object_vars_loop:
     beq emit_current_object_vars_done
     txa
     pha
+    sta compare_char
     lda var_init_lo,x
     jsr append_payload_byte
+    ldx compare_char
     lda var_init_hi,x
     jsr append_payload_byte
+    ldx compare_char
+    lda var_width,x
+    sec
+    sbc #$02
+    tay
+    beq emit_current_object_vars_restore
+emit_current_object_vars_zero_loop:
+    lda #$00
+    jsr append_payload_byte
+    dey
+    bne emit_current_object_vars_zero_loop
+emit_current_object_vars_restore:
     pla
     tax
     inx
@@ -3313,7 +3346,7 @@ load_current_var_offsets_from_pending_x_loop:
     sta current_var_offsets_hi,x
     clc
     lda current_bit_lo
-    adc #$02
+    adc var_width,x
     sta current_bit_lo
     bcc :+
     inc current_bit_hi
@@ -3885,6 +3918,8 @@ var_names:
 var_init_lo:
     .res VAR_MAX
 var_init_hi:
+    .res VAR_MAX
+var_width:
     .res VAR_MAX
 var_count:
     .res 1

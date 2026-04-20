@@ -38,6 +38,11 @@ All immediate addresses are payload-relative offsets inside the active `.avm`.
 
 These are not final machine addresses. `vm.com` recognizes them directly.
 
+REAL arithmetic is intentionally not listed here as VM pseudo-targets. REAL32
+support is expected to come from link-time runtime modules selected per used
+operator, so programs that do not use a REAL operation do not pay for that code
+in the interpreter or in their linked payload.
+
 ## Semantics
 
 ### `Print`

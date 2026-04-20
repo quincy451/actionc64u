@@ -89,6 +89,12 @@ class TestToolAbiPipeline(unittest.TestCase):
     def test_byte_card_vars_basic_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("byte_card_vars_basic", "0\n2\n3\n", 64, 47)
 
+    def test_real_decl_storage_width_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("real_decl_storage_width", "7\n", 46, 25)
+
+    def test_real_decl_offsets_following_int_pipeline_is_green_under_harness(self) -> None:
+        self.run_scenario("real_decl_offsets_following_int", "5\n", 48, 27)
+
     def test_int_vars_multi_while_pipeline_is_green_under_harness(self) -> None:
         self.run_scenario("int_vars_multi_while", "0\n1\n2\n", 69, 54)
 

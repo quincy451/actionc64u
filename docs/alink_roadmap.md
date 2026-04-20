@@ -62,6 +62,8 @@ Current working-tree verification:
 - Current loop/control-flow/body-op slice emitted by the widened compiler.
 - Narrow `BYTE`/`CARD` compiler declaration output through the existing
   16-bit variable slot path.
+- Optional variable-width metadata for compiler-emitted data, currently proving
+  4-byte module-scope `REAL` storage.
 
 ## Remaining Work
 
@@ -78,6 +80,8 @@ Current working-tree verification:
 - Broaden supported object-graph shapes and external-resolution patterns.
 - Broaden body-op coverage as `ACTC` widens.
 - Broaden data/variable support beyond the current integer-centered slice.
+- Add REAL runtime-module resolution as operator-specific link inputs rather
+  than AVM opcode growth or one monolithic REAL blob.
 - Broaden procedure/function semantics as compiler output becomes richer.
 
 ## Structural Work Still Outstanding
@@ -97,4 +101,5 @@ Current working-tree verification:
 
 1. Keep `make -C ../udos vice-action-alink` green.
 2. Keep `make -C ../udos vice-action-alink-avmrun` and `vice-action-actc-alink-avmrun` green.
-3. Resume linker-surface widening from the restored compiler/runtime boundary.
+3. Wire REAL runtime lookup so only used REAL operators are pulled into the
+   linked AVM image.

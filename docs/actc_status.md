@@ -35,6 +35,8 @@ Current lowering note:
 
 - [x] proc-local `INT` declarations currently lower to proc-scoped static slots plus declaration-site runtime init stores; this is not a stack-frame model yet
 - [x] current harness-proven variable slot ceiling is `16`, aligned with the current VM local-slot count
+- [x] module-scope `REAL` declarations now emit 4-byte storage-width metadata;
+  REAL32 expressions and runtime-library calls are not lowered yet
 
 ## Proven Narrow Source Surface
 
@@ -71,7 +73,7 @@ Current lowering note:
 - [ ] broader runtime-emitted integer expression chains beyond the already-proven narrow path
 - [ ] larger statement/control-flow surface beyond the current `IF`/`ELSE`/`WHILE ... DO ... OD`/`DO ... UNTIL ... OD`/nested-loop/branch-combined path
 - [ ] broader stateful variable surface beyond the current multi-var module-scope
-  `INT` plus narrow `BYTE`/`CARD` declaration slice
+  `INT`, narrow `BYTE`/`CARD`, and declaration-only 4-byte `REAL` slices
 - [ ] broader procedure/function surface beyond the current local/external integer arg/return slice
 - [ ] full historical ACTION! source compatibility
 
@@ -144,6 +146,9 @@ Current lowering note:
 - [x] narrow module-scope `BYTE`/`CARD` declarations lower through the existing
   16-bit variable slot path:
   `BYTE X=[0]`, `CARD Y=[2]`, `PrintIE(X)`, `PrintIE(Y)`, `X=Y+1`
+- [x] module-scope `REAL` declarations emit a 4-byte variable slot without
+  importing unused REAL runtime operators:
+  `REAL X`, `PrintIE(7)`
 - [x] variable-to-variable arithmetic assignment:
   `X=X+Y`
 - [x] multiple module-scope integer variables driving `WHILE ... DO ... OD`:

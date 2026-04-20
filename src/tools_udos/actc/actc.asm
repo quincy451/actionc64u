@@ -436,6 +436,8 @@ store_module_var_from_scan_ptr_or_fail_copy_done:
     sta var_init_lo,x
     lda #$00
     sta var_init_hi,x
+    lda decl_width_data
+    sta var_width_data,x
     inc var_count_data
     rts
 
@@ -591,6 +593,8 @@ store_proc_local_var_from_scan_ptr_or_fail_copy_done:
     lda #$00
     sta var_init_lo,x
     sta var_init_hi,x
+    lda decl_width_data
+    sta var_width_data,x
     inc var_count_data
     ldx current_proc_index_data
     inc proc_local_count_data,x
@@ -3050,6 +3054,8 @@ store_proc_params_from_scan_y_for_current_export_copy_done:
     lda #$00
     sta var_init_lo,x
     sta var_init_hi,x
+    lda #$02
+    sta var_width_data,x
     inc var_count_data
     ldx proc_index
     inc proc_param_count_data,x
@@ -3573,21 +3579,34 @@ match_scalar_decl_at_scan_ptr:
     lda #>pattern_int_decl
     sta const_ptr+1
     jsr pattern_matches_scan_ptr_keyword
-    bcc match_scalar_decl_at_scan_ptr_ok
+    bcc match_scalar_decl_at_scan_ptr_width2
     lda #<pattern_byte_decl
     sta const_ptr
     lda #>pattern_byte_decl
     sta const_ptr+1
     jsr pattern_matches_scan_ptr_keyword
-    bcc match_scalar_decl_at_scan_ptr_ok
+    bcc match_scalar_decl_at_scan_ptr_width2
     lda #<pattern_card_decl
     sta const_ptr
     lda #>pattern_card_decl
     sta const_ptr+1
     jsr pattern_matches_scan_ptr_keyword
-    bcc match_scalar_decl_at_scan_ptr_ok
+    bcc match_scalar_decl_at_scan_ptr_width2
+    lda #<pattern_real_decl
+    sta const_ptr
+    lda #>pattern_real_decl
+    sta const_ptr+1
+    jsr pattern_matches_scan_ptr_keyword
+    bcc match_scalar_decl_at_scan_ptr_width4
     sec
     rts
+match_scalar_decl_at_scan_ptr_width2:
+    lda #$02
+    bne match_scalar_decl_at_scan_ptr_store_width
+match_scalar_decl_at_scan_ptr_width4:
+    lda #$04
+match_scalar_decl_at_scan_ptr_store_width:
+    sta decl_width_data
 match_scalar_decl_at_scan_ptr_ok:
     clc
     rts
@@ -3873,6 +3892,16 @@ append_var_list_name_done:
     bne append_var_list_bad
     lda var_init_lo,x
     jsr append_small_decimal
+    ldx proc_index
+    lda var_width_data,x
+    cmp #$02
+    beq append_var_list_newline
+    lda #' '
+    jsr append_char
+    ldx proc_index
+    lda var_width_data,x
+    jsr append_small_decimal
+append_var_list_newline:
     jsr append_newline
     inc proc_index
     jmp append_var_list_loop
@@ -4194,6 +4223,8 @@ pattern_byte_decl:
     .asciiz "BYTE"
 pattern_card_decl:
     .asciiz "CARD"
+pattern_real_decl:
+    .asciiz "REAL"
 pattern_proc:
     .asciiz "PROC"
 pattern_if:
@@ -4259,6 +4290,10 @@ var_init_lo:
     .res VAR_MAX
 var_init_hi:
     .res VAR_MAX
+var_width_data:
+    .res VAR_MAX
+decl_width_data:
+    .res 1
 export_offsets:
     .res EXPORT_MAX
 export_offsets_hi:

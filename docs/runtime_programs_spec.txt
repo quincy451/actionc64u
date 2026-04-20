@@ -159,6 +159,8 @@ files at program launch time.
 In other words:
 
 - runtime modules are link-time inputs
+- REAL arithmetic/conversion/print routines are link-time inputs selected per
+  used operator, not AVMRUN opcodes and not an always-present REAL blob
 - AVMRUN is the run-time launcher
 - the linked AVM is the run-time payload
 

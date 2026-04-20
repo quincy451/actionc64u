@@ -54,7 +54,8 @@ Current real-target build note:
 - [ ] more robust final save/return diagnostics for future larger outputs
 - [ ] larger body-op surface than the current arithmetic/procedure/branch/`WHILE`/nested-loop-combined slice
 - [ ] broader variable/data surface beyond the current multi-var module-scope
-  integer storage/read/write/control plus narrow `BYTE`/`CARD` declaration slice
+  integer storage/read/write/control, narrow `BYTE`/`CARD`, and declaration-only
+  4-byte `REAL` storage slice
 - [ ] broader procedure/function surface beyond the current local/external integer arg/return slice
 - [ ] full historical dead-strip/link behavior
 
@@ -81,6 +82,10 @@ Current real-target build note:
 - [x] also loads narrow compiler output from module-scope `BYTE`/`CARD`
   declarations through the existing 16-bit variable slot path:
   `BYTE X=[0]`, `CARD Y=[2]`, `PrintIE(X)`, `PrintIE(Y)`, `X=Y+1`
+- [x] also preserves optional variable-width metadata from compiler output,
+  currently proving a 4-byte module-scope `REAL` slot without pulling REAL
+  operator code:
+  `REAL X`, `PrintIE(7)`
 - [x] also loads variable-to-variable arithmetic assignment:
   `X=X+Y`
 - [x] also loads multiple module-scope integer vars under `WHILE` control:

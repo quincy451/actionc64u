@@ -230,6 +230,16 @@ at least these logical families:
 The exact implementation of these symbols may change, but the logical link-time
 names are part of the stable contract between ACTC, ALINK, and AVMRUN.
 
+REAL runtime modules are intentionally operator-specific. ALINK must include
+only the symbols present in the reachable object closure. A program that uses
+REAL addition but not REAL multiplication should include `rt.f_add` and should
+not include `rt.f_mul`. A program that merely declares REAL storage should not
+include REAL operator code at all.
+
+The REAL routines are normal link-time runtime modules folded into the final
+AVM payload when used. They are not AVMRUN interpreter opcodes, and they are
+not a monolithic always-present REAL blob.
+
 
 What ALINK Does Not Do
 
@@ -270,6 +280,8 @@ already proves a narrower but real subset:
 - deterministic load of OBJ/<MODULE>.AVO
 - parse of export metadata, body_ops, unresolved external symbols, string
   literals, integer literals, and variable metadata
+- parse of optional variable-width metadata, currently proving 4-byte REAL
+  storage layout while preserving the older 2-byte default for existing objects
 - live-set construction from the requested entry
 - current child-object closure
 - deterministic BIN/<MODULE>.AVM emission

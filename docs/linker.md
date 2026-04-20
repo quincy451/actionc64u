@@ -112,3 +112,8 @@ to compile-time string output in the payload, and the same is currently true for
 REAL arithmetic/printing. The compiler retains the logical runtime imports in
 the `.avo` object so the dead-strip linker flow is already exercised and
 testable.
+
+For the UDOS-native compiler/linker path, REAL must remain a link-time runtime
+library surface. REAL routines are not AVM interpreter opcodes. ACTC should emit
+only the runtime symbols required by the reachable REAL operations, and ALINK
+should include only those runtime objects in the final AVM image.

@@ -84,6 +84,35 @@ The linker-level REAL runtime surface currently uses these stable symbol names:
 - `rt.f_to_i`
 - `rt.print_f`
 
-The current compiler still evaluates REAL expressions on the host and lowers the
-final printed result to string output, but it records these logical runtime
-dependencies in the `.avo` object so dead-strip linking is already testable.
+## UDOS-Native Linking Rule
+
+REAL support must stay out of the AVM interpreter opcode set. REAL arithmetic,
+conversion, comparison, and printing are link-time runtime-library routines.
+
+ACTC should emit only the runtime symbols required by reachable source code:
+
+- a REAL declaration by itself allocates REAL32 storage and does not import
+  arithmetic or print code
+- `+` on REAL values imports only `rt.f_add`
+- `-` on REAL values imports only `rt.f_sub`
+- `*` on REAL values imports only `rt.f_mul`
+- `/` on REAL values imports only `rt.f_div`
+- REAL comparisons import only `rt.f_cmp`
+- `REAL(x)` imports only `rt.i_to_f`
+- `INT(r)` imports only `rt.f_to_i`
+- `PrintR` or `PrintRE` imports only `rt.print_f` plus the needed line/string
+  output support
+
+ALINK is then responsible for pulling only those runtime objects into the final
+AVM image. Programs that do not use REAL must not pay for REAL code, and REAL
+programs must not pay for unused REAL operators.
+
+## Current UDOS-Native Slice
+
+The current UDOS-native compiler/linker slice only proves REAL declaration
+storage metadata: `REAL X` emits a 4-byte variable slot in the AVO object, and
+ALINK preserves that 4-byte width in the linked AVM data layout.
+
+Full UDOS-native REAL32 literals, arithmetic, comparisons, conversions, and
+`PrintR` / `PrintRE` lowering remain future work. The host/reference compiler
+still has broader REAL behavior than the UDOS-native ACTC path.

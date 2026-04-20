@@ -423,6 +423,59 @@ SCENARIOS = {
         ),
         "expected_console": "0\n2\n3\n",
     },
+    "real_decl_storage_width": {
+        "out_fs_name": "harness-actc-alink-avmrun-real-decl-storage-width",
+        "source": (
+            'MODULE MAIN\r'
+            'REAL X\r'
+            'PROC MAIN()\r'
+            'PrintIE(7)\r'
+            'RETURN\r'
+        ),
+        "expected_avo": (
+            "AVO1\n"
+            "x main 0 7\n"
+            "b p0zr\n"
+            "i 7\n"
+            "v x 0 4\n"
+            "k 6\n"
+            "n main\n"
+        ),
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 13, 0, 0, 0, 1, 9, 0, 17, 7, 0, 73,
+                49, 255, 73, 32, 255, 0, 0, 0, 0,
+            ]
+        ),
+        "expected_console": "7\n",
+    },
+    "real_decl_offsets_following_int": {
+        "out_fs_name": "harness-actc-alink-avmrun-real-decl-offsets-following-int",
+        "source": (
+            'MODULE MAIN\r'
+            'REAL R\r'
+            'INT X=[5]\r'
+            'PROC MAIN()\r'
+            'PrintIE(X)\r'
+            'RETURN\r'
+        ),
+        "expected_avo": (
+            "AVO1\n"
+            "x main 0 7\n"
+            "b L1zr\n"
+            "v r 0 4\n"
+            "v x 5\n"
+            "k 6\n"
+            "n main\n"
+        ),
+        "expected_avm": bytes(
+            [
+                65, 86, 77, 49, 2, 15, 0, 0, 0, 1, 9, 0, 19, 13, 0, 73,
+                49, 255, 73, 32, 255, 0, 0, 0, 0, 5, 0,
+            ]
+        ),
+        "expected_console": "5\n",
+    },
     "int_vars_multi_while": {
         "out_fs_name": "harness-actc-alink-avmrun-int-vars-multi-while",
         "source": (

@@ -44,6 +44,8 @@ Current dirty-tree verification:
   `INT` declarations.
 - Narrow `BYTE`/`CARD` declaration acceptance through the existing 16-bit
   variable slot path.
+- Declaration-only module-scope `REAL` support now records a 4-byte storage
+  width in AVO variable metadata.
 
 ## Object Emission
 
@@ -62,6 +64,7 @@ Current dirty-tree verification:
 - Mixed arithmetic/comparison conditions.
 - Current multi-variable integer state slice.
 - Narrow module-scope `BYTE`/`CARD` and proc-local `BYTE` declaration slice.
+- Module-scope `REAL` declaration storage-width slice.
 - Current local/external integer arg/return slice.
 - Current larger-object and larger-proc-size coverage proved through the harness.
 
@@ -87,6 +90,9 @@ Current dirty-tree verification:
 - Broaden expression lowering beyond the current proven narrow slice.
 - Broaden statement coverage beyond the current branch/loop/call subset.
 - Broaden stateful variable semantics beyond the current integer-only slice.
+- Add full REAL32 lowering without AVM opcode growth: imports must be
+  operator-specific runtime-library symbols, so `+`, `-`, `*`, `/`, compare,
+  convert, and print support only link when used.
 - Broaden procedure/function semantics beyond the current local/external integer path.
 
 ## Structural Work Still Outstanding
@@ -99,4 +105,5 @@ Current dirty-tree verification:
 
 1. Keep `make -C ../udos vice-action-actc` green on the current working tree.
 2. Keep `make -C ../udos vice-action-actc-alink-avmrun` green as the chained gate.
-3. Resume compiler-surface widening now that runtime persistence is stable again.
+3. Widen REAL from declaration-only storage into typed expressions with
+   per-operation runtime imports.

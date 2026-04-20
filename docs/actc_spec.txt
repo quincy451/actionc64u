@@ -200,6 +200,11 @@ The completed compiler is intended to preserve the current published rules:
 - mixed integer and REAL expressions promote integers to REAL
 - INT(r) truncates toward zero
 - assigning REAL directly to integer storage is rejected without INT(...)
+- REAL support is not implemented as AVM opcode growth; ACTC records typed
+  storage and emits link-time runtime symbols for only the REAL operations used
+  by reachable code
+- a REAL declaration alone does not import REAL arithmetic, comparison,
+  conversion, or print runtime code
 - divide by zero is a compile error
 - out-of-range assignment is a compile error
 - use of undeclared identifiers is a compile error
@@ -251,6 +256,10 @@ At minimum, each emitted object carries:
 - payload bytes and payload length
 - enough size and offset metadata for ALINK to recover procedure boundaries and
   live-set reachability
+
+For REAL, variable metadata must identify 4-byte REAL32 storage. Runtime imports
+must be operator-specific: `+` imports add only, `*` imports multiply only,
+comparisons import compare only, and unused REAL operators are not emitted.
 
 ACTC is responsible for object correctness and determinism. ALINK is
 responsible for whole-program symbol resolution, dead-strip, final layout, and
@@ -306,6 +315,8 @@ already proves a narrower but real subset:
 - DO ... UNTIL ... OD
 - current local and external integer argument and return handling
 - current integer variable handling for module scope and procedure scope
+- current REAL declaration proof allocates 4-byte variable storage metadata but
+  does not yet lower REAL32 literals or REAL operations
 - current body_ops and payload emission
 - committed ACTC -> ALINK -> AVMRUN proof on the validated baseline
 

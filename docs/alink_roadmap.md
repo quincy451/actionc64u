@@ -1,6 +1,6 @@
 # `ALINK` Roadmap
 
-Current as of `2026-04-16`.
+Current as of `2026-04-19`.
 
 This is the short planning document for the UDOS-native Action linker, `ALINK.PRG`.
 For the detailed proof ledger, see [alink_status.md](./alink_status.md).
@@ -16,11 +16,15 @@ Committed baseline:
 - `ALINK -> AVMRUN` is proven.
 - `ACTC -> ALINK -> AVMRUN` is also proven on the committed Linux `VICE 3.7.1` line.
 
-Current working-tree reality:
+Current working-tree verification:
 
-- The main active blocker is upstream of the linker: the current dirty-tree `ACTC` save regression.
-- There is no stronger standalone `ALINK` regression than that on the last committed baseline.
-- So linker work is currently less about rescue and more about preserving the proven baseline while compiler/runtime fixes land.
+- The previous upstream `ACTC` save regression has been cleared on the current
+  UDOS line.
+- Standalone `ALINK` is green again on the current working tree.
+- `ALINK -> AVMRUN` is green again on the current working tree.
+- `ACTC -> ALINK -> AVMRUN` is green again on the current working tree.
+- Linker work can move back from rescue verification to object/link-surface
+  widening.
 
 ## Accomplished
 
@@ -59,11 +63,13 @@ Current working-tree reality:
 
 ## Remaining Work
 
-## Immediate Practical Work
+## Immediate Stability Work
 
-- Keep standalone `ALINK` green while the compiler save-path regression is repaired.
-- Reconfirm the chained `ACTC -> ALINK -> AVMRUN` proof after the current `ACTC` fix lands.
-- Continue reducing probe-specific noise so linker failures are easier to separate from boot/mount noise.
+- Keep standalone `ALINK` green while compiler and runtime changes continue.
+- Keep `ALINK -> AVMRUN` and `ACTC -> ALINK -> AVMRUN` as the first chained
+  regression gates.
+- Continue reducing probe-specific noise so linker failures are easier to
+  separate from boot/mount noise.
 
 ## Medium-Term Linker Work
 
@@ -80,11 +86,13 @@ Current working-tree reality:
 
 ## Dependency Note
 
-- The next meaningful linker milestone depends on a stable compiler object-save path.
-- In practice, that means the highest-value next step for the overall toolchain is still restoring clean dirty-tree `ACTC` object emission.
+- The linker still depends on stable compiler object emission.
+- That dependency is currently green again, so the next meaningful linker work
+  can widen object-graph and body-op coverage instead of chasing the prior
+  save-path blocker.
 
 ## Next Milestones
 
-1. Restore the current dirty-tree `ACTC` object-save path.
-2. Reconfirm `make -C ../udos vice-action-alink` and `vice-action-alink-avmrun` on top of that fix.
-3. Resume linker-surface widening once the upstream compiler/runtime boundary is stable again.
+1. Keep `make -C ../udos vice-action-alink` green.
+2. Keep `make -C ../udos vice-action-alink-avmrun` and `vice-action-actc-alink-avmrun` green.
+3. Resume linker-surface widening from the restored compiler/runtime boundary.

@@ -1,6 +1,6 @@
 # `ACTC` Roadmap
 
-Current as of `2026-04-16`.
+Current as of `2026-04-19`.
 
 This is the short planning document for the UDOS-native Action compiler, `ACTC.PRG`.
 For the detailed proof ledger, see [actc_status.md](./actc_status.md).
@@ -15,12 +15,14 @@ Committed baseline:
 - It emits deterministic `AVO1` object output to `OBJ/<MODULE>.AVO`.
 - The integrated `ACTC -> ALINK -> AVMRUN` path is proven on the committed Linux `VICE 3.7.1` line.
 
-Current dirty-tree investigation:
+Current dirty-tree verification:
 
 - `ACTC` front-end and codegen still appear correct.
-- The active regression is in the mounted-tree save/service path on the working tree.
-- Current failure shape is: `ACTC` escapes to `READY.` before `OBJ/MAIN.AVO` lands on the host.
-- So the compiler itself is mostly past parsing/lowering right now; the active blocker is tool-runtime persistence.
+- The previous mounted-tree save/service blocker has been cleared on the current
+  UDOS line.
+- `make -C ../udos vice-action-actc` is green again.
+- The chained `ACTC -> ALINK -> AVMRUN` proof is green again on the current
+  working tree.
 
 ## Accomplished
 
@@ -61,17 +63,20 @@ Current dirty-tree investigation:
 
 ## Remaining Work
 
-## Immediate Blocker
+## Immediate Stability Work
 
-- Make the current dirty-tree `ACTC` save path green again.
-- Specifically: fix the `svc_file_save_sc0` / mounted-tree write path so `vice-action-actc` writes `OBJ/MAIN.AVO` reliably on the host.
-- Keep the standalone `ACTC` proof green before leaning on the chained wrapper again.
+- Keep the restored `ACTC` save path green while other tool/runtime changes land.
+- Preserve `vice-action-actc` and the chained `ACTC -> ALINK -> AVMRUN` proof as
+  the first regression gates for compiler work.
+- Remove temporary probe/debug noise once equivalent permanent diagnostics exist.
 
 ## Near-Term Compiler Work
 
-- Preserve the committed `ACTC -> ALINK -> AVMRUN` proof while the save-path regression is fixed.
-- Widen diagnostics so save/load/parse failures are easier to localize without temporary probe code.
-- Add more direct target-side proofs for the compiler save boundary, not just the integrated chain.
+- Widen diagnostics so save/load/parse failures are easier to localize without
+  temporary probe code.
+- Add more direct target-side proofs for the compiler save boundary, not just
+  the integrated chain.
+- Resume language-surface widening from a green real-target compiler baseline.
 
 ## Medium-Term Language Work
 
@@ -88,6 +93,6 @@ Current dirty-tree investigation:
 
 ## Next Milestones
 
-1. Restore `make -C ../udos vice-action-actc` on the current working tree.
-2. Reconfirm `ACTC -> ALINK -> AVMRUN` after that fix.
-3. Resume compiler-surface widening once runtime persistence is stable again.
+1. Keep `make -C ../udos vice-action-actc` green on the current working tree.
+2. Keep `make -C ../udos vice-action-actc-alink-avmrun` green as the chained gate.
+3. Resume compiler-surface widening now that runtime persistence is stable again.

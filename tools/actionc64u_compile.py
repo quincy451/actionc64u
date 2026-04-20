@@ -15,10 +15,24 @@ from typing import Iterable
 from avo_format import AvoObject, AvoFormatError, OverlayObject, write_avo
 
 OPCODE_CALLN = 0x49
+OPCODE_PUSH16 = 0x11
+OPCODE_EQ = 0x16
+OPCODE_JZ = 0x18
+OPCODE_JMP = 0x19
+OPCODE_DUP = 0x1A
+OPCODE_DROP = 0x1B
 OPCODE_SETP16 = 0x61
 INTR_PRINT = 0xFF00
 INTR_PRINTE = 0xFF10
 INTR_EXIT = 0xFF20
+INTR_CONOUT = 0xFF51
+INTR_FOPENR = 0xFF60
+INTR_FCLOSER = 0xFF61
+INTR_FREAD8 = 0xFF62
+INTR_FOPENW = 0xFF63
+INTR_FCLOSEW = 0xFF64
+INTR_FWRITE8 = 0xFF65
+VM_EOF = 0xFFFF
 RUNTIME_PRINT = "rt.print_str"
 RUNTIME_PRINT_LINE = "rt.print_line"
 RUNTIME_FORMAT_INT = "rt.format_int"
@@ -67,6 +81,20 @@ class PrintAction:
     newline: bool
     requires_int_format: bool = False
     requires_real_format: bool = False
+
+
+@dataclass(frozen=True)
+class FileCopyAction:
+    source_name: str
+    dest_name: str
+
+
+@dataclass(frozen=True)
+class FilePrintAction:
+    filename: str
+
+
+EmitAction = PrintAction | FileCopyAction | FilePrintAction
 
 
 @dataclass(frozen=True)
@@ -128,13 +156,26 @@ class OverlayCallStmt:
 
 
 @dataclass(frozen=True)
+class FileCopyStmt:
+    line: int
+    source_name: str
+    dest_name: str
+
+
+@dataclass(frozen=True)
+class FilePrintStmt:
+    line: int
+    filename: str
+
+
+@dataclass(frozen=True)
 class IfStmt:
     line: int
     condition: "Expr"
     body: list["Stmt"]
 
 
-Stmt = AssignStmt | PrintStmt | PrintIntStmt | PrintRealStmt | ReuPokeStmt | OverlayCallStmt | IfStmt
+Stmt = AssignStmt | PrintStmt | PrintIntStmt | PrintRealStmt | ReuPokeStmt | OverlayCallStmt | FileCopyStmt | FilePrintStmt | IfStmt
 
 
 @dataclass(frozen=True)
@@ -346,8 +387,7 @@ def parse_reu_decl(line_no: int, text: str) -> ReuDecl:
     return ReuDecl(line_no, element_type.upper(), name, length)
 
 
-def parse_string_stmt(line_no: int, text: str, kind: str) -> PrintStmt:
-    inner = text[text.find("(") + 1 : -1].strip()
+def parse_ascii_string_literal(line_no: int, inner: str, kind: str) -> str:
     try:
         value = ast.literal_eval(inner)
     except (SyntaxError, ValueError) as exc:
@@ -358,7 +398,66 @@ def parse_string_stmt(line_no: int, text: str, kind: str) -> PrintStmt:
         value.encode("ascii")
     except UnicodeEncodeError as exc:
         raise fail(line_no, f"{kind} only supports ASCII string literals") from exc
+    if "\x00" in value:
+        raise fail(line_no, f"{kind} does not support NUL bytes")
+    return value
+
+
+def parse_string_stmt(line_no: int, text: str, kind: str) -> PrintStmt:
+    inner = text[text.find("(") + 1 : -1].strip()
+    value = parse_ascii_string_literal(line_no, inner, kind)
     return PrintStmt(line_no, kind, value)
+
+
+def split_call_args(line_no: int, text: str, kind: str, expected_args: int) -> list[str]:
+    inner = text[text.find("(") + 1 : -1].strip()
+    args: list[str] = []
+    current: list[str] = []
+    in_string = False
+    escaped = False
+    quote = ""
+    for ch in inner:
+        if escaped:
+            current.append(ch)
+            escaped = False
+            continue
+        if in_string:
+            current.append(ch)
+            if ch == "\\":
+                escaped = True
+            elif ch == quote:
+                in_string = False
+            continue
+        if ch in {"'", '"'}:
+            in_string = True
+            quote = ch
+            current.append(ch)
+            continue
+        if ch == ",":
+            args.append("".join(current).strip())
+            current = []
+            continue
+        current.append(ch)
+    if in_string:
+        raise fail(line_no, f"unterminated string literal in {kind}")
+    args.append("".join(current).strip())
+    if len(args) != expected_args or any(not arg for arg in args):
+        raise fail(line_no, f"{kind} expects {expected_args} arguments")
+    return args
+
+
+def parse_file_copy_stmt(line_no: int, text: str) -> FileCopyStmt:
+    args = split_call_args(line_no, text, "FileCopy", 2)
+    return FileCopyStmt(
+        line_no,
+        parse_ascii_string_literal(line_no, args[0], "FileCopy"),
+        parse_ascii_string_literal(line_no, args[1], "FileCopy"),
+    )
+
+
+def parse_file_print_stmt(line_no: int, text: str) -> FilePrintStmt:
+    args = split_call_args(line_no, text, "FilePrint", 1)
+    return FilePrintStmt(line_no, parse_ascii_string_literal(line_no, args[0], "FilePrint"))
 
 
 def parse_int_stmt(line_no: int, text: str, kind: str) -> PrintIntStmt:
@@ -405,6 +504,10 @@ def parse_statement(line_no: int, text: str, lines: list[tuple[int, str]], index
     if upper.startswith("OVERLAYCALL(") and text.endswith(")"):
         name, _args = parse_name_and_args(line_no, text, "OverlayCall", 1)
         return OverlayCallStmt(line_no, name), index + 1
+    if upper.startswith("FILECOPY(") and text.endswith(")"):
+        return parse_file_copy_stmt(line_no, text), index + 1
+    if upper.startswith("FILEPRINT(") and text.endswith(")"):
+        return parse_file_print_stmt(line_no, text), index + 1
     if upper.startswith("IF "):
         condition_text = text[3:].strip()
         if condition_text.upper().endswith(" THEN"):
@@ -693,7 +796,7 @@ def build_overlay_payload(name: str) -> bytes:
     return f"overlay:{name}\0".encode("ascii")
 
 
-def execute_program(program: Program) -> tuple[list[PrintAction], set[str], list[tuple[str, bytes]]]:
+def execute_program(program: Program) -> tuple[list[EmitAction], set[str], list[tuple[str, bytes]]]:
     symbols: dict[str, VarInfo] = {}
     for decl in program.decls:
         for name in decl.names:
@@ -715,7 +818,7 @@ def execute_program(program: Program) -> tuple[list[PrintAction], set[str], list
             raise fail(overlay.line, f"duplicate overlay '{overlay.name}'")
         overlay_table[overlay.name] = overlay
 
-    actions: list[PrintAction] = []
+    actions: list[EmitAction] = []
     used_runtime_imports: set[str] = set()
     used_overlay_payloads: list[tuple[str, bytes]] = []
     used_overlay_names: set[str] = set()
@@ -792,6 +895,12 @@ def execute_program(program: Program) -> tuple[list[PrintAction], set[str], list
                     used_overlay_payloads.append((stmt.name, build_overlay_payload(stmt.name)))
                 exec_block(overlay.statements)
                 continue
+            if isinstance(stmt, FileCopyStmt):
+                actions.append(FileCopyAction(stmt.source_name, stmt.dest_name))
+                continue
+            if isinstance(stmt, FilePrintStmt):
+                actions.append(FilePrintAction(stmt.filename))
+                continue
             if isinstance(stmt, IfStmt):
                 cond = eval_expr(stmt.condition, symbols, reu_arrays, stmt.line, used_runtime_imports)
                 if cond.value != 0:
@@ -807,28 +916,137 @@ def encode_u16(value: int) -> bytes:
     return bytes((value & 0xFF, (value >> 8) & 0xFF))
 
 
-def emit_payload(actions: Iterable[PrintAction]) -> bytes:
+def emit_payload(actions: Iterable[EmitAction]) -> bytes:
     code = bytearray()
     strings = bytearray()
-    pending_offsets: list[tuple[int, int]] = []
+    string_fixups: list[tuple[int, int]] = []
+    branch_fixups: list[tuple[int, str]] = []
+    labels: dict[str, int] = {}
 
-    for action in actions:
-        code.append(OPCODE_SETP16)
+    def emit_u16(value: int) -> None:
+        code.extend(encode_u16(value))
+
+    def emit_calln(target: int) -> None:
+        code.append(OPCODE_CALLN)
+        emit_u16(target)
+
+    def emit_push16(value: int) -> None:
+        code.append(OPCODE_PUSH16)
+        emit_u16(value)
+
+    def emit_string_ref(text: str) -> None:
         patch_index = len(code)
         code.extend(b"\x00\x00")
-        pending_offsets.append((patch_index, len(strings)))
-
-        code.append(OPCODE_CALLN)
-        code.extend(encode_u16(INTR_PRINTE if action.newline else INTR_PRINT))
-
-        strings.extend(action.text.encode("ascii"))
+        string_fixups.append((patch_index, len(strings)))
+        strings.extend(text.encode("ascii"))
         strings.append(0)
 
-    code.append(OPCODE_CALLN)
-    code.extend(encode_u16(INTR_EXIT))
+    def emit_setp_string(text: str) -> None:
+        code.append(OPCODE_SETP16)
+        emit_string_ref(text)
+
+    def emit_push_string(text: str) -> None:
+        code.append(OPCODE_PUSH16)
+        emit_string_ref(text)
+
+    def mark(label: str) -> None:
+        labels[label] = len(code)
+
+    def emit_branch(opcode: int, label: str) -> None:
+        code.append(opcode)
+        patch_index = len(code)
+        code.extend(b"\x00\x00")
+        branch_fixups.append((patch_index, label))
+
+    def emit_fail(label: str) -> None:
+        mark(label)
+        emit_setp_string("FILE IO FAIL")
+        emit_calln(INTR_PRINTE)
+        emit_calln(INTR_EXIT)
+
+    def emit_file_print(action: FilePrintAction, prefix: str) -> None:
+        loop_label = f"{prefix}_loop"
+        emit_label = f"{prefix}_emit"
+        fail_label = f"{prefix}_fail"
+        done_label = f"{prefix}_done"
+
+        emit_push_string(action.filename)
+        emit_calln(INTR_FOPENR)
+        emit_branch(OPCODE_JZ, fail_label)
+
+        mark(loop_label)
+        emit_calln(INTR_FREAD8)
+        code.append(OPCODE_DUP)
+        emit_push16(VM_EOF)
+        code.append(OPCODE_EQ)
+        emit_branch(OPCODE_JZ, emit_label)
+        code.append(OPCODE_DROP)
+        emit_calln(INTR_FCLOSER)
+        code.append(OPCODE_DROP)
+        emit_branch(OPCODE_JMP, done_label)
+
+        mark(emit_label)
+        emit_calln(INTR_CONOUT)
+        emit_branch(OPCODE_JMP, loop_label)
+
+        emit_fail(fail_label)
+        mark(done_label)
+
+    def emit_file_copy(action: FileCopyAction, prefix: str) -> None:
+        loop_label = f"{prefix}_loop"
+        write_label = f"{prefix}_write"
+        fail_label = f"{prefix}_fail"
+        done_label = f"{prefix}_done"
+
+        emit_push_string(action.source_name)
+        emit_calln(INTR_FOPENR)
+        emit_branch(OPCODE_JZ, fail_label)
+        emit_push_string(action.dest_name)
+        emit_calln(INTR_FOPENW)
+        emit_branch(OPCODE_JZ, fail_label)
+
+        mark(loop_label)
+        emit_calln(INTR_FREAD8)
+        code.append(OPCODE_DUP)
+        emit_push16(VM_EOF)
+        code.append(OPCODE_EQ)
+        emit_branch(OPCODE_JZ, write_label)
+        code.append(OPCODE_DROP)
+        emit_calln(INTR_FCLOSER)
+        code.append(OPCODE_DROP)
+        emit_calln(INTR_FCLOSEW)
+        code.append(OPCODE_DROP)
+        emit_branch(OPCODE_JMP, done_label)
+
+        mark(write_label)
+        emit_calln(INTR_FWRITE8)
+        emit_branch(OPCODE_JMP, loop_label)
+
+        emit_fail(fail_label)
+        mark(done_label)
+
+    for index, action in enumerate(actions):
+        if isinstance(action, PrintAction):
+            emit_setp_string(action.text)
+            emit_calln(INTR_PRINTE if action.newline else INTR_PRINT)
+            continue
+        if isinstance(action, FileCopyAction):
+            emit_file_copy(action, f"filecopy_{index}")
+            continue
+        if isinstance(action, FilePrintAction):
+            emit_file_print(action, f"fileprint_{index}")
+            continue
+        raise AssertionError(f"unsupported action: {action!r}")
+
+    emit_calln(INTR_EXIT)
+
+    for patch_index, label in branch_fixups:
+        if label not in labels:
+            raise AssertionError(f"unresolved code label: {label}")
+        code[patch_index : patch_index + 2] = encode_u16(labels[label])
 
     string_base = len(code)
-    for patch_index, string_offset in pending_offsets:
+    for patch_index, string_offset in string_fixups:
         code[patch_index : patch_index + 2] = encode_u16(string_base + string_offset)
 
     code.extend(strings)
@@ -870,9 +1088,11 @@ def module_name_for(program: Program, input_path: Path) -> str:
     return program.module_name or input_path.stem
 
 
-def collect_imports(actions: Iterable[PrintAction], runtime_imports: set[str]) -> list[str]:
+def collect_imports(actions: Iterable[EmitAction], runtime_imports: set[str]) -> list[str]:
     imports: set[str] = set(runtime_imports)
     for action in actions:
+        if not isinstance(action, PrintAction):
+            continue
         imports.add(RUNTIME_PRINT_LINE if action.newline else RUNTIME_PRINT)
         if action.requires_int_format:
             imports.add(RUNTIME_FORMAT_INT)

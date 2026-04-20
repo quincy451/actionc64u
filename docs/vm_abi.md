@@ -102,10 +102,20 @@ Current behavior notes:
 
 ## Bootstrap Compiler Pattern
 
-`actc.com` still emits the older print-oriented pattern:
+The host reference compiler can now emit direct runtime file I/O for:
+
+- `FileCopy("source.txt", "dest.txt")`
+- `FilePrint("dest.txt")`
+
+These compile to the `FileOpenRead`, `FileRead8`, `FileOpenWrite`,
+`FileWrite8`, close, and console-output intrinsics listed above.
+
+The CP/M `actc.com` target still emits the older print-oriented pattern while
+its memory image remains tight:
 
 1. `setp16 <string_offset>`
 2. `calln 0xff00` or `calln 0xff10`
 3. `calln 0xff20`
 
-Direct AVM assembly can now use the wider opcode/intrinsic subset.
+Direct AVM assembly and host-compiled AVM output can use the wider
+opcode/intrinsic subset.

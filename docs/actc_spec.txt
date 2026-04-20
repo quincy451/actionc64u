@@ -154,6 +154,8 @@ Comparison and boolean results are represented as integer truth values 0 or 1.
 - ReuPoke8(name, index, value)
 - ReuPoke16(name, index, value)
 - OverlayCall(name)
+- FileCopy("source.txt", "dest.txt")
+- FilePrint("dest.txt")
 
 These are source-level built-ins. ACTC lowers them either to direct body
 operations and literal data or to stable runtime imports for ALINK and AVMRUN.

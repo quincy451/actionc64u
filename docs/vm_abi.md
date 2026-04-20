@@ -28,6 +28,13 @@ All immediate addresses are payload-relative offsets inside the active `.avm`.
 - `0xff45`: `ReuPoke16`
 - `0xff50`: `ConIn`
 - `0xff51`: `ConOut`
+- `0xff60`: `FileOpenRead`
+- `0xff61`: `FileCloseRead`
+- `0xff62`: `FileRead8`
+- `0xff63`: `FileOpenWrite`
+- `0xff64`: `FileCloseWrite`
+- `0xff65`: `FileWrite8`
+- `0xff66`: `FileDelete`
 
 These are not final machine addresses. `vm.com` recognizes them directly.
 
@@ -74,6 +81,24 @@ API remains 32-bit for future expansion.
 
 - `ConIn`: push one input character from the CP/M console
 - `ConOut`: pop one byte and write it to the CP/M console
+
+### File Intrinsics
+
+Current file I/O is intentionally small and text-oriented.
+
+- `FileOpenRead`: pop payload-relative filename string offset, push `1` on success else `0`
+- `FileCloseRead`: push `1` when the active read stream closes cleanly else `0`
+- `FileRead8`: push next byte from the active read stream, or `0xffff` on EOF
+- `FileOpenWrite`: pop payload-relative filename string offset, push `1` on success else `0`
+- `FileCloseWrite`: flush and close the active write stream, push `1` on success else `0`
+- `FileWrite8`: pop one byte and append it to the active write stream
+- `FileDelete`: pop payload-relative filename string offset, push `1` on success else `0`
+
+Current behavior notes:
+- one active read stream and one active write stream are supported
+- `FileOpenWrite` truncates or recreates the target file
+- `FileRead8` treats `0x1a` as text EOF, matching the bootstrap text-file use case
+- `FileWrite8` writes through 128-byte CP/M records and pads the final record on close
 
 ## Bootstrap Compiler Pattern
 

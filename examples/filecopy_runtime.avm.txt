@@ -1,0 +1,59 @@
+entry start
+
+start:
+  push16 src_name
+  calln fopenr
+  jz fail
+
+  push16 dst_name
+  calln fopenw
+  jz fail
+
+copy_loop:
+  calln fread8
+  dup
+  push16 $ffff
+  eq
+  jz write_byte
+  drop
+  calln fcloser
+  drop
+  calln fclosew
+  drop
+
+  push16 dst_name
+  calln fopenr
+  jz fail
+
+print_loop:
+  calln fread8
+  dup
+  push16 $ffff
+  eq
+  jz emit_byte
+  drop
+  calln fcloser
+  drop
+  calln exit
+
+write_byte:
+  calln fwrite8
+  jmp copy_loop
+
+emit_byte:
+  calln conout
+  jmp print_loop
+
+fail:
+  setp16 fail_msg
+  calln printe
+  calln exit
+
+src_name:
+  stringz "source.txt"
+
+dst_name:
+  stringz "copyout.txt"
+
+fail_msg:
+  stringz "FILE IO FAIL"

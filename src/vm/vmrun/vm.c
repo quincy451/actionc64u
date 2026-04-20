@@ -42,12 +42,40 @@
 #define INTR_REU_POKE16 0xFF45
 #define INTR_CONIN 0xFF50
 #define INTR_CONOUT 0xFF51
+#define INTR_FOPENR 0xFF60
+#define INTR_FCLOSER 0xFF61
+#define INTR_FREAD8 0xFF62
+#define INTR_FOPENW 0xFF63
+#define INTR_FCLOSEW 0xFF64
+#define INTR_FWRITE8 0xFF65
+#define INTR_FDELETE 0xFF66
 
 static uint8_t avm_data[MAX_AVM_BYTES];
 static uint16_t current_string_offset;
 static uint16_t vm_stack[VM_STACK_SIZE];
 static uint16_t vm_locals[VM_LOCAL_COUNT];
 static uint8_t vm_sp;
+
+typedef struct FileReadState
+{
+    bool open;
+    bool eof;
+    FCB fcb;
+    uint8_t buffer[128];
+    uint8_t index;
+    uint8_t valid;
+} FileReadState;
+
+typedef struct FileWriteState
+{
+    bool open;
+    FCB fcb;
+    uint8_t buffer[128];
+    uint8_t used;
+} FileWriteState;
+
+static FileReadState vm_reader;
+static FileWriteState vm_writer;
 
 static void print_cstr(const char* s)
 {
@@ -175,6 +203,152 @@ static uint16_t read_avm_file(const char* filename)
     if (total_bytes == 0)
         fatal("empty or unreadable AVM file");
     return total_bytes;
+}
+
+static const char* payload_string_ptr(const uint8_t* payload, uint16_t payload_len, uint16_t offset)
+{
+    if (offset >= payload_len)
+        fatal("string offset outside payload");
+
+    for (uint16_t cursor = offset; cursor < payload_len; cursor++)
+    {
+        if (payload[cursor] == 0)
+            return (const char*)&payload[offset];
+    }
+
+    fatal("unterminated payload string");
+    return 0;
+}
+
+static bool close_reader(void)
+{
+    if (!vm_reader.open)
+        return false;
+    vm_reader.open = false;
+    vm_reader.eof = true;
+    vm_reader.index = 0;
+    vm_reader.valid = 0;
+    return cpm_close_file(&vm_reader.fcb) == CPME_OK;
+}
+
+static bool flush_writer(void)
+{
+    if (vm_writer.used == 0)
+        return true;
+
+    memset(cpm_default_dma, 0, 128);
+    memcpy(cpm_default_dma, vm_writer.buffer, vm_writer.used);
+    cpm_set_dma(cpm_default_dma);
+    if (cpm_write_sequential(&vm_writer.fcb) != CPME_OK)
+        return false;
+
+    vm_writer.used = 0;
+    return true;
+}
+
+static bool close_writer(void)
+{
+    bool ok;
+
+    if (!vm_writer.open)
+        return false;
+
+    ok = flush_writer();
+    if (cpm_close_file(&vm_writer.fcb) != CPME_OK)
+        ok = false;
+
+    vm_writer.open = false;
+    vm_writer.used = 0;
+    return ok;
+}
+
+static bool open_reader(const uint8_t* payload, uint16_t payload_len, uint16_t offset)
+{
+    const char* filename = payload_string_ptr(payload, payload_len, offset);
+
+    if (vm_reader.open)
+        (void)close_reader();
+
+    parse_filename(&vm_reader.fcb, filename);
+    vm_reader.fcb.ex = 0;
+    vm_reader.fcb.cr = 0;
+    if (cpm_open_file(&vm_reader.fcb) != CPME_OK)
+    {
+        vm_reader.open = false;
+        vm_reader.eof = true;
+        vm_reader.index = 0;
+        vm_reader.valid = 0;
+        return false;
+    }
+
+    vm_reader.open = true;
+    vm_reader.eof = false;
+    vm_reader.index = 0;
+    vm_reader.valid = 0;
+    return true;
+}
+
+static bool open_writer(const uint8_t* payload, uint16_t payload_len, uint16_t offset)
+{
+    const char* filename = payload_string_ptr(payload, payload_len, offset);
+
+    if (vm_writer.open)
+        (void)close_writer();
+
+    parse_filename(&vm_writer.fcb, filename);
+    cpm_delete_file(&vm_writer.fcb);
+    if (cpm_make_file(&vm_writer.fcb) != CPME_OK)
+    {
+        vm_writer.open = false;
+        vm_writer.used = 0;
+        return false;
+    }
+
+    vm_writer.open = true;
+    vm_writer.used = 0;
+    return true;
+}
+
+static uint16_t read_text_byte(void)
+{
+    uint8_t value;
+
+    if (!vm_reader.open || vm_reader.eof)
+        return 0xFFFFu;
+
+    while (vm_reader.index >= vm_reader.valid)
+    {
+        cpm_set_dma(cpm_default_dma);
+        if (cpm_read_sequential(&vm_reader.fcb) != CPME_OK)
+        {
+            vm_reader.eof = true;
+            return 0xFFFFu;
+        }
+        memcpy(vm_reader.buffer, cpm_default_dma, 128);
+        vm_reader.index = 0;
+        vm_reader.valid = 128;
+    }
+
+    value = vm_reader.buffer[vm_reader.index++];
+    if (value == 0x1Au)
+    {
+        vm_reader.eof = true;
+        return 0xFFFFu;
+    }
+    return value;
+}
+
+static void write_text_byte(uint8_t value)
+{
+    if (!vm_writer.open)
+        fatal("write channel not open");
+
+    vm_writer.buffer[vm_writer.used++] = value;
+    if (vm_writer.used < sizeof(vm_writer.buffer))
+        return;
+
+    if (!flush_writer())
+        fatal("write failed");
 }
 
 static void print_payload_string(const uint8_t* payload, uint16_t payload_len, uint16_t offset, bool newline)
@@ -350,6 +524,46 @@ static void run_intrinsic(uint16_t target, const uint8_t* payload, uint16_t payl
         cpm_conout((uint8_t)stack_pop());
         return;
     }
+    if (target == INTR_FOPENR)
+    {
+        offset = stack_pop();
+        stack_push(open_reader(payload, payload_len, offset) ? 1u : 0u);
+        return;
+    }
+    if (target == INTR_FCLOSER)
+    {
+        stack_push(close_reader() ? 1u : 0u);
+        return;
+    }
+    if (target == INTR_FREAD8)
+    {
+        stack_push(read_text_byte());
+        return;
+    }
+    if (target == INTR_FOPENW)
+    {
+        offset = stack_pop();
+        stack_push(open_writer(payload, payload_len, offset) ? 1u : 0u);
+        return;
+    }
+    if (target == INTR_FCLOSEW)
+    {
+        stack_push(close_writer() ? 1u : 0u);
+        return;
+    }
+    if (target == INTR_FWRITE8)
+    {
+        write_text_byte((uint8_t)stack_pop());
+        return;
+    }
+    if (target == INTR_FDELETE)
+    {
+        FCB fcb;
+        offset = stack_pop();
+        parse_filename(&fcb, payload_string_ptr(payload, payload_len, offset));
+        stack_push(cpm_delete_file(&fcb) == CPME_OK ? 1u : 0u);
+        return;
+    }
 
     fatal("unknown intrinsic");
 }
@@ -367,6 +581,8 @@ int vm_run_filename(const char* filename)
     current_string_offset = 0;
     vm_sp = 0;
     memset(vm_locals, 0, sizeof(vm_locals));
+    memset(&vm_reader, 0, sizeof(vm_reader));
+    memset(&vm_writer, 0, sizeof(vm_writer));
 
     while (ip < end)
     {
@@ -511,7 +727,11 @@ int vm_run_filename(const char* filename)
             target = load_u16(ip);
             ip += 2;
             if (target == INTR_EXIT)
+            {
+                (void)close_reader();
+                (void)close_writer();
                 return 0;
+            }
             run_intrinsic(target, payload, payload_len);
             continue;
         }
@@ -522,6 +742,8 @@ int vm_run_filename(const char* filename)
         fatal("unknown opcode");
     }
 
+    (void)close_reader();
+    (void)close_writer();
     return 0;
 }
 

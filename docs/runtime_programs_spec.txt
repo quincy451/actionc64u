@@ -161,6 +161,8 @@ In other words:
 - runtime modules are link-time inputs
 - REAL arithmetic/conversion/print routines are link-time inputs selected per
   used operator, not AVMRUN opcodes and not an always-present REAL blob
+- the current UDOS `RT_F_ADD.AVO` file is only an ABI stub; final numeric
+  IEEE-754 addition still needs real library code
 - AVMRUN is the run-time launcher
 - the linked AVM is the run-time payload
 

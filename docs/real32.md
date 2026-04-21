@@ -129,6 +129,12 @@ object-level `u <symbol>` metadata alone. That is required for REAL operator
 dead-stripping: a helper mentioned only by a dead procedure must not enter the
 final AVM image.
 
+The repo now carries the first UDOS-target text runtime object under
+`src/runtime/udos_modules/rt_f_add.avo`, and the workspace exporter overlays it
+into `LIB/RT_F_ADD.AVO`. This file is currently an ABI stub: it returns REAL32
+zero as low word then high word, so it proves library lookup, stack shape, and
+dead-strip behavior without claiming numeric IEEE-754 addition yet.
+
 ## Current REAL Helper ABI
 
 The current target-side REAL value ABI is intentionally simple:
@@ -148,6 +154,7 @@ rejects REAL initializers and rejects REAL use in the 16-bit integer expression
 path. This avoids false success where only the low word of a REAL32 slot would
 be read or written.
 
-Full UDOS-native REAL32 literals, `-`, `*`, `/`, comparisons, conversions, and
-`PrintR` / `PrintRE` lowering remain future work. The host/reference compiler
-still has broader REAL behavior than the UDOS-native ACTC path.
+Full UDOS-native REAL32 literals, real IEEE-754 `+`, `-`, `*`, `/`,
+comparisons, conversions, and `PrintR` / `PrintRE` lowering remain future work.
+The host/reference compiler still has broader REAL behavior than the
+UDOS-native ACTC path.

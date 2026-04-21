@@ -202,11 +202,15 @@ def export_udos_tools(root: Path, image_root: Path, bin_dir: Path) -> None:
 def export_libs(root: Path, lib_dir: Path) -> None:
     libmods = root / "src" / "tools_cpm" / "libmods"
     runtime_modules = root / "src" / "runtime" / "modules"
+    udos_runtime_modules = root / "src" / "runtime" / "udos_modules"
     (lib_dir / "LIBMODS.DAT").write_text(build_manifest_bundle(libmods), encoding="ascii")
     for manifest in sorted(libmods.glob("*.mod")):
         shutil.copy2(manifest, lib_dir / manifest.name.upper())
     for obj in sorted(runtime_modules.glob("*.avo")):
         shutil.copy2(obj, lib_dir / obj.name.upper())
+    if udos_runtime_modules.is_dir():
+        for obj in sorted(udos_runtime_modules.glob("*.avo")):
+            shutil.copy2(obj, lib_dir / obj.name.upper())
 
 
 def main(argv: list[str] | None = None) -> int:

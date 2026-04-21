@@ -264,6 +264,8 @@ not a monolithic always-present REAL blob.
 The current proven target-side REAL link case is `R=A+B`, which imports only
 `RT_F_ADD` / `rt_f_add`, pulls that helper from `LIB/`, and does not pull any
 other REAL operator helper.
+The repo-supplied UDOS `RT_F_ADD.AVO` is currently an ABI stub, not the final
+IEEE-754 addition algorithm.
 
 
 What ALINK Does Not Do

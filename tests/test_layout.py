@@ -69,6 +69,8 @@ class TestRepoLayout(unittest.TestCase):
             "src/runtime/modules/rt_print_str.avo",
             "src/runtime/modules/rt_print_line.avo",
             "src/runtime/modules/rt_format_int.avo",
+            "src/runtime/udos_modules",
+            "src/runtime/udos_modules/rt_f_add.avo",
             "src/tools_cpm",
             "src/tools_cpm/alink",
             "src/tools_cpm/alink/alink.c",

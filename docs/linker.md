@@ -104,7 +104,7 @@ The linker also emits a sidecar map file:
 
 ## Current Runtime Modules
 
-Bootstrap runtime modules live under `src/runtime/modules/`:
+Host/reference bootstrap runtime modules live under `src/runtime/modules/`:
 
 - `rt.print_str`
 - `rt.print_line`
@@ -139,3 +139,9 @@ For the UDOS-native compiler/linker path, REAL must remain a link-time runtime
 library surface. REAL routines are not AVM interpreter opcodes. ACTC should emit
 only the runtime symbols required by the reachable REAL operations, and ALINK
 should include only those runtime objects in the final AVM image.
+
+UDOS-target text AVO runtime modules live separately under
+`src/runtime/udos_modules/` because `ALINK.PRG` does not parse the host JSON AVO
+metadata format. The current `rt_f_add.avo` there is an ABI stub that returns
+REAL32 zero and exists to prove exported `LIB/RT_F_ADD.AVO` lookup and linking;
+it is not the final floating-point addition implementation.

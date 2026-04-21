@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 UDOS_ROOT = ROOT.parent / "udos"
 BUILD_DIR = ROOT / "build" / "udos_tools"
+UDOS_RUNTIME_MODULES = ROOT / "src" / "runtime" / "udos_modules"
 HARNESS = BUILD_DIR / "tool_abi_harness"
 ACTC_PRG = BUILD_DIR / "ACTC.PRG"
 ALINK_PRG = BUILD_DIR / "ALINK.PRG"
@@ -570,28 +571,17 @@ SCENARIOS = {
             "k 2\n"
             "n main\n"
         ),
-        "seed_library_objects": {
-            "RT_F_ADD": (
-                "AVO1\n"
-                "x rt_f_add 0 13\n"
-                "b e0p0p1r\n"
-                "s FADD\n"
-                "i 0\n"
-                "i 0\n"
-                "k 2\n"
-                "n rt_f_add\n"
-            ),
-        },
+        "use_udos_runtime_modules": True,
         "expected_avm": bytes(
             [
-                65, 86, 77, 49, 2, 65, 0, 0, 0, 1, 43, 0, 19, 43, 0, 19,
-                45, 0, 19, 47, 0, 19, 49, 0, 69, 30, 0, 18, 53, 0, 18,
-                51, 0, 97, 55, 0, 73, 16, 255, 73, 32, 255, 97, 60, 0, 73,
-                16, 255, 17, 0, 0, 17, 0, 0, 72, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 68, 79, 78, 69, 0, 70, 65, 68, 68, 0,
+                65, 86, 77, 49, 2, 54, 0, 0, 0, 1, 37, 0, 19, 37, 0, 19,
+                39, 0, 19, 41, 0, 19, 43, 0, 69, 30, 0, 18, 47, 0, 18,
+                45, 0, 97, 49, 0, 73, 16, 255, 73, 32, 255, 17, 0, 0, 17,
+                0, 0, 72, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 68, 79, 78,
+                69, 0,
             ]
         ),
-        "expected_console": "FADD\nDONE\n",
+        "expected_console": "DONE\n",
     },
     "int_vars_multi_while": {
         "out_fs_name": "harness-actc-alink-avmrun-int-vars-multi-while",
@@ -9610,6 +9600,11 @@ def prepare_workspace(base_fs: Path, out_fs: Path, scenario: dict) -> Path:
         library_dir = project_root / "lib"
         library_dir.mkdir(exist_ok=True)
         (library_dir / f"{module.upper()}.AVO").write_text(object_text, encoding="ascii")
+    if scenario.get("use_udos_runtime_modules"):
+        library_dir = project_root / "lib"
+        library_dir.mkdir(exist_ok=True)
+        for runtime_object in sorted(UDOS_RUNTIME_MODULES.glob("*.avo")):
+            shutil.copy2(runtime_object, library_dir / runtime_object.name.upper())
     return project_root
 
 

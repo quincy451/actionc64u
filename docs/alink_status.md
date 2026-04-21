@@ -107,6 +107,8 @@ Current real-target build note:
   `REAL A`, `REAL B`, `REAL R`, `R=A+B`, proving live `RT_F_ADD` lookup from
   `LIB/`, upper-word variable load/store lowering, and no monolithic REAL VM
   opcode requirement
+- [x] repo-exported UDOS `LIB/RT_F_ADD.AVO` now exists as a target text-object
+  ABI stub; real IEEE-754 addition inside that helper remains future work
 - [x] also loads variable-to-variable arithmetic assignment:
   `X=X+Y`
 - [x] also loads multiple module-scope integer vars under `WHILE` control:

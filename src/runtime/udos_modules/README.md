@@ -165,3 +165,8 @@ Current status:
   `X=A/B` with `A=1.0`, `B=23.0` producing `0.0434782616794109344482421875`,
   and `X=A/B` with `A=2.0`, `B=23.0` producing
   `0.086956523358821868896484375`.
+- `rt_sprite_on.obj` is the first target-side SID/sprite helper implemented as
+  machine code. It expects a sprite index in `A`, sets the matching enable bit
+  in VIC-II register `$D015`, and returns with `RTS`; the ALINK direct-PRG
+  probe proves the helper is selected from `LIB/` and carried in the final
+  linked program.

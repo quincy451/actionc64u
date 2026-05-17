@@ -1311,6 +1311,8 @@ load_reloc_records_current_object_found:
     clc
     adc #$01
     bcs load_reloc_records_current_object_bad
+    jsr reloc_offset_is_in_current_export
+    bcs load_reloc_records_current_object_next
     jsr require_space_or_fail
     ldy #$00
     lda (scan_ptr),y
@@ -1356,6 +1358,32 @@ load_reloc_records_current_object_next:
     jsr skip_current_line
     jmp load_reloc_records_current_object_loop
 load_reloc_records_current_object_done:
+    rts
+
+reloc_offset_is_in_current_export:
+    lda saved_state_lo
+    cmp export_meta_window+EXPORT_META_OFFSET_LO
+    bcc reloc_offset_is_in_current_export_no
+    clc
+    lda export_meta_window+EXPORT_META_OFFSET_LO
+    adc export_meta_window+EXPORT_META_SIZE_LO
+    sta parse_word_temp_hi
+    bcc reloc_offset_is_in_current_export_low_end
+    lda parse_word_temp_hi
+    beq reloc_offset_is_in_current_export_yes
+    jmp reloc_offset_is_in_current_export_no
+reloc_offset_is_in_current_export_low_end:
+    clc
+    lda saved_state_lo
+    adc #$01
+    bcs reloc_offset_is_in_current_export_no
+    cmp parse_word_temp_hi
+    bcs reloc_offset_is_in_current_export_no
+reloc_offset_is_in_current_export_yes:
+    clc
+    rts
+reloc_offset_is_in_current_export_no:
+    sec
     rts
 
 find_reloc_patch_byte_for_current_offset:

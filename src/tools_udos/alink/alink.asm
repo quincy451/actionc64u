@@ -296,6 +296,7 @@ start:
     jsr parse_exports_or_fail
     jsr parse_body_ops_or_fail
     jsr parse_external_symbols_or_fail
+    jsr prune_direct_object_code_external_symbols
     jsr parse_strings_or_fail
     jsr parse_ints_or_fail
     jsr parse_vars_or_fail
@@ -507,26 +508,169 @@ require_loaded_object_exports_module_done:
     rts
 
 append_loaded_object_imports_to_queue_or_fail:
+    jsr find_loaded_export_index_from_module_name_or_fail
+    jsr set_body_ptr_to_loaded_body_index_or_fail
+    jsr loaded_body_ptr_is_object_code
+    bcc append_loaded_object_imports_live
+    jmp append_all_loaded_object_imports_to_queue_or_fail
+append_loaded_object_imports_live:
+    jmp append_imports_from_body_ptr_to_queue_or_fail
+
+loaded_body_ptr_is_object_code:
+    lda body_ptr
+    sta scan_ptr
+    lda body_ptr+1
+    sta scan_ptr+1
+    jmp object_code_body_at_scan_ptr_is_supported
+
+find_loaded_export_index_from_module_name_or_fail:
+    lda #$00
+    sta linked_object_index
     jsr reset_scan_ptr_after_header
-append_loaded_object_imports_loop:
+find_loaded_export_index_from_module_name_loop:
     jsr skip_line_breaks
     ldy #$00
     lda (scan_ptr),y
-    beq append_loaded_object_imports_done
+    beq find_loaded_export_index_from_module_name_bad
+    lda #<line_export
+    sta const_ptr
+    lda #>line_export
+    sta const_ptr+1
+    jsr pattern_matches_scan_ptr
+    bcs find_loaded_export_index_from_module_name_next
+    jsr advance_scan_ptr_by_const_ptr
+    jsr scan_symbol_matches_module_name
+    bcc find_loaded_export_index_from_module_name_done
+    inc linked_object_index
+    beq find_loaded_export_index_from_module_name_bad
+find_loaded_export_index_from_module_name_next:
+    jsr skip_current_line
+    jmp find_loaded_export_index_from_module_name_loop
+find_loaded_export_index_from_module_name_bad:
+    lda #<msg_bad_object
+    ldy #>msg_bad_object
+    jmp fail_with_ptr
+find_loaded_export_index_from_module_name_done:
+    rts
+
+set_body_ptr_to_loaded_body_index_or_fail:
+    lda #$00
+    sta current_bit_lo
+    jsr reset_scan_ptr_after_header
+set_body_ptr_to_loaded_body_index_loop:
+    jsr skip_line_breaks
+    ldy #$00
+    lda (scan_ptr),y
+    beq set_body_ptr_to_loaded_body_index_bad
     lda #<line_external
     sta const_ptr
     lda #>line_external
     sta const_ptr+1
     jsr pattern_matches_scan_ptr
-    bcs append_loaded_object_imports_next
+    bcc set_body_ptr_to_loaded_body_index_next
+    lda #<line_body
+    sta const_ptr
+    lda #>line_body
+    sta const_ptr+1
+    jsr pattern_matches_scan_ptr
+    bcs set_body_ptr_to_loaded_body_index_next
+    jsr advance_scan_ptr_by_const_ptr
+    lda current_bit_lo
+    cmp linked_object_index
+    beq set_body_ptr_to_loaded_body_index_found
+    inc current_bit_lo
+    beq set_body_ptr_to_loaded_body_index_bad
+set_body_ptr_to_loaded_body_index_next:
+    jsr skip_current_line
+    jmp set_body_ptr_to_loaded_body_index_loop
+set_body_ptr_to_loaded_body_index_found:
+    lda scan_ptr
+    sta body_ptr
+    lda scan_ptr+1
+    sta body_ptr+1
+    rts
+set_body_ptr_to_loaded_body_index_bad:
+    lda #<msg_bad_object
+    ldy #>msg_bad_object
+    jmp fail_with_ptr
+
+append_imports_from_body_ptr_to_queue_or_fail:
+    ldy #$00
+append_imports_from_body_ptr_loop:
+    lda (body_ptr),y
+    beq append_imports_from_body_ptr_done
+    cmp #10
+    beq append_imports_from_body_ptr_done
+    cmp #13
+    beq append_imports_from_body_ptr_done
+    cmp #'u'
+    beq append_imports_from_body_ptr_import
+    iny
+    bne append_imports_from_body_ptr_loop
+    jmp append_imports_from_body_ptr_bad
+append_imports_from_body_ptr_import:
+    iny
+    lda (body_ptr),y
+    jsr object_code_import_index_from_a
+    bcs append_imports_from_body_ptr_bad
+    sta linked_import_index
+    iny
+    sty saved_state_lo
+    lda linked_import_index
+    jsr copy_loaded_import_index_to_pending_window_or_fail
+    jsr append_pending_name_to_external_queue_or_fail
+    ldy saved_state_lo
+    jmp append_imports_from_body_ptr_loop
+append_imports_from_body_ptr_bad:
+    lda #<msg_bad_object
+    ldy #>msg_bad_object
+    jmp fail_with_ptr
+append_imports_from_body_ptr_done:
+    rts
+
+append_all_loaded_object_imports_to_queue_or_fail:
+    jsr reset_scan_ptr_after_header
+append_all_loaded_object_imports_loop:
+    jsr skip_line_breaks
+    ldy #$00
+    lda (scan_ptr),y
+    beq append_all_loaded_object_imports_done
+    lda #<line_external
+    sta const_ptr
+    lda #>line_external
+    sta const_ptr+1
+    jsr pattern_matches_scan_ptr
+    bcs append_all_loaded_object_imports_next
     jsr advance_scan_ptr_by_const_ptr
     jsr copy_import_symbol_line_to_pending_window_or_fail
     jsr append_pending_name_to_external_queue_or_fail
-append_loaded_object_imports_next:
+append_all_loaded_object_imports_next:
     jsr skip_current_line
-    jmp append_loaded_object_imports_loop
-append_loaded_object_imports_done:
+    jmp append_all_loaded_object_imports_loop
+append_all_loaded_object_imports_done:
     rts
+
+prune_direct_object_code_external_symbols:
+    jsr find_export_index_from_module_name
+    bcc prune_direct_object_code_external_symbols_have_entry
+    rts
+prune_direct_object_code_external_symbols_have_entry:
+    stx entry_export_index
+    jsr direct_entry_body_is_object_code_external
+    bcc prune_direct_object_code_external_symbols_prune
+    lda #<direct_body_object_code
+    sta const_ptr
+    lda #>direct_body_object_code
+    sta const_ptr+1
+    jsr direct_entry_body_matches_const
+    bcc prune_direct_object_code_external_symbols_prune
+    rts
+prune_direct_object_code_external_symbols_prune:
+    lda #$00
+    sta external_count
+    ldx entry_export_index
+    jsr set_body_ptr_from_x
+    jmp append_imports_from_body_ptr_to_queue_or_fail
 
 copy_import_symbol_line_to_pending_window_or_fail:
     lda #<pending_name_window

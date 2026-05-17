@@ -1180,23 +1180,69 @@ reload_root_object_or_fail:
 append_machine_code_record_current_object_or_fail:
     jsr load_reloc_records_current_object_or_fail
     jsr find_machine_code_record_or_fail
+    lda export_meta_window+EXPORT_META_OFFSET_HI
+    bne build_object_code_prg_bad
     lda export_meta_window+EXPORT_META_SIZE_HI
     bne build_object_code_prg_bad
+    clc
+    lda export_meta_window+EXPORT_META_OFFSET_LO
+    adc export_meta_window+EXPORT_META_SIZE_LO
+    bcc build_object_code_prg_range_ok
+    beq build_object_code_prg_range_ok
+    jmp build_object_code_prg_bad
+build_object_code_prg_range_ok:
+    jsr skip_machine_code_bytes_to_export_offset_or_fail
     lda #$00
     sta linked_store_value
 build_object_code_prg_loop:
+    lda linked_store_value
+    cmp export_meta_window+EXPORT_META_SIZE_LO
+    beq build_object_code_prg_done
+    jsr read_machine_code_byte_or_fail
+    jsr find_reloc_patch_byte_for_current_offset
+    bcs build_object_code_prg_unpatched_byte
+    jmp build_object_code_prg_append_byte
+build_object_code_prg_unpatched_byte:
+    lda parse_word_temp_hi
+build_object_code_prg_append_byte:
+    jsr append_payload_byte
+    inc linked_store_value
+    beq build_object_code_prg_bad
+    jmp build_object_code_prg_loop
+build_object_code_prg_done:
+    lda linked_store_value
+    beq build_object_code_prg_bad
+    rts
+build_object_code_prg_bad:
+    lda #<msg_bad_object
+    ldy #>msg_bad_object
+    jmp fail_with_ptr
+
+skip_machine_code_bytes_to_export_offset_or_fail:
+    lda export_meta_window+EXPORT_META_OFFSET_LO
+    sta current_bit_lo
+skip_machine_code_bytes_to_export_offset_loop:
+    lda current_bit_lo
+    beq skip_machine_code_bytes_to_export_offset_done
+    jsr read_machine_code_byte_or_fail
+    dec current_bit_lo
+    jmp skip_machine_code_bytes_to_export_offset_loop
+skip_machine_code_bytes_to_export_offset_done:
+    rts
+
+read_machine_code_byte_or_fail:
     ldy #$00
     lda (scan_ptr),y
-    beq build_object_code_prg_done
+    beq read_machine_code_byte_bad
     cmp #10
-    beq build_object_code_prg_done
+    beq read_machine_code_byte_bad
     cmp #13
-    beq build_object_code_prg_done
+    beq read_machine_code_byte_bad
     cmp #' '
-    bne build_object_code_prg_hex_hi
+    bne read_machine_code_byte_hex_hi
     jsr advance_scan_ptr
-    jmp build_object_code_prg_loop
-build_object_code_prg_hex_hi:
+    jmp read_machine_code_byte_or_fail
+read_machine_code_byte_hex_hi:
     jsr parse_hex_nibble_from_a_or_fail
     asl a
     asl a
@@ -1209,27 +1255,11 @@ build_object_code_prg_hex_hi:
     jsr parse_hex_nibble_from_a_or_fail
     ora parse_word_temp_lo
     sta parse_word_temp_hi
-    jsr find_reloc_patch_byte_for_current_offset
-    bcs build_object_code_prg_unpatched_byte
-    jmp build_object_code_prg_append_byte
-build_object_code_prg_unpatched_byte:
-    lda parse_word_temp_hi
-build_object_code_prg_append_byte:
-    jsr append_payload_byte
-    inc linked_store_value
-    beq build_object_code_prg_bad
     jsr advance_scan_ptr
-    jmp build_object_code_prg_loop
-build_object_code_prg_done:
-    lda linked_store_value
-    beq build_object_code_prg_bad
-    cmp export_meta_window+EXPORT_META_SIZE_LO
-    bne build_object_code_prg_bad
+    lda parse_word_temp_hi
     rts
-build_object_code_prg_bad:
-    lda #<msg_bad_object
-    ldy #>msg_bad_object
-    jmp fail_with_ptr
+read_machine_code_byte_bad:
+    jmp build_object_code_prg_bad
 
 find_machine_code_record_or_fail:
     jsr reset_scan_ptr_after_header
@@ -1281,8 +1311,6 @@ load_reloc_records_current_object_found:
     clc
     adc #$01
     bcs load_reloc_records_current_object_bad
-    cmp export_meta_window+EXPORT_META_SIZE_LO
-    bcs load_reloc_records_current_object_bad
     jsr require_space_or_fail
     ldy #$00
     lda (scan_ptr),y
@@ -1331,17 +1359,21 @@ load_reloc_records_current_object_done:
     rts
 
 find_reloc_patch_byte_for_current_offset:
+    clc
+    lda export_meta_window+EXPORT_META_OFFSET_LO
+    adc linked_store_value
+    sta current_bit_lo
     ldx #$00
 find_reloc_patch_byte_for_current_offset_loop:
     cpx linked_reloc_count
     beq find_reloc_patch_byte_for_current_offset_not_found
-    lda linked_store_value
+    lda current_bit_lo
     cmp linked_reloc_offsets,x
     beq find_reloc_patch_byte_for_current_offset_lo
     clc
     lda linked_reloc_offsets,x
     adc #$01
-    cmp linked_store_value
+    cmp current_bit_lo
     beq find_reloc_patch_byte_for_current_offset_hi
     inx
     jmp find_reloc_patch_byte_for_current_offset_loop

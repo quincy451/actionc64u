@@ -4060,6 +4060,14 @@ emit_real_add_assignment_from_scan_y_or_fail_fail:
 resolve_call_target_from_declared_or_fail:
     jsr find_export_index_from_declared
     bcc resolve_call_target_from_declared_or_fail_local
+    jsr find_or_store_builtin_runtime_external_from_declared
+    bcs :+
+    stx call_target_index_data
+    lda #'u'
+    sta call_target_kind
+    clc
+    rts
+:
     jsr find_or_store_external_from_declared
     bcs resolve_call_target_from_declared_or_fail_fail
     stx call_target_index_data
@@ -4147,9 +4155,9 @@ emit_call_args_from_scan_y_or_fail_next:
     jmp emit_call_args_from_scan_y_or_fail_loop
 emit_call_args_from_scan_y_or_fail_done:
     jsr advance_scan_y
-    lda call_target_kind
-    cmp #'c'
-    bne emit_call_args_from_scan_y_or_fail_ok
+    lda call_expected_arg_count
+    cmp #$FF
+    beq emit_call_args_from_scan_y_or_fail_ok
     lda call_arg_count_data
     cmp call_expected_arg_count
     bne emit_call_args_from_scan_y_or_fail_fail
@@ -8431,6 +8439,112 @@ find_or_store_real_operator_external:
     jmp find_or_store_real_operator_external_from_a
 .endif
 
+find_or_store_builtin_runtime_external_from_declared:
+    lda #<builtin_symbol_sprite_on
+    sta const_ptr
+    lda #>builtin_symbol_sprite_on
+    sta const_ptr+1
+    jsr symbol_buffer_matches_const_ptr
+    bcs :+
+    lda #$01
+    sta call_expected_arg_count
+    lda #<runtime_symbol_rt_sprite_on
+    ldy #>runtime_symbol_rt_sprite_on
+    jmp find_or_store_runtime_external_from_ay
+:
+    lda #<builtin_symbol_sprite_off
+    sta const_ptr
+    lda #>builtin_symbol_sprite_off
+    sta const_ptr+1
+    jsr symbol_buffer_matches_const_ptr
+    bcs :+
+    lda #$01
+    sta call_expected_arg_count
+    lda #<runtime_symbol_rt_sprite_off
+    ldy #>runtime_symbol_rt_sprite_off
+    jmp find_or_store_runtime_external_from_ay
+:
+    lda #<builtin_symbol_sprite_color
+    sta const_ptr
+    lda #>builtin_symbol_sprite_color
+    sta const_ptr+1
+    jsr symbol_buffer_matches_const_ptr
+    bcs :+
+    lda #$02
+    sta call_expected_arg_count
+    lda #<runtime_symbol_rt_sprite_color
+    ldy #>runtime_symbol_rt_sprite_color
+    jmp find_or_store_runtime_external_from_ay
+:
+    lda #<builtin_symbol_sprite_mc
+    sta const_ptr
+    lda #>builtin_symbol_sprite_mc
+    sta const_ptr+1
+    jsr symbol_buffer_matches_const_ptr
+    bcs :+
+    lda #$02
+    sta call_expected_arg_count
+    lda #<runtime_symbol_rt_sprite_mc
+    ldy #>runtime_symbol_rt_sprite_mc
+    jmp find_or_store_runtime_external_from_ay
+:
+    lda #<builtin_symbol_sprite_xexp
+    sta const_ptr
+    lda #>builtin_symbol_sprite_xexp
+    sta const_ptr+1
+    jsr symbol_buffer_matches_const_ptr
+    bcs :+
+    lda #$02
+    sta call_expected_arg_count
+    lda #<runtime_symbol_rt_sprite_xexp
+    ldy #>runtime_symbol_rt_sprite_xexp
+    jmp find_or_store_runtime_external_from_ay
+:
+    lda #<builtin_symbol_sprite_yexp
+    sta const_ptr
+    lda #>builtin_symbol_sprite_yexp
+    sta const_ptr+1
+    jsr symbol_buffer_matches_const_ptr
+    bcs :+
+    lda #$02
+    sta call_expected_arg_count
+    lda #<runtime_symbol_rt_sprite_yexp
+    ldy #>runtime_symbol_rt_sprite_yexp
+    jmp find_or_store_runtime_external_from_ay
+:
+    lda #<builtin_symbol_sprite_prio
+    sta const_ptr
+    lda #>builtin_symbol_sprite_prio
+    sta const_ptr+1
+    jsr symbol_buffer_matches_const_ptr
+    bcs :+
+    lda #$02
+    sta call_expected_arg_count
+    lda #<runtime_symbol_rt_sprite_prio
+    ldy #>runtime_symbol_rt_sprite_prio
+    jmp find_or_store_runtime_external_from_ay
+:
+    lda #<builtin_symbol_set_sprite_mc
+    sta const_ptr
+    lda #>builtin_symbol_set_sprite_mc
+    sta const_ptr+1
+    jsr symbol_buffer_matches_const_ptr
+    bcs find_or_store_builtin_runtime_external_from_declared_fail
+    lda #$02
+    sta call_expected_arg_count
+    lda #<runtime_symbol_rt_sprite_set_mc
+    ldy #>runtime_symbol_rt_sprite_set_mc
+    jmp find_or_store_runtime_external_from_ay
+find_or_store_builtin_runtime_external_from_declared_fail:
+    sec
+    rts
+
+find_or_store_runtime_external_from_ay:
+    sta const_ptr
+    sty const_ptr+1
+    jsr copy_const_ptr_to_declared_module_name
+    jmp find_or_store_external_from_declared
+
 copy_const_ptr_to_declared_module_name:
     ldy #$00
 copy_const_ptr_to_declared_module_name_loop:
@@ -9988,6 +10102,38 @@ runtime_symbol_rt_s_to_f:
     .asciiz "RT_S_TO_F"
 runtime_symbol_rt_print_f:
     .asciiz "RT_PRINT_F"
+runtime_symbol_rt_sprite_on:
+    .asciiz "RT_SPRITE_ON"
+runtime_symbol_rt_sprite_off:
+    .asciiz "RT_SPRITE_OFF"
+runtime_symbol_rt_sprite_color:
+    .asciiz "RT_SPRITE_COLOR"
+runtime_symbol_rt_sprite_mc:
+    .asciiz "RT_SPRITE_MC"
+runtime_symbol_rt_sprite_xexp:
+    .asciiz "RT_SPRITE_XEXP"
+runtime_symbol_rt_sprite_yexp:
+    .asciiz "RT_SPRITE_YEXP"
+runtime_symbol_rt_sprite_prio:
+    .asciiz "RT_SPRITE_PRIO"
+runtime_symbol_rt_sprite_set_mc:
+    .asciiz "RT_SPRITE_SET_MC"
+builtin_symbol_sprite_on:
+    .asciiz "SPRITEON"
+builtin_symbol_sprite_off:
+    .asciiz "SPRITEOFF"
+builtin_symbol_sprite_color:
+    .asciiz "SPRITECOLOR"
+builtin_symbol_sprite_mc:
+    .asciiz "SPRITEMC"
+builtin_symbol_sprite_xexp:
+    .asciiz "SPRITEXEXP"
+builtin_symbol_sprite_yexp:
+    .asciiz "SPRITEYEXP"
+builtin_symbol_sprite_prio:
+    .asciiz "SPRITEPRIO"
+builtin_symbol_set_sprite_mc:
+    .asciiz "SETSPRITEMC"
 
 object_header:
     .byte "OBJ1",10,0

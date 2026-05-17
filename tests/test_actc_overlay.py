@@ -1834,6 +1834,78 @@ class TestActcOverlay(unittest.TestCase):
         self.assertEqual(entry, 0xA000 + 14)
         self.assertEqual(length, len(data))
 
+    def test_actc_compile_path_maps_referenced_sprite_builtins_to_runtime_objs(self) -> None:
+        self.require_toolchain()
+        self.run_checked([str(self.root / "tools" / "build_tool_abi_harness.sh")])
+        build_env = os.environ.copy()
+        build_env["ACTC_USE_DECL_OVERLAY"] = "1"
+        build_env["ACTC_USE_SOURCE_HEADER_OVERLAY"] = "1"
+        build_env["ACTC_USE_LAYOUT_OVERLAY"] = "1"
+        build_env["ACTC_USE_IMPORT_OVERLAY"] = "1"
+        build_env["ACTC_USE_EMIT_OVERLAY"] = "1"
+        build_env["ACTC_USE_BODY_OVERLAY"] = "1"
+        self.run_checked([str(self.root / "tools" / "build_actc_udos.sh")], env=build_env)
+        self.run_checked([str(self.root / "tools" / "build_actc_overlay_decl_counts.sh")])
+        self.run_checked([str(self.root / "tools" / "build_actc_overlay_source_header.sh")])
+        self.run_checked([str(self.root / "tools" / "build_actc_overlay_payload_layout.sh")])
+        self.run_checked([str(self.root / "tools" / "build_actc_overlay_runtime_imports.sh")])
+        self.run_checked([str(self.root / "tools" / "build_actc_overlay_emit_object.sh")])
+        self.run_checked([str(self.root / "tools" / "build_actc_overlay_body_collect.sh")])
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir) / "actc-overlay-sprite-builtins"
+            image_root = workspace / "IMAGES" / "ACTION.DNP"
+            project_root = image_root / "PROJ3"
+            source_dir = project_root / "src"
+            object_dir = project_root / "OBJ"
+            source_dir.mkdir(parents=True)
+            object_dir.mkdir()
+            (project_root / "ACTION.PROJ").write_text("ACTION PROJECT\rMAIN.ACT\r", encoding="ascii")
+            (source_dir / "main.act").write_text(
+                "MODULE MAIN\r"
+                "PROC MAIN()\r"
+                "SpriteOn(2)\r"
+                "SpriteColor(2,5)\r"
+                "SetSpriteMC(5,10)\r"
+                "RETURN\r",
+                encoding="ascii",
+            )
+
+            result = self.run_checked(
+                [
+                    str(self.build_dir / "tool_abi_harness"),
+                    "--prg",
+                    str(self.build_dir / "ACTC.PRG"),
+                    "--workspace",
+                    str(project_root),
+                    "--cmdline",
+                    "MAIN",
+                    "--services-inc",
+                    str(self.build_dir / "udos_services.inc"),
+                    "--labels",
+                    str(self.build_dir / "actc.current.labels"),
+                    "--dump",
+                    "actc_overlay_requested_pass:1",
+                    "--dump",
+                    f"actc_overlay_context:{self.CTX_SIZE}",
+                    "--max-steps",
+                    "12000000",
+                ]
+            )
+
+            summary = json.loads(result.stdout)
+            self.assertEqual(summary["exit_status"], 0, msg=result.stdout)
+            self.assertFalse(summary["hit_limit"], msg=result.stdout)
+            self.assertEqual(summary["dumps"]["actc_overlay_requested_pass"], [5], msg=result.stdout)
+            obj = (object_dir / "MAIN.OBJ").read_text(encoding="ascii")
+            self.assertIn("u rt_sprite_on\n", obj)
+            self.assertIn("u rt_sprite_color\n", obj)
+            self.assertIn("u rt_sprite_set_mc\n", obj)
+            self.assertNotIn("u spriteon\n", obj)
+            self.assertNotIn("u spritecolor\n", obj)
+            self.assertNotIn("u setspritemc\n", obj)
+            self.assertNotIn("u rt_sprite_off\n", obj)
+
     def test_emit_object_overlay_builds_with_expected_header(self) -> None:
         self.require_toolchain()
         self.run_checked([str(self.root / "tools" / "build_actc_overlay_emit_object.sh")])

@@ -1,5 +1,5 @@
 OBJ1
-x rt_sprite_pos 0 4
-b 4r
-k 0
+x rt_sprite_pos 0 13
+b M
+m 48 8A 0A AA 68 9D 00 D0 98 9D 01 D0 60
 n rt_sprite_pos

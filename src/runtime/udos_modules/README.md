@@ -174,3 +174,13 @@ Current status:
   enable bit. It expects a sprite index in `A`, clears the matching bit in
   `$D015`, and returns with `RTS`; the probe seeds `$D015` first so the target
   run verifies an actual bit-clear side effect.
+- `rt_sprite_color.obj` is the first per-sprite color helper. It expects the
+  color nybble in `A` and the sprite index in `X`, stores to `$D027,X`, and
+  returns with `RTS`; the probe verifies slot 2 writes through `$D029`.
+- `rt_sprite_pos.obj` is the first 8-bit position helper. It expects X low in
+  `A`, sprite index in `X`, and Y in `Y`, then stores through `$D000+2*slot`
+  and `$D001+2*slot`; X-MSB handling through `$D010` remains a later helper
+  slice.
+- `rt_sprite_data.obj` writes the sprite data pointer for the default screen
+  block. It expects the pointer byte in `A` and the sprite index in `X`, stores
+  to `$07F8,X`, and returns with `RTS`.

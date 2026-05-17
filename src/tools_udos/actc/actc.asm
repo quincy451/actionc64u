@@ -8524,6 +8524,18 @@ find_or_store_builtin_runtime_external_from_declared:
     ldy #>runtime_symbol_rt_sprite_prio
     jmp find_or_store_runtime_external_from_ay
 :
+    lda #<builtin_symbol_sprite_data
+    sta const_ptr
+    lda #>builtin_symbol_sprite_data
+    sta const_ptr+1
+    jsr symbol_buffer_matches_const_ptr
+    bcs :+
+    lda #$02
+    sta call_expected_arg_count
+    lda #<runtime_symbol_rt_sprite_data
+    ldy #>runtime_symbol_rt_sprite_data
+    jmp find_or_store_runtime_external_from_ay
+:
     lda #<builtin_symbol_set_sprite_mc
     sta const_ptr
     lda #>builtin_symbol_set_sprite_mc
@@ -10116,6 +10128,8 @@ runtime_symbol_rt_sprite_yexp:
     .asciiz "RT_SPRITE_YEXP"
 runtime_symbol_rt_sprite_prio:
     .asciiz "RT_SPRITE_PRIO"
+runtime_symbol_rt_sprite_data:
+    .asciiz "RT_SPRITE_DATA"
 runtime_symbol_rt_sprite_set_mc:
     .asciiz "RT_SPRITE_SET_MC"
 builtin_symbol_sprite_on:
@@ -10132,6 +10146,8 @@ builtin_symbol_sprite_yexp:
     .asciiz "SPRITEYEXP"
 builtin_symbol_sprite_prio:
     .asciiz "SPRITEPRIO"
+builtin_symbol_sprite_data:
+    .asciiz "SPRITEDATA"
 builtin_symbol_set_sprite_mc:
     .asciiz "SETSPRITEMC"
 

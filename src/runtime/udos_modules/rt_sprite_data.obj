@@ -1,5 +1,5 @@
 OBJ1
-x rt_sprite_data 0 4
+x rt_sprite_data 0 23
 b M
-m 9D F8 07 60
+m 48 98 0A 0A 85 02 8A 4A 4A 4A 4A 4A 4A 05 02 AA 68 A8 8A 99 F8 07 60
 n rt_sprite_data

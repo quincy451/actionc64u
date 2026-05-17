@@ -184,3 +184,10 @@ Current status:
 - `rt_sprite_data.obj` writes the sprite data pointer for the default screen
   block. It expects the pointer byte in `A` and the sprite index in `X`, stores
   to `$07F8,X`, and returns with `RTS`.
+- `rt_sprite_mc.obj`, `rt_sprite_xexp.obj`, `rt_sprite_yexp.obj`, and
+  `rt_sprite_prio.obj` are per-sprite bit-control helpers. They expect the
+  sprite index in `A` and a boolean flag in `Y`, then set or clear the matching
+  bit in `$D01C`, `$D01D`, `$D017`, or `$D01B` respectively.
+- `rt_sprite_set_mc.obj` sets the shared multicolor sprite registers. It
+  expects multicolor 0 in `A` and multicolor 1 in `X`, stores to `$D025` and
+  `$D026`, and returns with `RTS`.

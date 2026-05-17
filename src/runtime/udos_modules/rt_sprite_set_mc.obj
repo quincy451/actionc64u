@@ -1,0 +1,5 @@
+OBJ1
+x rt_sprite_set_mc 0 7
+b M
+m 8D 25 D0 8E 26 D0 60
+n rt_sprite_set_mc

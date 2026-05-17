@@ -1,0 +1,5 @@
+OBJ1
+x rt_sprite_prio 0 31
+b M
+m AA A9 01 E0 00 F0 04 0A CA D0 FC C0 00 F0 07 0D 1B D0 8D 1B D0 60 49 FF 2D 1B D0 8D 1B D0 60
+n rt_sprite_prio

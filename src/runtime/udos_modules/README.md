@@ -177,10 +177,10 @@ Current status:
 - `rt_sprite_color.obj` is the first per-sprite color helper. It expects the
   color nybble in `A` and the sprite index in `X`, stores to `$D027,X`, and
   returns with `RTS`; the probe verifies slot 2 writes through `$D029`.
-- `rt_sprite_pos.obj` is the first 8-bit position helper. It expects X low in
-  `A`, sprite index in `X`, and Y in `Y`, then stores through `$D000+2*slot`
-  and `$D001+2*slot`; X-MSB handling through `$D010` remains a later helper
-  slice.
+- `rt_sprite_pos.obj` positions a sprite using the full VIC-II 9-bit X
+  coordinate. It expects the sprite index in `A`, X low byte in `X`, Y in `Y`,
+  and the X high bit in carry; it stores `$D000+2*slot`, `$D001+2*slot`, and
+  sets or clears the sprite bit in `$D010`.
 - `rt_sprite_data.obj` writes the sprite data pointer for the default screen
   block from a sprite data address. It expects the sprite index in `A`, the
   address low byte in `X`, and the address high byte in `Y`, computes

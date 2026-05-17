@@ -8476,6 +8476,18 @@ find_or_store_builtin_runtime_external_from_declared:
     ldy #>runtime_symbol_rt_sprite_color
     jmp find_or_store_runtime_external_from_ay
 :
+    lda #<builtin_symbol_sprite_pos
+    sta const_ptr
+    lda #>builtin_symbol_sprite_pos
+    sta const_ptr+1
+    jsr symbol_buffer_matches_const_ptr
+    bcs :+
+    lda #$03
+    sta call_expected_arg_count
+    lda #<runtime_symbol_rt_sprite_pos
+    ldy #>runtime_symbol_rt_sprite_pos
+    jmp find_or_store_runtime_external_from_ay
+:
     lda #<builtin_symbol_sprite_mc
     sta const_ptr
     lda #>builtin_symbol_sprite_mc
@@ -10120,6 +10132,8 @@ runtime_symbol_rt_sprite_off:
     .asciiz "RT_SPRITE_OFF"
 runtime_symbol_rt_sprite_color:
     .asciiz "RT_SPRITE_COLOR"
+runtime_symbol_rt_sprite_pos:
+    .asciiz "RT_SPRITE_POS"
 runtime_symbol_rt_sprite_mc:
     .asciiz "RT_SPRITE_MC"
 runtime_symbol_rt_sprite_xexp:
@@ -10138,6 +10152,8 @@ builtin_symbol_sprite_off:
     .asciiz "SPRITEOFF"
 builtin_symbol_sprite_color:
     .asciiz "SPRITECOLOR"
+builtin_symbol_sprite_pos:
+    .asciiz "SPRITEPOS"
 builtin_symbol_sprite_mc:
     .asciiz "SPRITEMC"
 builtin_symbol_sprite_xexp:

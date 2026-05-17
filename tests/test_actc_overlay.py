@@ -1866,6 +1866,7 @@ class TestActcOverlay(unittest.TestCase):
                 "PROC MAIN()\r"
                 "SpriteOn(2)\r"
                 "SpriteColor(2,5)\r"
+                "SpritePos(2,52,86)\r"
                 "SpriteData(2,64)\r"
                 "SetSpriteMC(5,10)\r"
                 "RETURN\r",
@@ -1901,10 +1902,12 @@ class TestActcOverlay(unittest.TestCase):
             obj = (object_dir / "MAIN.OBJ").read_text(encoding="ascii")
             self.assertIn("u rt_sprite_on\n", obj)
             self.assertIn("u rt_sprite_color\n", obj)
+            self.assertIn("u rt_sprite_pos\n", obj)
             self.assertIn("u rt_sprite_data\n", obj)
             self.assertIn("u rt_sprite_set_mc\n", obj)
             self.assertNotIn("u spriteon\n", obj)
             self.assertNotIn("u spritecolor\n", obj)
+            self.assertNotIn("u spritepos\n", obj)
             self.assertNotIn("u spritedata\n", obj)
             self.assertNotIn("u setspritemc\n", obj)
             self.assertNotIn("u rt_sprite_off\n", obj)

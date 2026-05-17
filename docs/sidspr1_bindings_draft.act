@@ -5,7 +5,8 @@
 ; Intent:
 ; - thin Action-facing declarations
 ; - semantic sprite/SID operations
-; - raw 6502 implementation lives in RT_SIDSPR1_HELPER.BIN
+; - raw 6502 implementation lives in link-selected RT_SPRITE_*.OBJ and
+;   future RT_SID_*.OBJ modules
 ; - ALINK selects it only when used
 
 MODULE SIDSPR1

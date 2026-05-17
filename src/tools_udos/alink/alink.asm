@@ -718,6 +718,7 @@ parse_exports_loop:
     bcs parse_exports_next_line
     jsr advance_scan_ptr_by_const_ptr
     jsr copy_export_symbol_line_or_fail
+    jsr reject_duplicate_export_or_fail
     jsr require_space_or_fail
     jsr parse_decimal_word_or_fail
     lda current_bit_lo
@@ -784,6 +785,62 @@ copy_export_symbol_line_advance_loop:
 copy_export_symbol_line_advanced:
     ldx export_count
     jsr store_export_name_window_from_x_or_fail
+    rts
+
+reject_duplicate_export_or_fail:
+    lda export_count
+    beq reject_duplicate_export_done
+    jsr copy_export_name_window_to_symbol_buffer
+    lda #$00
+    sta current_bit_hi
+reject_duplicate_export_loop:
+    ldx current_bit_hi
+    cpx export_count
+    beq reject_duplicate_export_done
+    jsr load_export_name_window_from_x_or_fail
+    jsr export_name_window_matches_symbol_buffer
+    bcc reject_duplicate_export_bad
+    inc current_bit_hi
+    bne reject_duplicate_export_loop
+reject_duplicate_export_bad:
+    lda #<msg_bad_object
+    ldy #>msg_bad_object
+    jmp fail_with_ptr
+reject_duplicate_export_done:
+    rts
+
+copy_export_name_window_to_symbol_buffer:
+    ldy #$00
+copy_export_name_window_to_symbol_buffer_loop:
+    lda export_name_window,y
+    sta symbol_buffer,y
+    beq copy_export_name_window_to_symbol_buffer_done
+    iny
+    cpy #25
+    bcc copy_export_name_window_to_symbol_buffer_loop
+copy_export_name_window_to_symbol_buffer_done:
+    rts
+
+export_name_window_matches_symbol_buffer:
+    ldy #$00
+export_name_window_matches_symbol_buffer_loop:
+    lda export_name_window,y
+    jsr lowercase_ascii
+    sta compare_char
+    lda symbol_buffer,y
+    jsr lowercase_ascii
+    cmp compare_char
+    bne export_name_window_matches_symbol_buffer_fail
+    lda export_name_window,y
+    beq export_name_window_matches_symbol_buffer_ok
+    iny
+    cpy #25
+    bcc export_name_window_matches_symbol_buffer_loop
+export_name_window_matches_symbol_buffer_fail:
+    sec
+    rts
+export_name_window_matches_symbol_buffer_ok:
+    clc
     rts
 
 set_export_ptr_from_x:

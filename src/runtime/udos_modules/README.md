@@ -168,11 +168,16 @@ Current status:
 - `rt_sid_freq.obj` sets a SID voice frequency word. It expects the voice index
   in `A`, frequency low byte in `X`, and frequency high byte in `Y`; it stores
   to `$D400+7*voice` and `$D401+7*voice`, then returns with `RTS`.
+- `rt_sid_state.obj` exports a three-byte SID control shadow used by the
+  waveform and gate helpers. It is data, not a callable routine.
 - `rt_sid_wave.obj` sets a SID voice waveform/control byte exactly. It expects
-  the voice index in `A` and the waveform/control byte in `Y`; it stores to
-  `$D404+7*voice`, then returns with `RTS`. Gate control belongs to
-  `SidOn`/`SidOff`, because SID control registers should not be treated as a
-  reliable read/modify/write source.
+  the voice index in `A` and the waveform/control byte in `Y`; it updates
+  `rt_sid_state[voice]`, stores to `$D404+7*voice`, then returns with `RTS`.
+  Gate helpers use the shadow because SID control registers should not be
+  treated as a reliable read/modify/write source.
+- `rt_sid_on.obj` sets a SID voice gate bit while preserving the last
+  `SidWave` control byte from `rt_sid_state`. It expects the voice index in
+  `A`; it stores to `$D404+7*voice`, then returns with `RTS`.
 - `rt_sid_ad.obj` sets a SID voice attack/decay byte. It expects the voice
   index in `A` and the attack/decay byte in `Y`; it stores to
   `$D405+7*voice`, then returns with `RTS`.

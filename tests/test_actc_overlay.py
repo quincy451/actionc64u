@@ -1873,6 +1873,7 @@ class TestActcOverlay(unittest.TestCase):
                 "SidWave(1,64)\r"
                 "SidAD(1,151)\r"
                 "SidSR(1,248)\r"
+                "SidOn(1)\r"
                 "SidVol(10)\r"
                 "RETURN\r",
                 encoding="ascii",
@@ -1914,6 +1915,7 @@ class TestActcOverlay(unittest.TestCase):
             self.assertIn("u rt_sid_wave\n", obj)
             self.assertIn("u rt_sid_ad\n", obj)
             self.assertIn("u rt_sid_sr\n", obj)
+            self.assertIn("u rt_sid_on\n", obj)
             self.assertIn("u rt_sid_vol\n", obj)
             self.assertNotIn("u spriteon\n", obj)
             self.assertNotIn("u spritecolor\n", obj)
@@ -1924,6 +1926,7 @@ class TestActcOverlay(unittest.TestCase):
             self.assertNotIn("u sidwave\n", obj)
             self.assertNotIn("u sidad\n", obj)
             self.assertNotIn("u sidsr\n", obj)
+            self.assertNotIn("u sidon\n", obj)
             self.assertNotIn("u sidvol\n", obj)
             self.assertNotIn("u rt_sprite_off\n", obj)
 

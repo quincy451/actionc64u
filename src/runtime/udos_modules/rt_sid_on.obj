@@ -1,5 +1,8 @@
 OBJ1
-x rt_sid_on 0 4
-b Nr
-k 0
+x rt_sid_on 0 31
+b u0M
+u rt_sid_state
+m 85 02 AA BD 00 00 09 01 9D 00 00 85 03 A5 02 0A 0A 0A 38 E5 02 18 69 04 AA A5 03 9D 00 D4 60
+r 4 u0
+r 9 u0
 n rt_sid_on

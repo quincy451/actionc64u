@@ -8524,6 +8524,30 @@ find_or_store_builtin_runtime_external_from_declared:
     ldy #>runtime_symbol_rt_sid_off
     jmp find_or_store_runtime_external_from_ay
 :
+    lda #<builtin_symbol_sid_rst
+    sta const_ptr
+    lda #>builtin_symbol_sid_rst
+    sta const_ptr+1
+    jsr symbol_buffer_matches_const_ptr
+    bcs :+
+    lda #$00
+    sta call_expected_arg_count
+    lda #<runtime_symbol_rt_sid_rst
+    ldy #>runtime_symbol_rt_sid_rst
+    jmp find_or_store_runtime_external_from_ay
+:
+    lda #<builtin_symbol_snd_rst
+    sta const_ptr
+    lda #>builtin_symbol_snd_rst
+    sta const_ptr+1
+    jsr symbol_buffer_matches_const_ptr
+    bcs :+
+    lda #$00
+    sta call_expected_arg_count
+    lda #<runtime_symbol_rt_sid_rst
+    ldy #>runtime_symbol_rt_sid_rst
+    jmp find_or_store_runtime_external_from_ay
+:
     lda #<builtin_symbol_sid_vol
     sta const_ptr
     lda #>builtin_symbol_sid_vol
@@ -10236,6 +10260,8 @@ runtime_symbol_rt_sid_on:
     .asciiz "RT_SID_ON"
 runtime_symbol_rt_sid_off:
     .asciiz "RT_SID_OFF"
+runtime_symbol_rt_sid_rst:
+    .asciiz "RT_SID_RST"
 runtime_symbol_rt_sid_vol:
     .asciiz "RT_SID_VOL"
 runtime_symbol_rt_sprite_on:
@@ -10292,6 +10318,10 @@ builtin_symbol_sid_on:
     .asciiz "SIDON"
 builtin_symbol_sid_off:
     .asciiz "SIDOFF"
+builtin_symbol_sid_rst:
+    .asciiz "SIDRST"
+builtin_symbol_snd_rst:
+    .asciiz "SNDRST"
 builtin_symbol_sid_vol:
     .asciiz "SIDVOL"
 

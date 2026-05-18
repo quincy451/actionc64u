@@ -1878,6 +1878,8 @@ class TestActcOverlay(unittest.TestCase):
                 "SidOff(1)\r"
                 "SidRst()\r"
                 "SndRst()\r"
+                "SidRoute(7)\r"
+                "SidRes(10)\r"
                 "SidVol(10)\r"
                 "RETURN\r",
                 encoding="ascii",
@@ -1923,6 +1925,8 @@ class TestActcOverlay(unittest.TestCase):
             self.assertIn("u rt_sid_on\n", obj)
             self.assertIn("u rt_sid_off\n", obj)
             self.assertIn("u rt_sid_rst\n", obj)
+            self.assertIn("u rt_sid_route\n", obj)
+            self.assertIn("u rt_sid_res\n", obj)
             self.assertIn("u rt_sid_vol\n", obj)
             self.assertNotIn("u spriteon\n", obj)
             self.assertNotIn("u spritecolor\n", obj)
@@ -1938,6 +1942,8 @@ class TestActcOverlay(unittest.TestCase):
             self.assertNotIn("u sidoff\n", obj)
             self.assertNotIn("u sidrst\n", obj)
             self.assertNotIn("u sndrst\n", obj)
+            self.assertNotIn("u sidroute\n", obj)
+            self.assertNotIn("u sidres\n", obj)
             self.assertNotIn("u sidvol\n", obj)
             self.assertNotIn("u rt_sprite_off\n", obj)
 

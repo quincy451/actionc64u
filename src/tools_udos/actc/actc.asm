@@ -8077,6 +8077,11 @@ symbol_buffer_matches_const_ptr_done:
     clc
     rts
 
+symbol_buffer_matches_ay:
+    sta const_ptr
+    sty const_ptr+1
+    jmp symbol_buffer_matches_const_ptr
+
 find_var_index_from_scan_y:
     sty symbol_start_y_data
     jsr copy_symbol_from_scan_y
@@ -8441,10 +8446,8 @@ find_or_store_real_operator_external:
 
 find_or_store_builtin_runtime_external_from_declared:
     lda #<builtin_symbol_sid_freq
-    sta const_ptr
-    lda #>builtin_symbol_sid_freq
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_sid_freq
+    jsr symbol_buffer_matches_ay
     bcs :+
     lda #$02
     sta call_expected_arg_count
@@ -8453,10 +8456,8 @@ find_or_store_builtin_runtime_external_from_declared:
     jmp find_or_store_runtime_external_from_ay
 :
     lda #<builtin_symbol_sid_pulse
-    sta const_ptr
-    lda #>builtin_symbol_sid_pulse
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_sid_pulse
+    jsr symbol_buffer_matches_ay
     bcs :+
     lda #$02
     sta call_expected_arg_count
@@ -8465,10 +8466,8 @@ find_or_store_builtin_runtime_external_from_declared:
     jmp find_or_store_runtime_external_from_ay
 :
     lda #<builtin_symbol_sid_wave
-    sta const_ptr
-    lda #>builtin_symbol_sid_wave
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_sid_wave
+    jsr symbol_buffer_matches_ay
     bcs :+
     lda #$02
     sta call_expected_arg_count
@@ -8477,10 +8476,8 @@ find_or_store_builtin_runtime_external_from_declared:
     jmp find_or_store_runtime_external_from_ay
 :
     lda #<builtin_symbol_sid_ad
-    sta const_ptr
-    lda #>builtin_symbol_sid_ad
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_sid_ad
+    jsr symbol_buffer_matches_ay
     bcs :+
     lda #$02
     sta call_expected_arg_count
@@ -8489,10 +8486,8 @@ find_or_store_builtin_runtime_external_from_declared:
     jmp find_or_store_runtime_external_from_ay
 :
     lda #<builtin_symbol_sid_sr
-    sta const_ptr
-    lda #>builtin_symbol_sid_sr
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_sid_sr
+    jsr symbol_buffer_matches_ay
     bcs :+
     lda #$02
     sta call_expected_arg_count
@@ -8501,10 +8496,8 @@ find_or_store_builtin_runtime_external_from_declared:
     jmp find_or_store_runtime_external_from_ay
 :
     lda #<builtin_symbol_sid_on
-    sta const_ptr
-    lda #>builtin_symbol_sid_on
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_sid_on
+    jsr symbol_buffer_matches_ay
     bcs :+
     lda #$01
     sta call_expected_arg_count
@@ -8513,10 +8506,8 @@ find_or_store_builtin_runtime_external_from_declared:
     jmp find_or_store_runtime_external_from_ay
 :
     lda #<builtin_symbol_sid_off
-    sta const_ptr
-    lda #>builtin_symbol_sid_off
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_sid_off
+    jsr symbol_buffer_matches_ay
     bcs :+
     lda #$01
     sta call_expected_arg_count
@@ -8525,10 +8516,8 @@ find_or_store_builtin_runtime_external_from_declared:
     jmp find_or_store_runtime_external_from_ay
 :
     lda #<builtin_symbol_sid_rst
-    sta const_ptr
-    lda #>builtin_symbol_sid_rst
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_sid_rst
+    jsr symbol_buffer_matches_ay
     bcs :+
     lda #$00
     sta call_expected_arg_count
@@ -8537,10 +8526,8 @@ find_or_store_builtin_runtime_external_from_declared:
     jmp find_or_store_runtime_external_from_ay
 :
     lda #<builtin_symbol_snd_rst
-    sta const_ptr
-    lda #>builtin_symbol_snd_rst
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_snd_rst
+    jsr symbol_buffer_matches_ay
     bcs :+
     lda #$00
     sta call_expected_arg_count
@@ -8548,11 +8535,29 @@ find_or_store_builtin_runtime_external_from_declared:
     ldy #>runtime_symbol_rt_sid_rst
     jmp find_or_store_runtime_external_from_ay
 :
+    lda #<builtin_symbol_sid_route
+    ldy #>builtin_symbol_sid_route
+    jsr symbol_buffer_matches_ay
+    bcs :+
+    lda #$01
+    sta call_expected_arg_count
+    lda #<runtime_symbol_rt_sid_route
+    ldy #>runtime_symbol_rt_sid_route
+    jmp find_or_store_runtime_external_from_ay
+:
+    lda #<builtin_symbol_sid_res
+    ldy #>builtin_symbol_sid_res
+    jsr symbol_buffer_matches_ay
+    bcs :+
+    lda #$01
+    sta call_expected_arg_count
+    lda #<runtime_symbol_rt_sid_res
+    ldy #>runtime_symbol_rt_sid_res
+    jmp find_or_store_runtime_external_from_ay
+:
     lda #<builtin_symbol_sid_vol
-    sta const_ptr
-    lda #>builtin_symbol_sid_vol
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_sid_vol
+    jsr symbol_buffer_matches_ay
     bcs :+
     lda #$01
     sta call_expected_arg_count
@@ -8561,10 +8566,8 @@ find_or_store_builtin_runtime_external_from_declared:
     jmp find_or_store_runtime_external_from_ay
 :
     lda #<builtin_symbol_sprite_on
-    sta const_ptr
-    lda #>builtin_symbol_sprite_on
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_sprite_on
+    jsr symbol_buffer_matches_ay
     bcs :+
     lda #$01
     sta call_expected_arg_count
@@ -8573,10 +8576,8 @@ find_or_store_builtin_runtime_external_from_declared:
     jmp find_or_store_runtime_external_from_ay
 :
     lda #<builtin_symbol_sprite_off
-    sta const_ptr
-    lda #>builtin_symbol_sprite_off
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_sprite_off
+    jsr symbol_buffer_matches_ay
     bcs :+
     lda #$01
     sta call_expected_arg_count
@@ -8585,10 +8586,8 @@ find_or_store_builtin_runtime_external_from_declared:
     jmp find_or_store_runtime_external_from_ay
 :
     lda #<builtin_symbol_sprite_color
-    sta const_ptr
-    lda #>builtin_symbol_sprite_color
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_sprite_color
+    jsr symbol_buffer_matches_ay
     bcs :+
     lda #$02
     sta call_expected_arg_count
@@ -8597,10 +8596,8 @@ find_or_store_builtin_runtime_external_from_declared:
     jmp find_or_store_runtime_external_from_ay
 :
     lda #<builtin_symbol_sprite_pos
-    sta const_ptr
-    lda #>builtin_symbol_sprite_pos
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_sprite_pos
+    jsr symbol_buffer_matches_ay
     bcs :+
     lda #$03
     sta call_expected_arg_count
@@ -8609,10 +8606,8 @@ find_or_store_builtin_runtime_external_from_declared:
     jmp find_or_store_runtime_external_from_ay
 :
     lda #<builtin_symbol_sprite_mc
-    sta const_ptr
-    lda #>builtin_symbol_sprite_mc
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_sprite_mc
+    jsr symbol_buffer_matches_ay
     bcs :+
     lda #$02
     sta call_expected_arg_count
@@ -8621,10 +8616,8 @@ find_or_store_builtin_runtime_external_from_declared:
     jmp find_or_store_runtime_external_from_ay
 :
     lda #<builtin_symbol_sprite_xexp
-    sta const_ptr
-    lda #>builtin_symbol_sprite_xexp
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_sprite_xexp
+    jsr symbol_buffer_matches_ay
     bcs :+
     lda #$02
     sta call_expected_arg_count
@@ -8633,10 +8626,8 @@ find_or_store_builtin_runtime_external_from_declared:
     jmp find_or_store_runtime_external_from_ay
 :
     lda #<builtin_symbol_sprite_yexp
-    sta const_ptr
-    lda #>builtin_symbol_sprite_yexp
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_sprite_yexp
+    jsr symbol_buffer_matches_ay
     bcs :+
     lda #$02
     sta call_expected_arg_count
@@ -8645,10 +8636,8 @@ find_or_store_builtin_runtime_external_from_declared:
     jmp find_or_store_runtime_external_from_ay
 :
     lda #<builtin_symbol_sprite_prio
-    sta const_ptr
-    lda #>builtin_symbol_sprite_prio
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_sprite_prio
+    jsr symbol_buffer_matches_ay
     bcs :+
     lda #$02
     sta call_expected_arg_count
@@ -8657,10 +8646,8 @@ find_or_store_builtin_runtime_external_from_declared:
     jmp find_or_store_runtime_external_from_ay
 :
     lda #<builtin_symbol_sprite_data
-    sta const_ptr
-    lda #>builtin_symbol_sprite_data
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_sprite_data
+    jsr symbol_buffer_matches_ay
     bcs :+
     lda #$02
     sta call_expected_arg_count
@@ -8669,10 +8656,8 @@ find_or_store_builtin_runtime_external_from_declared:
     jmp find_or_store_runtime_external_from_ay
 :
     lda #<builtin_symbol_set_sprite_mc
-    sta const_ptr
-    lda #>builtin_symbol_set_sprite_mc
-    sta const_ptr+1
-    jsr symbol_buffer_matches_const_ptr
+    ldy #>builtin_symbol_set_sprite_mc
+    jsr symbol_buffer_matches_ay
     bcs find_or_store_builtin_runtime_external_from_declared_fail
     lda #$02
     sta call_expected_arg_count
@@ -10262,6 +10247,10 @@ runtime_symbol_rt_sid_off:
     .asciiz "RT_SID_OFF"
 runtime_symbol_rt_sid_rst:
     .asciiz "RT_SID_RST"
+runtime_symbol_rt_sid_route:
+    .asciiz "RT_SID_ROUTE"
+runtime_symbol_rt_sid_res:
+    .asciiz "RT_SID_RES"
 runtime_symbol_rt_sid_vol:
     .asciiz "RT_SID_VOL"
 runtime_symbol_rt_sprite_on:
@@ -10322,6 +10311,10 @@ builtin_symbol_sid_rst:
     .asciiz "SIDRST"
 builtin_symbol_snd_rst:
     .asciiz "SNDRST"
+builtin_symbol_sid_route:
+    .asciiz "SIDROUTE"
+builtin_symbol_sid_res:
+    .asciiz "SIDRES"
 builtin_symbol_sid_vol:
     .asciiz "SIDVOL"
 

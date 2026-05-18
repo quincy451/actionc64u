@@ -186,13 +186,23 @@ Current status:
   `SidWave` control byte from `rt_sid_state`. It expects the voice index in
   `A`; it stores to `$D404+7*voice`, then returns with `RTS`.
 - `rt_sid_rst.obj` clears the SID register block `$D400-$D418` and the linked
-  `rt_sid_state` shadow, then returns with `RTS`.
+  `rt_sid_state` and `rt_sid_filter_state` shadows, then returns with `RTS`.
 - `rt_sid_ad.obj` sets a SID voice attack/decay byte. It expects the voice
   index in `A` and the attack/decay byte in `Y`; it stores to
   `$D405+7*voice`, then returns with `RTS`.
 - `rt_sid_sr.obj` sets a SID voice sustain/release byte. It expects the voice
   index in `A` and the sustain/release byte in `Y`; it stores to
   `$D406+7*voice`, then returns with `RTS`.
+- `rt_sid_filter_state.obj` exports a one-byte shadow for SID filter routing
+  and resonance register `$D417`. It is data, not a callable routine.
+- `rt_sid_route.obj` sets the SID filter routing low nybble. It expects the
+  route mask in `A`, preserves the resonance nybble from
+  `rt_sid_filter_state`, stores to `$D417`, updates the shadow, and returns
+  with `RTS`.
+- `rt_sid_res.obj` sets the SID filter resonance high nybble. It expects the
+  resonance value in `A`, preserves the routing nybble from
+  `rt_sid_filter_state`, stores to `$D417`, updates the shadow, and returns
+  with `RTS`.
 - `rt_sid_vol.obj` sets the SID master volume nybble. It expects the volume in
   `A`, masks it to four bits, stores `$D418`, and returns with `RTS`.
 - `rt_sprite_on.obj` is the first target-side SID/sprite helper implemented as

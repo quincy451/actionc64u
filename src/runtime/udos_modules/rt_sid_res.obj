@@ -1,0 +1,8 @@
+OBJ1
+x rt_sid_res 0 24
+b u0M
+u rt_sid_filter_state
+m 85 02 AD 00 00 29 0F 85 03 A5 02 0A 0A 0A 0A 05 03 8D 00 00 8D 17 D4 60
+r 3 u0
+r 18 u0
+n rt_sid_res

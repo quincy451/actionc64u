@@ -450,6 +450,8 @@ find_runtime_literal_call_prg_case_have_external:
     bcc find_runtime_literal_call_prg_case_have_supported_external
     jsr runtime_literal_call_first_external_is_sprite_flag_helper
     bcc find_runtime_literal_call_prg_case_have_supported_external
+    jsr runtime_literal_call_first_external_is_rt_sprite_set_mc
+    bcc find_runtime_literal_call_prg_case_have_supported_external
     jmp find_runtime_literal_call_prg_case_unsupported_value
 find_runtime_literal_call_prg_case_not_sprite_data_external:
     lda linked_literal_count
@@ -630,6 +632,15 @@ runtime_literal_call_first_external_is_rt_sprite_prio:
     lda #<runtime_name_rt_sprite_prio
     sta const_ptr
     lda #>runtime_name_rt_sprite_prio
+    sta const_ptr+1
+    jmp external_name_window_matches_const_ptr
+
+runtime_literal_call_first_external_is_rt_sprite_set_mc:
+    ldx #$00
+    jsr load_external_name_window_from_x_or_fail
+    lda #<runtime_name_rt_sprite_set_mc
+    sta const_ptr
+    lda #>runtime_name_rt_sprite_set_mc
     sta const_ptr+1
     jmp external_name_window_matches_const_ptr
 
@@ -1369,6 +1380,11 @@ build_runtime_literal_call_not_sprite_data:
     jsr append_runtime_sprite_flag_literal_call_prefix
     jmp build_runtime_literal_call_jsr_and_exit
 build_runtime_literal_call_not_sprite_flag:
+    jsr runtime_literal_call_first_external_is_rt_sprite_set_mc
+    bcs build_runtime_literal_call_not_sprite_set_mc
+    jsr append_runtime_sprite_set_mc_literal_call_prefix
+    jmp build_runtime_literal_call_jsr_and_exit
+build_runtime_literal_call_not_sprite_set_mc:
     jsr append_runtime_sprite_color_literal_call_prefix
     jmp build_runtime_literal_call_jsr_and_exit
 build_runtime_literal_call_one_arg:
@@ -1475,6 +1491,16 @@ append_runtime_sprite_flag_literal_call_prefix:
     lda #$A0
     jsr append_payload_byte
     lda linked_literal_values+1
+    jmp append_payload_byte
+
+append_runtime_sprite_set_mc_literal_call_prefix:
+    lda #$A2
+    jsr append_payload_byte
+    lda linked_literal_values+1
+    jsr append_payload_byte
+    lda #$A9
+    jsr append_payload_byte
+    lda linked_literal_values
     jmp append_payload_byte
 
 build_object_code_prg_content_or_fail:
@@ -2534,6 +2560,8 @@ runtime_name_rt_sprite_yexp:
     .asciiz "rt_sprite_yexp"
 runtime_name_rt_sprite_prio:
     .asciiz "rt_sprite_prio"
+runtime_name_rt_sprite_set_mc:
+    .asciiz "rt_sprite_set_mc"
 direct_body_real_print_int:
     .asciiz "p1u0T0S0L0U0p2u1r"
 direct_body_real_print_div:

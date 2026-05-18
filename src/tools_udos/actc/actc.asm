@@ -8503,6 +8503,8 @@ builtin_runtime_import_table:
     .byte $00, <builtin_symbol_sid_env3, >builtin_symbol_sid_env3, <runtime_symbol_rt_sid_env3, >runtime_symbol_rt_sid_env3
     .byte $01, <builtin_symbol_sprite_on, >builtin_symbol_sprite_on, <runtime_symbol_rt_sprite_on, >runtime_symbol_rt_sprite_on
     .byte $01, <builtin_symbol_sprite_off, >builtin_symbol_sprite_off, <runtime_symbol_rt_sprite_off, >runtime_symbol_rt_sprite_off
+    .byte $00, <builtin_symbol_sprite_hit, >builtin_symbol_sprite_hit, <runtime_symbol_rt_sprite_hit, >runtime_symbol_rt_sprite_hit
+    .byte $00, <builtin_symbol_sprite_hit_bg, >builtin_symbol_sprite_hit_bg, <runtime_symbol_rt_sprite_hit_bg, >runtime_symbol_rt_sprite_hit_bg
     .byte $02, <builtin_symbol_sprite_color, >builtin_symbol_sprite_color, <runtime_symbol_rt_sprite_color, >runtime_symbol_rt_sprite_color
     .byte $03, <builtin_symbol_sprite_pos, >builtin_symbol_sprite_pos, <runtime_symbol_rt_sprite_pos, >runtime_symbol_rt_sprite_pos
     .byte $02, <builtin_symbol_sprite_mc, >builtin_symbol_sprite_mc, <runtime_symbol_rt_sprite_mc, >runtime_symbol_rt_sprite_mc
@@ -10111,6 +10113,10 @@ runtime_symbol_rt_sprite_on:
     .asciiz "RT_SPRITE_ON"
 runtime_symbol_rt_sprite_off:
     .asciiz "RT_SPRITE_OFF"
+runtime_symbol_rt_sprite_hit:
+    .asciiz "RT_SPRITE_HIT"
+runtime_symbol_rt_sprite_hit_bg:
+    .asciiz "RT_SPRITE_HIT_BG"
 runtime_symbol_rt_sprite_color:
     .asciiz "RT_SPRITE_COLOR"
 runtime_symbol_rt_sprite_pos:
@@ -10133,6 +10139,10 @@ builtin_symbol_sprite_on:
     .asciiz "SPRITEON"
 builtin_symbol_sprite_off:
     .asciiz "SPRITEOFF"
+builtin_symbol_sprite_hit:
+    .asciiz "SPRITEHIT"
+builtin_symbol_sprite_hit_bg:
+    .asciiz "SPRITEHITBG"
 builtin_symbol_sprite_color:
     .asciiz "SPRITECOLOR"
 builtin_symbol_sprite_pos:

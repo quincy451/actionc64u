@@ -1865,6 +1865,8 @@ class TestActcOverlay(unittest.TestCase):
                 "MODULE MAIN\r"
                 "PROC MAIN()\r"
                 "SpriteOn(2)\r"
+                "SpriteHit()\r"
+                "SpriteHitBg()\r"
                 "SpriteColor(2,5)\r"
                 "SpritePos(2,52,86)\r"
                 "SpritePtr(2,128)\r"
@@ -1918,6 +1920,8 @@ class TestActcOverlay(unittest.TestCase):
             self.assertEqual(summary["dumps"]["actc_overlay_requested_pass"], [5], msg=result.stdout)
             obj = (object_dir / "MAIN.OBJ").read_text(encoding="ascii")
             self.assertIn("u rt_sprite_on\n", obj)
+            self.assertIn("u rt_sprite_hit\n", obj)
+            self.assertIn("u rt_sprite_hit_bg\n", obj)
             self.assertIn("u rt_sprite_color\n", obj)
             self.assertIn("u rt_sprite_pos\n", obj)
             self.assertIn("u rt_sprite_ptr\n", obj)
@@ -1939,6 +1943,8 @@ class TestActcOverlay(unittest.TestCase):
             self.assertIn("u rt_sid_osc3\n", obj)
             self.assertIn("u rt_sid_env3\n", obj)
             self.assertNotIn("u spriteon\n", obj)
+            self.assertNotIn("u spritehit\n", obj)
+            self.assertNotIn("u spritehitbg\n", obj)
             self.assertNotIn("u spritecolor\n", obj)
             self.assertNotIn("u spritepos\n", obj)
             self.assertNotIn("u spriteptr\n", obj)

@@ -1,0 +1,5 @@
+OBJ1
+x rt_sprite_hit 0 4
+b M
+m AD 1E D0 60
+n rt_sprite_hit

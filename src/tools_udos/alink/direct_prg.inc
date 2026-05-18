@@ -448,6 +448,8 @@ find_runtime_literal_call_prg_case_have_external:
     bcc find_runtime_literal_call_prg_case_have_supported_external
     jsr runtime_literal_call_first_external_is_rt_sprite_ptr
     bcc find_runtime_literal_call_prg_case_have_supported_external
+    jsr runtime_literal_call_first_external_is_sprite_flag_helper
+    bcc find_runtime_literal_call_prg_case_have_supported_external
     jmp find_runtime_literal_call_prg_case_unsupported_value
 find_runtime_literal_call_prg_case_not_sprite_data_external:
     lda linked_literal_count
@@ -577,6 +579,57 @@ runtime_literal_call_first_external_is_rt_sprite_ptr:
     lda #<runtime_name_rt_sprite_ptr
     sta const_ptr
     lda #>runtime_name_rt_sprite_ptr
+    sta const_ptr+1
+    jmp external_name_window_matches_const_ptr
+
+runtime_literal_call_first_external_is_sprite_flag_helper:
+    jsr runtime_literal_call_first_external_is_rt_sprite_mc
+    bcc runtime_literal_call_first_external_is_sprite_flag_ok
+    jsr runtime_literal_call_first_external_is_rt_sprite_xexp
+    bcc runtime_literal_call_first_external_is_sprite_flag_ok
+    jsr runtime_literal_call_first_external_is_rt_sprite_yexp
+    bcc runtime_literal_call_first_external_is_sprite_flag_ok
+    jsr runtime_literal_call_first_external_is_rt_sprite_prio
+    bcc runtime_literal_call_first_external_is_sprite_flag_ok
+    sec
+    rts
+runtime_literal_call_first_external_is_sprite_flag_ok:
+    clc
+    rts
+
+runtime_literal_call_first_external_is_rt_sprite_mc:
+    ldx #$00
+    jsr load_external_name_window_from_x_or_fail
+    lda #<runtime_name_rt_sprite_mc
+    sta const_ptr
+    lda #>runtime_name_rt_sprite_mc
+    sta const_ptr+1
+    jmp external_name_window_matches_const_ptr
+
+runtime_literal_call_first_external_is_rt_sprite_xexp:
+    ldx #$00
+    jsr load_external_name_window_from_x_or_fail
+    lda #<runtime_name_rt_sprite_xexp
+    sta const_ptr
+    lda #>runtime_name_rt_sprite_xexp
+    sta const_ptr+1
+    jmp external_name_window_matches_const_ptr
+
+runtime_literal_call_first_external_is_rt_sprite_yexp:
+    ldx #$00
+    jsr load_external_name_window_from_x_or_fail
+    lda #<runtime_name_rt_sprite_yexp
+    sta const_ptr
+    lda #>runtime_name_rt_sprite_yexp
+    sta const_ptr+1
+    jmp external_name_window_matches_const_ptr
+
+runtime_literal_call_first_external_is_rt_sprite_prio:
+    ldx #$00
+    jsr load_external_name_window_from_x_or_fail
+    lda #<runtime_name_rt_sprite_prio
+    sta const_ptr
+    lda #>runtime_name_rt_sprite_prio
     sta const_ptr+1
     jmp external_name_window_matches_const_ptr
 
@@ -1311,6 +1364,11 @@ build_runtime_literal_call_not_sprite_pos:
     jsr append_runtime_sprite_data_literal_call_prefix
     jmp build_runtime_literal_call_jsr_and_exit
 build_runtime_literal_call_not_sprite_data:
+    jsr runtime_literal_call_first_external_is_sprite_flag_helper
+    bcs build_runtime_literal_call_not_sprite_flag
+    jsr append_runtime_sprite_flag_literal_call_prefix
+    jmp build_runtime_literal_call_jsr_and_exit
+build_runtime_literal_call_not_sprite_flag:
     jsr append_runtime_sprite_color_literal_call_prefix
     jmp build_runtime_literal_call_jsr_and_exit
 build_runtime_literal_call_one_arg:
@@ -1405,6 +1463,16 @@ append_runtime_sprite_color_literal_call_prefix:
     lda linked_literal_values
     jsr append_payload_byte
     lda #$A9
+    jsr append_payload_byte
+    lda linked_literal_values+1
+    jmp append_payload_byte
+
+append_runtime_sprite_flag_literal_call_prefix:
+    lda #$A9
+    jsr append_payload_byte
+    lda linked_literal_values
+    jsr append_payload_byte
+    lda #$A0
     jsr append_payload_byte
     lda linked_literal_values+1
     jmp append_payload_byte
@@ -2458,6 +2526,14 @@ runtime_name_rt_sprite_color:
     .asciiz "rt_sprite_color"
 runtime_name_rt_sprite_ptr:
     .asciiz "rt_sprite_ptr"
+runtime_name_rt_sprite_mc:
+    .asciiz "rt_sprite_mc"
+runtime_name_rt_sprite_xexp:
+    .asciiz "rt_sprite_xexp"
+runtime_name_rt_sprite_yexp:
+    .asciiz "rt_sprite_yexp"
+runtime_name_rt_sprite_prio:
+    .asciiz "rt_sprite_prio"
 direct_body_real_print_int:
     .asciiz "p1u0T0S0L0U0p2u1r"
 direct_body_real_print_div:

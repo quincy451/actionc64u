@@ -493,6 +493,8 @@ find_runtime_literal_call_prg_case_int_loop:
     sta linked_literal_hi_values,x
     beq find_runtime_literal_call_prg_case_int_ok
     lda linked_literal_count
+    cmp #$01
+    beq find_runtime_literal_call_prg_case_allow_one_arg_word
     cmp #$02
     beq find_runtime_literal_call_prg_case_allow_two_arg_word
     cmp #$03
@@ -504,6 +506,13 @@ find_runtime_literal_call_prg_case_int_loop:
     cmp #$02
     bcs find_runtime_literal_call_prg_case_unsupported_value
     jmp find_runtime_literal_call_prg_case_int_ok
+find_runtime_literal_call_prg_case_allow_one_arg_word:
+    ldx linked_object_index
+    cpx #$00
+    bne find_runtime_literal_call_prg_case_unsupported_value
+    jsr runtime_literal_call_first_external_is_rt_sid_cutoff
+    bcc find_runtime_literal_call_prg_case_int_ok
+    jmp find_runtime_literal_call_prg_case_unsupported_value
 find_runtime_literal_call_prg_case_allow_two_arg_word:
     ldx linked_object_index
     cpx #$01
@@ -657,6 +666,15 @@ runtime_literal_call_first_external_is_rt_sid_sr:
     lda #<runtime_name_rt_sid_sr
     sta const_ptr
     lda #>runtime_name_rt_sid_sr
+    sta const_ptr+1
+    jmp external_name_window_matches_const_ptr
+
+runtime_literal_call_first_external_is_rt_sid_cutoff:
+    ldx #$00
+    jsr load_external_name_window_from_x_or_fail
+    lda #<runtime_name_rt_sid_cutoff
+    sta const_ptr
+    lda #>runtime_name_rt_sid_cutoff
     sta const_ptr+1
     jmp external_name_window_matches_const_ptr
 
@@ -1474,6 +1492,11 @@ build_runtime_literal_call_not_sprite_set_mc:
     jsr append_runtime_sprite_color_literal_call_prefix
     jmp build_runtime_literal_call_jsr_and_exit
 build_runtime_literal_call_one_arg:
+    jsr runtime_literal_call_first_external_is_rt_sid_cutoff
+    bcs build_runtime_literal_call_generic_one_arg
+    jsr append_runtime_sid_cutoff_literal_call_prefix
+    jmp build_runtime_literal_call_jsr_and_exit
+build_runtime_literal_call_generic_one_arg:
     jsr append_runtime_single_literal_call_prefix
 build_runtime_literal_call_jsr_and_exit:
     lda #$20
@@ -1501,6 +1524,16 @@ append_runtime_single_literal_call_prefix:
     lda linked_literal_values
     jsr append_payload_byte
     rts
+
+append_runtime_sid_cutoff_literal_call_prefix:
+    lda #$A2
+    jsr append_payload_byte
+    lda linked_literal_values
+    jsr append_payload_byte
+    lda #$A0
+    jsr append_payload_byte
+    lda linked_literal_hi_values
+    jmp append_payload_byte
 
 append_runtime_sound_literal_call_prefix:
     lda #$A9
@@ -1733,6 +1766,14 @@ build_runtime_literal_call_address_table_not_two_arg_word:
     sta linked_next_addr_hi
     jmp build_object_code_address_table_with_current_next_or_fail
 build_runtime_literal_call_address_table_one_arg:
+    jsr runtime_literal_call_first_external_is_rt_sid_cutoff
+    bcs build_runtime_literal_call_address_table_generic_one_arg
+    lda #$17
+    sta linked_next_addr_lo
+    lda #$10
+    sta linked_next_addr_hi
+    jmp build_object_code_address_table_with_current_next_or_fail
+build_runtime_literal_call_address_table_generic_one_arg:
     lda #$15
     sta linked_next_addr_lo
     lda #$10
@@ -2667,6 +2708,8 @@ runtime_name_rt_sid_ad:
     .asciiz "rt_sid_ad"
 runtime_name_rt_sid_sr:
     .asciiz "rt_sid_sr"
+runtime_name_rt_sid_cutoff:
+    .asciiz "rt_sid_cutoff"
 runtime_name_rt_sprite_data:
     .asciiz "rt_sprite_data"
 runtime_name_rt_sprite_pos:

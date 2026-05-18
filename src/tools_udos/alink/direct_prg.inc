@@ -18,6 +18,10 @@ select_prg_build_strategy_not_real_print_int:
     bcs select_prg_build_strategy_not_real_print_div
     rts
 select_prg_build_strategy_not_real_print_div:
+    jsr find_runtime_sid_gate_prg_case
+    bcs select_prg_build_strategy_not_runtime_sid_gate
+    rts
+select_prg_build_strategy_not_runtime_sid_gate:
     jsr find_runtime_literal_call_prg_case
     bcs select_prg_build_strategy_not_runtime_literal_call
     rts
@@ -112,6 +116,11 @@ build_prg_content_not_real_print_div:
     bne build_prg_content_not_runtime_literal_call
     jmp build_runtime_literal_call_prg_content_or_fail
 build_prg_content_not_runtime_literal_call:
+    lda prg_build_strategy
+    cmp #PRG_BUILD_RUNTIME_SID_GATE_CALLS
+    bne build_prg_content_not_runtime_sid_gate
+    jmp build_runtime_sid_gate_prg_content_or_fail
+build_prg_content_not_runtime_sid_gate:
     lda prg_build_strategy
     cmp #PRG_BUILD_OBJECT_CODE
     bne build_prg_content_not_object_code
@@ -389,6 +398,116 @@ find_linked_real_print_div_prg_case_unsupported:
     sec
     rts
 
+find_runtime_sid_gate_prg_case:
+    lda #<direct_body_runtime_sid_on_literal_calls
+    sta const_ptr
+    lda #>direct_body_runtime_sid_on_literal_calls
+    sta const_ptr+1
+    jsr direct_entry_body_matches_const
+    bcs find_runtime_sid_gate_prg_case_not_on
+    lda #$03
+    sta linked_literal_count
+    jmp find_runtime_sid_gate_prg_case_body_ok
+find_runtime_sid_gate_prg_case_not_on:
+    lda #<direct_body_runtime_sid_off_literal_calls
+    sta const_ptr
+    lda #>direct_body_runtime_sid_off_literal_calls
+    sta const_ptr+1
+    jsr direct_entry_body_matches_const
+    bcc find_runtime_sid_gate_prg_case_is_off
+    jmp find_runtime_sid_gate_prg_case_no
+find_runtime_sid_gate_prg_case_is_off:
+    lda #$04
+    sta linked_literal_count
+find_runtime_sid_gate_prg_case_body_ok:
+    lda external_count
+    cmp #$02
+    bcs find_runtime_sid_gate_prg_case_have_externals
+    lda #<msg_bad_object
+    ldy #>msg_bad_object
+    jmp fail_with_ptr
+find_runtime_sid_gate_prg_case_have_externals:
+    lda linked_literal_count
+    cmp #$04
+    bne find_runtime_sid_gate_prg_case_check_names
+    lda external_count
+    cmp #$03
+    bcs find_runtime_sid_gate_prg_case_check_names
+    lda #<msg_bad_object
+    ldy #>msg_bad_object
+    jmp fail_with_ptr
+find_runtime_sid_gate_prg_case_check_names:
+    ldx #$00
+    jsr runtime_literal_external_index_is_rt_sid_wave
+    bcc find_runtime_sid_gate_prg_case_have_wave
+    jmp find_runtime_sid_gate_prg_case_unsupported_value
+find_runtime_sid_gate_prg_case_have_wave:
+    ldx #$01
+    jsr runtime_literal_external_index_is_rt_sid_on
+    bcc find_runtime_sid_gate_prg_case_have_on
+    jmp find_runtime_sid_gate_prg_case_unsupported_value
+find_runtime_sid_gate_prg_case_have_on:
+    lda linked_literal_count
+    cmp #$04
+    bne find_runtime_sid_gate_prg_case_check_int_count
+    ldx #$02
+    jsr runtime_literal_external_index_is_rt_sid_off
+    bcs find_runtime_sid_gate_prg_case_unsupported_value
+find_runtime_sid_gate_prg_case_check_int_count:
+    lda int_count
+    cmp linked_literal_count
+    bcs find_runtime_sid_gate_prg_case_have_ints
+    lda #<msg_bad_object
+    ldy #>msg_bad_object
+    jmp fail_with_ptr
+find_runtime_sid_gate_prg_case_have_ints:
+    lda #$00
+    sta linked_object_index
+find_runtime_sid_gate_prg_case_int_loop:
+    ldx linked_object_index
+    cpx linked_literal_count
+    beq find_runtime_sid_gate_prg_case_loaded_ints
+    jsr load_int_value_window_from_x_or_fail
+    lda int_value_window
+    ldx linked_object_index
+    sta linked_literal_values,x
+    lda int_value_window+1
+    bne find_runtime_sid_gate_prg_case_unsupported_value
+    ldx linked_object_index
+    sta linked_literal_hi_values,x
+    inc linked_object_index
+    jmp find_runtime_sid_gate_prg_case_int_loop
+find_runtime_sid_gate_prg_case_loaded_ints:
+    jsr save_current_module_name
+    lda #$00
+    sta linked_object_index
+find_runtime_sid_gate_prg_case_object_loop:
+    ldx linked_object_index
+    cpx external_count
+    beq find_runtime_sid_gate_prg_case_supported
+    jsr copy_external_name_to_module_name_from_x_or_fail
+    jsr build_object_target_path
+    jsr load_pending_object_or_library_or_fail
+    jsr require_loaded_source_not_truncated_or_fail
+    jsr require_supported_object_header_or_fail
+    jsr require_loaded_object_exports_module_or_fail
+    jsr loaded_first_body_is_object_code
+    bcs find_runtime_sid_gate_prg_case_unsupported
+    inc linked_object_index
+    jmp find_runtime_sid_gate_prg_case_object_loop
+find_runtime_sid_gate_prg_case_supported:
+    jsr restore_saved_module_name
+    lda #PRG_BUILD_RUNTIME_SID_GATE_CALLS
+    sta prg_build_strategy
+    clc
+    rts
+find_runtime_sid_gate_prg_case_unsupported:
+    jsr restore_saved_module_name
+find_runtime_sid_gate_prg_case_unsupported_value:
+find_runtime_sid_gate_prg_case_no:
+    sec
+    rts
+
 find_runtime_literal_call_prg_case:
     lda #<direct_body_runtime_no_arg_call
     sta const_ptr
@@ -577,6 +696,30 @@ runtime_literal_call_first_external_is_rt_sound:
     lda #<runtime_name_rt_sound
     sta const_ptr
     lda #>runtime_name_rt_sound
+    sta const_ptr+1
+    jmp external_name_window_matches_const_ptr
+
+runtime_literal_external_index_is_rt_sid_wave:
+    jsr load_external_name_window_from_x_or_fail
+    lda #<runtime_name_rt_sid_wave
+    sta const_ptr
+    lda #>runtime_name_rt_sid_wave
+    sta const_ptr+1
+    jmp external_name_window_matches_const_ptr
+
+runtime_literal_external_index_is_rt_sid_on:
+    jsr load_external_name_window_from_x_or_fail
+    lda #<runtime_name_rt_sid_on
+    sta const_ptr
+    lda #>runtime_name_rt_sid_on
+    sta const_ptr+1
+    jmp external_name_window_matches_const_ptr
+
+runtime_literal_external_index_is_rt_sid_off:
+    jsr load_external_name_window_from_x_or_fail
+    lda #<runtime_name_rt_sid_off
+    sta const_ptr
+    lda #>runtime_name_rt_sid_off
     sta const_ptr+1
     jmp external_name_window_matches_const_ptr
 
@@ -1521,6 +1664,36 @@ build_real_print_div_prg_content_or_fail:
     lda #$00
     jmp append_payload_byte
 
+build_runtime_sid_gate_prg_content_or_fail:
+    lda #$00
+    jsr append_payload_byte
+    lda #$10
+    jsr append_payload_byte
+    jsr build_runtime_sid_gate_address_table_or_fail
+    jsr append_runtime_sid_byte_literal_call_prefix
+    ldx #$00
+    jsr append_runtime_jsr_to_pending_target_x
+    jsr append_runtime_sid_on_literal_call_prefix
+    ldx #$01
+    jsr append_runtime_jsr_to_pending_target_x
+    lda linked_literal_count
+    cmp #$04
+    bne build_runtime_sid_gate_prg_exit
+    jsr append_runtime_sid_off_literal_call_prefix
+    ldx #$02
+    jsr append_runtime_jsr_to_pending_target_x
+build_runtime_sid_gate_prg_exit:
+    lda #<runtime_literal_call_prg_exit_template
+    sta const_ptr
+    lda #>runtime_literal_call_prg_exit_template
+    sta const_ptr+1
+    lda #<(runtime_literal_call_prg_exit_template_end - runtime_literal_call_prg_exit_template)
+    sta current_bit_lo
+    lda #>(runtime_literal_call_prg_exit_template_end - runtime_literal_call_prg_exit_template)
+    sta current_bit_hi
+    jsr copy_direct_prg_template
+    jmp append_object_code_external_modules_or_fail
+
 build_runtime_literal_call_prg_content_or_fail:
     lda #$00
     jsr append_payload_byte
@@ -1604,6 +1777,32 @@ append_runtime_single_literal_call_prefix:
     lda #$A9
     jsr append_payload_byte
     lda linked_literal_values
+    jsr append_payload_byte
+    rts
+
+append_runtime_sid_on_literal_call_prefix:
+    lda #$A9
+    jsr append_payload_byte
+    lda linked_literal_values+2
+    jsr append_payload_byte
+    rts
+
+append_runtime_sid_off_literal_call_prefix:
+    lda #$A9
+    jsr append_payload_byte
+    lda linked_literal_values+3
+    jsr append_payload_byte
+    rts
+
+append_runtime_jsr_to_pending_target_x:
+    stx linked_object_index
+    lda #$20
+    jsr append_payload_byte
+    ldx linked_object_index
+    jsr load_pending_target_offset_from_x
+    lda current_bit_lo
+    jsr append_payload_byte
+    lda current_bit_hi
     jsr append_payload_byte
     rts
 
@@ -1808,6 +2007,22 @@ build_object_code_address_table_size_ok:
 build_object_code_address_table_done:
     jsr restore_saved_module_name
     rts
+
+build_runtime_sid_gate_address_table_or_fail:
+    lda linked_literal_count
+    cmp #$04
+    bne build_runtime_sid_gate_address_table_on
+    lda #$21
+    sta linked_next_addr_lo
+    lda #$10
+    sta linked_next_addr_hi
+    jmp build_object_code_address_table_with_current_next_or_fail
+build_runtime_sid_gate_address_table_on:
+    lda #$1C
+    sta linked_next_addr_lo
+    lda #$10
+    sta linked_next_addr_hi
+    jmp build_object_code_address_table_with_current_next_or_fail
 
 build_runtime_literal_call_address_table_or_fail:
     lda linked_literal_count
@@ -2788,6 +3003,10 @@ direct_body_runtime_sprite_pos_literal_call:
     .asciiz "p0p1p2u0r"
 direct_body_runtime_sound_literal_call:
     .asciiz "p0p1p2p3u0r"
+direct_body_runtime_sid_on_literal_calls:
+    .asciiz "p0p1u0p2u1r"
+direct_body_runtime_sid_off_literal_calls:
+    .asciiz "p0p1u0p2u1p3u2r"
 runtime_name_rt_sound:
     .asciiz "rt_sound"
 runtime_name_rt_sid_freq:
@@ -2796,6 +3015,10 @@ runtime_name_rt_sid_pulse:
     .asciiz "rt_sid_pulse"
 runtime_name_rt_sid_wave:
     .asciiz "rt_sid_wave"
+runtime_name_rt_sid_on:
+    .asciiz "rt_sid_on"
+runtime_name_rt_sid_off:
+    .asciiz "rt_sid_off"
 runtime_name_rt_sid_ad:
     .asciiz "rt_sid_ad"
 runtime_name_rt_sid_sr:

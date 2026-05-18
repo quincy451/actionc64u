@@ -1,5 +1,5 @@
 OBJ1
-x rt_gfx_bgcolor 0 4
-b 0r
-k 0
+x rt_gfx_bgcolor 0 6
+b M
+m 29 0F 8D 21 D0 60
 n rt_gfx_bgcolor

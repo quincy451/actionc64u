@@ -165,6 +165,12 @@ Current status:
   `X=A/B` with `A=1.0`, `B=23.0` producing `0.0434782616794109344482421875`,
   and `X=A/B` with `A=2.0`, `B=23.0` producing
   `0.086956523358821868896484375`.
+- `rt_gfx_bgcolor.obj` sets the VIC-II background color register `$D021`. It
+  expects the color in `A`, masks it to the low nybble, stores it, and returns
+  with `RTS`.
+- `rt_gfx_bordercolor.obj` sets the VIC-II border color register `$D020`. It
+  expects the color in `A`, masks it to the low nybble, stores it, and returns
+  with `RTS`.
 - `rt_sid_freq.obj` sets a SID voice frequency word. It expects the voice index
   in `A`, frequency low byte in `X`, and frequency high byte in `Y`; it stores
   to `$D400+7*voice` and `$D401+7*voice`, then returns with `RTS`.

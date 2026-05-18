@@ -444,6 +444,8 @@ find_runtime_literal_call_prg_case_have_external:
     bne find_runtime_literal_call_prg_case_not_sprite_data_external
     jsr runtime_literal_call_first_external_is_rt_sprite_data
     bcc find_runtime_literal_call_prg_case_have_supported_external
+    jsr runtime_literal_call_first_external_is_rt_sprite_color
+    bcc find_runtime_literal_call_prg_case_have_supported_external
     jmp find_runtime_literal_call_prg_case_unsupported_value
 find_runtime_literal_call_prg_case_not_sprite_data_external:
     lda linked_literal_count
@@ -493,6 +495,8 @@ find_runtime_literal_call_prg_case_int_loop:
     bcs find_runtime_literal_call_prg_case_unsupported_value
     jmp find_runtime_literal_call_prg_case_int_ok
 find_runtime_literal_call_prg_case_allow_sprite_data_word:
+    jsr runtime_literal_call_first_external_is_rt_sprite_data
+    bcs find_runtime_literal_call_prg_case_unsupported_value
     ldx linked_object_index
     cpx #$01
     bne find_runtime_literal_call_prg_case_unsupported_value
@@ -553,6 +557,15 @@ runtime_literal_call_first_external_is_rt_sprite_pos:
     lda #<runtime_name_rt_sprite_pos
     sta const_ptr
     lda #>runtime_name_rt_sprite_pos
+    sta const_ptr+1
+    jmp external_name_window_matches_const_ptr
+
+runtime_literal_call_first_external_is_rt_sprite_color:
+    ldx #$00
+    jsr load_external_name_window_from_x_or_fail
+    lda #<runtime_name_rt_sprite_color
+    sta const_ptr
+    lda #>runtime_name_rt_sprite_color
     sta const_ptr+1
     jmp external_name_window_matches_const_ptr
 
@@ -1282,7 +1295,12 @@ build_runtime_literal_call_not_sprite_pos:
     lda linked_literal_count
     cmp #$02
     bne build_runtime_literal_call_one_arg
+    jsr runtime_literal_call_first_external_is_rt_sprite_data
+    bcs build_runtime_literal_call_not_sprite_data
     jsr append_runtime_sprite_data_literal_call_prefix
+    jmp build_runtime_literal_call_jsr_and_exit
+build_runtime_literal_call_not_sprite_data:
+    jsr append_runtime_sprite_color_literal_call_prefix
     jmp build_runtime_literal_call_jsr_and_exit
 build_runtime_literal_call_one_arg:
     jsr append_runtime_single_literal_call_prefix
@@ -1368,6 +1386,16 @@ append_runtime_sprite_pos_literal_call_prefix:
     jmp append_payload_byte
 append_runtime_sprite_pos_literal_call_clc:
     lda #$18
+    jmp append_payload_byte
+
+append_runtime_sprite_color_literal_call_prefix:
+    lda #$A2
+    jsr append_payload_byte
+    lda linked_literal_values
+    jsr append_payload_byte
+    lda #$A9
+    jsr append_payload_byte
+    lda linked_literal_values+1
     jmp append_payload_byte
 
 build_object_code_prg_content_or_fail:
@@ -1473,7 +1501,15 @@ build_runtime_literal_call_address_table_not_sprite_pos:
     lda linked_literal_count
     cmp #$02
     bne build_runtime_literal_call_address_table_one_arg
+    jsr runtime_literal_call_first_external_is_rt_sprite_data
+    bcs build_runtime_literal_call_address_table_not_sprite_data
     lda #$19
+    sta linked_next_addr_lo
+    lda #$10
+    sta linked_next_addr_hi
+    jmp build_object_code_address_table_with_current_next_or_fail
+build_runtime_literal_call_address_table_not_sprite_data:
+    lda #$17
     sta linked_next_addr_lo
     lda #$10
     sta linked_next_addr_hi
@@ -2407,6 +2443,8 @@ runtime_name_rt_sprite_data:
     .asciiz "rt_sprite_data"
 runtime_name_rt_sprite_pos:
     .asciiz "rt_sprite_pos"
+runtime_name_rt_sprite_color:
+    .asciiz "rt_sprite_color"
 direct_body_real_print_int:
     .asciiz "p1u0T0S0L0U0p2u1r"
 direct_body_real_print_div:

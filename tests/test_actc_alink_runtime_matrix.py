@@ -487,6 +487,7 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
                 "actc_runtime_dbf1_export_sample_linked",
                 "actc_runtime_dbf1_open_split_linked",
                 "actc_runtime_dbf1_close_split_linked",
+                "actc_runtime_dbf1_close_state_reset_linked",
                 "actc_runtime_dbf1_go_split_linked",
                 "actc_runtime_dbf1_field_count_split_linked",
                 "actc_runtime_dbf1_field_len_split_linked",

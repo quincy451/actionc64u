@@ -494,6 +494,7 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
                 "actc_runtime_dbf1_field_count_split_linked",
                 "actc_runtime_dbf1_field_len_split_linked",
                 "actc_runtime_dbf1_read_byte_split_linked",
+                "actc_runtime_dbf1_read_byte_invalid_offset_linked",
                 "actc_runtime_dbf1_deleted_split_linked",
                 "actc_runtime_dbf1_header_record_len_split_linked",
                 "actc_runtime_dbf1_read_byte_result_sprite_arg_linked",

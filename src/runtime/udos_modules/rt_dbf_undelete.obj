@@ -1,0 +1,7 @@
+OBJ1
+x rt_dbf_undelete 0 8
+b u0M
+u rt_dbf_writebyte
+m A2 00 A0 20 20 00 00 60
+r 5 u0
+n rt_dbf_undelete

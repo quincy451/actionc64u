@@ -56,12 +56,12 @@ save_ok:
 
 init_module_name:
     ldx #svc_retptr
-    jsr svc_program_get_cmdline_len
+    jsr act2save_svc_program_get_cmdline_len
     lda svc_retptr
     ora svc_retptr+1
     beq init_module_name_default
     ldx #svc_retptr
-    jsr svc_program_get_cmdline_ptr
+    jsr act2save_svc_program_get_cmdline_ptr
     lda svc_retptr
     sta src_ptr
     lda svc_retptr+1
@@ -118,7 +118,7 @@ save_text_to_target:
     lda #tool_file_status_fail
     sta file_params+2
     ldx #file_params
-    jsr svc_file_write_begin_sc0
+    jsr act2save_svc_file_write_begin_sc0
     lda file_params+2
     cmp #tool_file_status_ok
     bne save_text_to_target_fail
@@ -134,7 +134,7 @@ save_text_to_target:
     lda #tool_file_status_fail
     sta file_params+4
     ldx #file_params
-    jsr svc_file_write_chunk_sc0
+    jsr act2save_svc_file_write_chunk_sc0
     lda file_params+4
     cmp #tool_file_status_ok
     bne save_text_to_target_fail_close
@@ -142,7 +142,7 @@ save_text_to_target:
     lda #tool_file_status_fail
     sta file_params+0
     ldx #file_params
-    jsr svc_file_write_close_sc0
+    jsr act2save_svc_file_write_close_sc0
     lda file_params+0
     cmp #tool_file_status_ok
     bne save_text_to_target_fail
@@ -153,7 +153,7 @@ save_text_to_target_fail_close:
     lda #tool_file_status_fail
     sta file_params+0
     ldx #file_params
-    jsr svc_file_write_close_sc0
+    jsr act2save_svc_file_write_close_sc0
 save_text_to_target_fail:
     sec
     rts
@@ -192,7 +192,7 @@ try_load_seeded_file:
     sta file_params+7
     sta file_params+8
     ldx #file_params
-    jsr svc_file_load_sc0
+    jsr act2save_svc_file_load_sc0
     lda file_params+6
     cmp #tool_file_status_ok
     beq try_load_seeded_file_done
@@ -239,6 +239,132 @@ print_ptr:
     sty svc_retptr+1
     ldx #svc_retptr
     jmp svc_console_write_sc0
+
+act2save_save_zp_state:
+    ldx #$00
+act2save_save_zp_state_loop:
+    lda $00E0,x
+    sta act2save_zp_save,x
+    inx
+    cpx #$0E
+    bcc act2save_save_zp_state_loop
+    rts
+
+act2save_restore_zp_state:
+    ldx #$00
+act2save_restore_zp_state_loop:
+    lda act2save_zp_save,x
+    sta $00E0,x
+    inx
+    cpx #$0E
+    bcc act2save_restore_zp_state_loop
+    rts
+
+act2save_restore_service_status:
+    lda act2save_service_status
+    pha
+    plp
+    rts
+
+act2save_svc_program_get_cmdline_len:
+    jsr act2save_save_zp_state
+    ldx #svc_retptr
+    jsr svc_program_get_cmdline_len
+    php
+    pla
+    sta act2save_service_status
+    lda svc_retptr
+    sta act2save_service_out+0
+    lda svc_retptr+1
+    sta act2save_service_out+1
+    jsr act2save_restore_zp_state
+    lda act2save_service_out+0
+    sta svc_retptr
+    lda act2save_service_out+1
+    sta svc_retptr+1
+    jmp act2save_restore_service_status
+
+act2save_svc_program_get_cmdline_ptr:
+    jsr act2save_save_zp_state
+    ldx #svc_retptr
+    jsr svc_program_get_cmdline_ptr
+    php
+    pla
+    sta act2save_service_status
+    lda svc_retptr
+    sta act2save_service_out+0
+    lda svc_retptr+1
+    sta act2save_service_out+1
+    jsr act2save_restore_zp_state
+    lda act2save_service_out+0
+    sta svc_retptr
+    lda act2save_service_out+1
+    sta svc_retptr+1
+    jmp act2save_restore_service_status
+
+act2save_svc_file_load_sc0:
+    jsr act2save_save_zp_state
+    ldx #file_params
+    jsr svc_file_load_sc0
+    php
+    pla
+    sta act2save_service_status
+    lda file_params+6
+    sta act2save_service_out+0
+    lda file_params+7
+    sta act2save_service_out+1
+    lda file_params+8
+    sta act2save_service_out+2
+    jsr act2save_restore_zp_state
+    lda act2save_service_out+0
+    sta file_params+6
+    lda act2save_service_out+1
+    sta file_params+7
+    lda act2save_service_out+2
+    sta file_params+8
+    jmp act2save_restore_service_status
+
+act2save_svc_file_write_begin_sc0:
+    jsr act2save_save_zp_state
+    ldx #file_params
+    jsr svc_file_write_begin_sc0
+    php
+    pla
+    sta act2save_service_status
+    lda file_params+2
+    sta act2save_service_out+0
+    jsr act2save_restore_zp_state
+    lda act2save_service_out+0
+    sta file_params+2
+    jmp act2save_restore_service_status
+
+act2save_svc_file_write_chunk_sc0:
+    jsr act2save_save_zp_state
+    ldx #file_params
+    jsr svc_file_write_chunk_sc0
+    php
+    pla
+    sta act2save_service_status
+    lda file_params+4
+    sta act2save_service_out+0
+    jsr act2save_restore_zp_state
+    lda act2save_service_out+0
+    sta file_params+4
+    jmp act2save_restore_service_status
+
+act2save_svc_file_write_close_sc0:
+    jsr act2save_save_zp_state
+    ldx #file_params
+    jsr svc_file_write_close_sc0
+    php
+    pla
+    sta act2save_service_status
+    lda file_params+0
+    sta act2save_service_out+0
+    jsr act2save_restore_zp_state
+    lda act2save_service_out+0
+    sta file_params+0
+    jmp act2save_restore_service_status
 
 .include "../common/action_project_entry.inc"
 .include "../common/action_project_entry_guard.inc"
@@ -301,3 +427,11 @@ source_buffer:
     .res SOURCE_LIMIT+1
 manifest_buffer:
     .res MANIFEST_LIMIT+1
+
+.segment "BSS"
+act2save_service_status:
+    .res 1
+act2save_service_out:
+    .res 3
+act2save_zp_save:
+    .res $0E

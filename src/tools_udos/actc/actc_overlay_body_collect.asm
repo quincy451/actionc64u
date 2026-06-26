@@ -35,19 +35,17 @@ actc_overlay_entry:
     beq actc_overlay_body_mode_collect
     cmp #ACTC_OVERLAY_BODY_MODE_TABLE_ONLY
     beq actc_overlay_ok
-    jmp actc_overlay_fail
+    bne actc_overlay_fail
 
 actc_overlay_body_mode_collect:
     jsr collect_proc_body_ops_overlay
     bcs actc_overlay_fail
-    jmp actc_overlay_ok
 
 actc_overlay_ok:
     ldy #ACTC_OVERLAY_CTX_STATUS
     lda #ACTC_OVERLAY_STATUS_OK
     sta (ACTC_OVERLAY_CONTEXT_ZP),y
     clc
-    lda #ACTC_OVERLAY_STATUS_OK
     rts
 
 actc_overlay_fail:
@@ -55,7 +53,6 @@ actc_overlay_fail:
     lda #ACTC_OVERLAY_STATUS_FAILED
     sta (ACTC_OVERLAY_CONTEXT_ZP),y
     sec
-    lda #ACTC_OVERLAY_STATUS_FAILED
     rts
 
 publish_builtin_runtime_table:
@@ -555,7 +552,6 @@ collect_proc_body_ops_overlay_call_resolved:
     jsr load_context_function_ptr
     pla
     jsr call_loaded_target_with_a
-    jmp collect_proc_body_ops_overlay_skip_line
 
 collect_proc_body_ops_overlay_skip_line:
     lda #ACTC_OVERLAY_CTX_SKIP_SOURCE_LINE_FN_LO
@@ -570,13 +566,11 @@ collect_proc_body_ops_overlay_proc_decl:
     jsr call_context_function
     lda #ACTC_OVERLAY_CTX_COPY_SYMBOL_FROM_SCAN_PTR_FN_LO
     jsr call_context_function
-    bcc :+
-    jmp collect_proc_body_ops_overlay_bad_proc
-:   lda #ACTC_OVERLAY_CTX_FIND_EXPORT_INDEX_FN_LO
+    bcs collect_proc_body_ops_overlay_bad_proc
+    lda #ACTC_OVERLAY_CTX_FIND_EXPORT_INDEX_FN_LO
     jsr call_context_function
-    bcc :+
-    jmp collect_proc_body_ops_overlay_bad_proc
-:   txa
+    bcs collect_proc_body_ops_overlay_bad_proc
+    txa
     ldx #ACTC_OVERLAY_CTX_CURRENT_PROC_INDEX_PTR_LO
     jsr store_a_to_context_byte_ptr
     lda #ACTC_OVERLAY_CTX_STORE_CURRENT_BODY_DEBUG_MARK_FN_LO
@@ -741,16 +735,12 @@ emit_real_assignment_local_or_fail:
     jmp emit_real_fabs_assignment_local_or_fail
 :   lda #ACTC_OVERLAY_CTX_COPY_SYMBOL_FROM_SCAN_Y_FN_LO
     jsr call_context_function
-    bcc :+
-    sec
-    rts
-:   sty symbol_end_y_local
+    bcs emit_real_assignment_local_after_copy_check_fail
+    sty symbol_end_y_local
     lda #ACTC_OVERLAY_CTX_FIND_VAR_INDEX_FN_LO
     jsr call_context_function
-    bcc :+
-    sec
-    rts
-:   stx real_lhs_index_local
+    bcs emit_real_assignment_local_after_copy_check_fail
+    stx real_lhs_index_local
     ldy symbol_end_y_local
     lda #ACTC_OVERLAY_CTX_REQUIRE_LINE_END_FN_LO
     jsr call_context_function
@@ -791,35 +781,25 @@ emit_real_assignment_local_after_copy_check_fail:
 :   sta real_operator_local
     lda #ACTC_OVERLAY_CTX_ADVANCE_SCAN_Y_FN_LO
     jsr call_context_function
-    bcc :+
-    sec
-    rts
-:   lda #ACTC_OVERLAY_CTX_SKIP_INLINE_SPACES_FN_LO
+    bcs emit_real_assignment_local_after_copy_check_fail
+    lda #ACTC_OVERLAY_CTX_SKIP_INLINE_SPACES_FN_LO
     jsr call_context_function
     lda #ACTC_OVERLAY_CTX_COPY_SYMBOL_FROM_SCAN_Y_FN_LO
     jsr call_context_function
-    bcc :+
-    sec
-    rts
-:   sty symbol_end_y_local
+    bcs emit_real_assignment_local_after_copy_check_fail
+    sty symbol_end_y_local
     lda #ACTC_OVERLAY_CTX_FIND_VAR_INDEX_FN_LO
     jsr call_context_function
-    bcc :+
-    sec
-    rts
-:   lda #ACTC_OVERLAY_CTX_REQUIRE_REAL_VAR_FN_LO
+    bcs emit_real_assignment_local_after_copy_check_fail
+    lda #ACTC_OVERLAY_CTX_REQUIRE_REAL_VAR_FN_LO
     jsr call_indexed_context_function
-    bcc :+
-    sec
-    rts
-:   stx real_rhs_index_local
+    bcs emit_real_assignment_local_after_copy_check_fail
+    stx real_rhs_index_local
     ldy symbol_end_y_local
     lda #ACTC_OVERLAY_CTX_REQUIRE_LINE_END_FN_LO
     jsr call_context_function
-    bcc :+
-    sec
-    rts
-:   lda #ACTC_OVERLAY_CTX_APPEND_BODY_OP_FN_LO
+    bcs emit_real_assignment_local_after_copy_check_fail
+    lda #ACTC_OVERLAY_CTX_APPEND_BODY_OP_FN_LO
     jsr load_context_function_ptr
     ldx real_lhs_index_local
     lda #'L'
@@ -837,10 +817,8 @@ emit_real_assignment_local_after_copy_check_fail:
     jsr load_context_function_ptr
     lda real_operator_local
     jsr call_loaded_target_with_a
-    bcc :+
-    sec
-    rts
-:   lda #ACTC_OVERLAY_CTX_APPEND_BODY_OP_FN_LO
+    bcs emit_real_assignment_local_after_copy_check_fail
+    lda #ACTC_OVERLAY_CTX_APPEND_BODY_OP_FN_LO
     jsr load_context_function_ptr
     lda #'u'
     jsr call_loaded_target_with_a
@@ -2153,8 +2131,7 @@ store_runtime_expr_with_a_local_or_fail:
     jsr try_emit_runtime_int_value_local_or_fail
     bcc store_runtime_expr_with_a_local_or_fail_after_value
     lda int_parse_matched_local
-    beq store_runtime_expr_with_a_local_or_fail_generic
-    jmp store_runtime_expr_with_a_local_or_fail_fail
+    bne store_runtime_expr_with_a_local_or_fail_fail
 store_runtime_expr_with_a_local_or_fail_generic:
     lda #ACTC_OVERLAY_CTX_EMIT_RUNTIME_VALUE_FN_LO
     jsr call_context_function
@@ -2702,62 +2679,23 @@ emit_real_small_int_assignment_local_or_fail_signed:
     jsr load_context_function_ptr
     lda stored_byte_local
     jsr call_loaded_target_with_a
-    bcc :+
-    jmp emit_real_small_int_assignment_local_or_fail_fail
-:
+    bcs emit_real_small_int_assignment_local_or_fail_fail
     stx real_rhs_index_local
     lda #ACTC_OVERLAY_CTX_FIND_OR_STORE_RT_S_TO_F_FN_LO
     jsr call_context_function
-    bcc :+
-    jmp emit_real_small_int_assignment_local_or_fail_fail
-:
+    bcs emit_real_small_int_assignment_local_or_fail_fail
     stx real_lhs_index_local
     jmp emit_real_wide_bridge_assignment_local_from_indexes
 
 emit_real_small_int_assignment_local_or_fail_zero:
     lda #ACTC_OVERLAY_CTX_STORE_ZERO_INT_LITERAL_FN_LO
     jsr call_context_function
-    bcc :+
-    jmp emit_real_small_int_assignment_local_or_fail_fail
-:
+    bcs emit_real_small_int_assignment_local_or_fail_fail
     stx real_rhs_index_local
     stx real_lhs_index_local
     jmp emit_real_literal_assignment_local_from_indexes
 
 emit_real_small_int_assignment_local_or_fail_fail:
-    sec
-    rts
-
-emit_real_zero_assignment_local_or_fail:
-    lda #ACTC_OVERLAY_CTX_STORE_ZERO_INT_LITERAL_FN_LO
-    jsr call_context_function
-    bcs emit_real_zero_assignment_local_or_fail_fail
-    stx real_rhs_index_local
-    lda #ACTC_OVERLAY_CTX_ADVANCE_SCAN_Y_FN_LO
-    jsr call_context_function
-    bcs emit_real_zero_assignment_local_or_fail_fail
-    lda #ACTC_OVERLAY_CTX_REQUIRE_LINE_END_FN_LO
-    jsr call_context_function
-    bcs emit_real_zero_assignment_local_or_fail_fail
-    lda #ACTC_OVERLAY_CTX_APPEND_BODY_OP_FN_LO
-    jsr load_context_function_ptr
-    ldx real_rhs_index_local
-    lda #'p'
-    jsr call_loaded_target_with_a
-    ldx real_rhs_index_local
-    lda #'p'
-    jsr call_loaded_target_with_a
-    lda #ACTC_OVERLAY_CTX_ASSIGNMENT_TARGET_INDEX_PTR_LO
-    jsr load_x_from_context_byte_ptr
-    lda #'T'
-    jsr call_loaded_target_with_a
-    lda #ACTC_OVERLAY_CTX_ASSIGNMENT_TARGET_INDEX_PTR_LO
-    jsr load_x_from_context_byte_ptr
-    lda #'S'
-    jsr call_loaded_target_with_a
-    clc
-    rts
-emit_real_zero_assignment_local_or_fail_fail:
     sec
     rts
 
@@ -3068,12 +3006,20 @@ builtin_runtime_import_table:
     .byte (($00 << 6) | (>builtin_symbol_mouse_btn & $3F)), <builtin_symbol_mouse_btn, <runtime_symbol_rt_mb, >runtime_symbol_rt_mb
     .byte (($00 << 6) | (>builtin_symbol_mouse_btn1 & $3F)), <builtin_symbol_mouse_btn1, <runtime_symbol_rt_mb1, >runtime_symbol_rt_mb1
     .byte (($00 << 6) | (>builtin_symbol_mouse_btn2 & $3F)), <builtin_symbol_mouse_btn2, <runtime_symbol_rt_mb2, >runtime_symbol_rt_mb2
+    .byte (($01 << 6) | (>builtin_symbol_dbf_create & $3F)), <builtin_symbol_dbf_create, <runtime_symbol_rt_dbf_create, >runtime_symbol_rt_dbf_create
     .byte (($01 << 6) | (>builtin_symbol_dbf_open & $3F)), <builtin_symbol_dbf_open, <runtime_symbol_rt_dbf_open, >runtime_symbol_rt_dbf_open
     .byte (($01 << 6) | (>builtin_symbol_dbf_close & $3F)), <builtin_symbol_dbf_close, <runtime_symbol_rt_dbf_close, >runtime_symbol_rt_dbf_close
     .byte (($02 << 6) | (>builtin_symbol_dbf_go & $3F)), <builtin_symbol_dbf_go, <runtime_symbol_rt_dbf_go, >runtime_symbol_rt_dbf_go
     .byte (($01 << 6) | (>builtin_symbol_dbf_field_count & $3F)), <builtin_symbol_dbf_field_count, <runtime_symbol_rt_dbf_fieldcount, >runtime_symbol_rt_dbf_fieldcount
     .byte (($02 << 6) | (>builtin_symbol_dbf_field_len & $3F)), <builtin_symbol_dbf_field_len, <runtime_symbol_rt_dbf_fieldlen, >runtime_symbol_rt_dbf_fieldlen
     .byte (($02 << 6) | (>builtin_symbol_dbf_read_byte & $3F)), <builtin_symbol_dbf_read_byte, <runtime_symbol_rt_dbf_readbyte, >runtime_symbol_rt_dbf_readbyte
+    .byte (($03 << 6) | (>builtin_symbol_dbf_read_field_byte & $3F)), <builtin_symbol_dbf_read_field_byte, <runtime_symbol_rt_dbf_readfieldbyte, >runtime_symbol_rt_dbf_readfieldbyte
+    .byte (($03 << 6) | (>builtin_symbol_dbf_write_byte & $3F)), <builtin_symbol_dbf_write_byte, <runtime_symbol_rt_dbf_writebyte, >runtime_symbol_rt_dbf_writebyte
+    .byte (($01 << 6) | (>builtin_symbol_dbf_append & $3F)), <builtin_symbol_dbf_append, <runtime_symbol_rt_dbf_append, >runtime_symbol_rt_dbf_append
+    .byte (($01 << 6) | (>builtin_symbol_dbf_pack & $3F)), <builtin_symbol_dbf_pack, <runtime_symbol_rt_dbf_pack, >runtime_symbol_rt_dbf_pack
+    .byte (($01 << 6) | (>builtin_symbol_dbf_save & $3F)), <builtin_symbol_dbf_save, <runtime_symbol_rt_dbf_save, >runtime_symbol_rt_dbf_save
+    .byte (($01 << 6) | (>builtin_symbol_dbf_delete & $3F)), <builtin_symbol_dbf_delete, <runtime_symbol_rt_dbf_delete, >runtime_symbol_rt_dbf_delete
+    .byte (($01 << 6) | (>builtin_symbol_dbf_undelete & $3F)), <builtin_symbol_dbf_undelete, <runtime_symbol_rt_dbf_undelete, >runtime_symbol_rt_dbf_undelete
     .byte (($01 << 6) | (>builtin_symbol_dbf_deleted & $3F)), <builtin_symbol_dbf_deleted, <runtime_symbol_rt_dbf_deleted, >runtime_symbol_rt_dbf_deleted
     .byte (($01 << 6) | (>builtin_symbol_dbf_header_len & $3F)), <builtin_symbol_dbf_header_len, <runtime_symbol_rt_dbf_headerlen, >runtime_symbol_rt_dbf_headerlen
     .byte (($01 << 6) | (>builtin_symbol_dbf_record_len & $3F)), <builtin_symbol_dbf_record_len, <runtime_symbol_rt_dbf_recordlen, >runtime_symbol_rt_dbf_recordlen
@@ -3189,6 +3135,8 @@ runtime_symbol_rt_mb1:
     .asciiz "MB1"
 runtime_symbol_rt_mb2:
     .asciiz "MB2"
+runtime_symbol_rt_dbf_create:
+    .asciiz "DBF_CREATE"
 runtime_symbol_rt_dbf_open:
     .asciiz "DBF_OPEN"
 runtime_symbol_rt_dbf_close:
@@ -3201,6 +3149,20 @@ runtime_symbol_rt_dbf_fieldlen:
     .asciiz "DBF_FIELDLEN"
 runtime_symbol_rt_dbf_readbyte:
     .asciiz "DBF_READBYTE"
+runtime_symbol_rt_dbf_readfieldbyte:
+    .asciiz "DBF_READFIELDBYTE"
+runtime_symbol_rt_dbf_writebyte:
+    .asciiz "DBF_WRITEBYTE"
+runtime_symbol_rt_dbf_append:
+    .asciiz "DBF_APPEND"
+runtime_symbol_rt_dbf_pack:
+    .asciiz "DBF_PACK"
+runtime_symbol_rt_dbf_save:
+    .asciiz "DBF_SAVE"
+runtime_symbol_rt_dbf_delete:
+    .asciiz "DBF_DELETE"
+runtime_symbol_rt_dbf_undelete:
+    .asciiz "DBF_UNDELETE"
 runtime_symbol_rt_dbf_deleted:
     .asciiz "DBF_DELETED"
 runtime_symbol_rt_dbf_headerlen:
@@ -3259,6 +3221,8 @@ builtin_symbol_mouse_btn1:
     .asciiz "MOUSEBTN1"
 builtin_symbol_mouse_btn2:
     .asciiz "MOUSEBTN2"
+builtin_symbol_dbf_create:
+    .asciiz "DBFCREATE"
 builtin_symbol_dbf_open:
     .asciiz "DBFOPEN"
 builtin_symbol_dbf_close:
@@ -3271,6 +3235,20 @@ builtin_symbol_dbf_field_len:
     .asciiz "DBFFIELDLEN"
 builtin_symbol_dbf_read_byte:
     .asciiz "DBFREADBYTE"
+builtin_symbol_dbf_read_field_byte:
+    .asciiz "DBFREADFIELDBYTE"
+builtin_symbol_dbf_write_byte:
+    .asciiz "DBFWRITEBYTE"
+builtin_symbol_dbf_append:
+    .asciiz "DBFAPPEND"
+builtin_symbol_dbf_pack:
+    .asciiz "DBFPACK"
+builtin_symbol_dbf_save:
+    .asciiz "DBFSAVE"
+builtin_symbol_dbf_delete:
+    .asciiz "DBFDELETE"
+builtin_symbol_dbf_undelete:
+    .asciiz "DBFUNDELETE"
 builtin_symbol_dbf_deleted:
     .asciiz "DBFDELETED"
 builtin_symbol_dbf_header_len:
@@ -3350,12 +3328,6 @@ pattern_fabs:
     .asciiz "FABS"
 pattern_fsqrt:
     .asciiz "FSQRT"
-pattern_and:
-    .asciiz "AND"
-pattern_or:
-    .asciiz "OR"
-pattern_not:
-    .asciiz "NOT"
 pattern_proc:
     .asciiz "PROC"
 pattern_if:
@@ -3389,15 +3361,15 @@ pattern_printi:
 pattern_printie:
     .asciiz "PRINTIE("
 msg_load_fail:
-    .asciiz "LOAD FAIL"
+    .asciiz "LOAD"
 msg_save_fail:
-    .asciiz "SAVE FAIL"
+    .asciiz "SAVE"
 msg_bad_proc:
     .asciiz "BAD PROC"
 msg_bad_var:
-    .asciiz "BAD VAR"
+    .asciiz "VAR"
 msg_bad_literal:
-    .asciiz "BAD LITERAL"
+    .asciiz "LIT"
 call_target_minus_one:
     .byte $00
 call_target_ptr:
@@ -3441,12 +3413,6 @@ runtime_condition_op_local:
 runtime_compare_op_local:
     .byte $00
 runtime_compare_flag_local:
-    .byte $00
-runtime_saved_int_count_local:
-    .byte $00
-runtime_saved_extern_count_local:
-    .byte $00
-runtime_saved_body_end_local:
     .byte $00
 int_parse_matched_local:
     .byte $00

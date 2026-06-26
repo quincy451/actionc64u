@@ -1,0 +1,10 @@
+OBJ1
+x rt_dbf_writefieldbyte 0 98
+b u0u1M
+u rt_dbf_fieldlen
+u rt_dbf_writebyte
+m 85 02 86 03 84 04 A5 E0 85 08 A5 03 D0 03 A9 00 60 A5 02 A4 03 20 00 00 85 07 D0 03 A9 00 60 A5 04 C5 07 90 03 A9 00 60 A5 04 18 69 01 85 05 A9 01 85 06 A5 06 C5 03 90 02 B0 1D A5 02 A4 06 20 00 00 D0 03 A9 00 60 18 65 05 85 05 90 03 A9 00 60 E6 06 D0 DE A9 00 60 A5 02 A6 05 A4 08 20 00 00 60
+r 22 u0
+r 64 u0
+r 95 u1
+n rt_dbf_writefieldbyte

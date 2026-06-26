@@ -31,7 +31,6 @@ actc_overlay_ok:
     lda #ACTC_OVERLAY_STATUS_OK
     sta (ACTC_OVERLAY_CONTEXT_ZP),y
     clc
-    lda #ACTC_OVERLAY_STATUS_OK
     rts
 
 actc_overlay_fail:
@@ -39,7 +38,6 @@ actc_overlay_fail:
     lda #ACTC_OVERLAY_STATUS_FAILED
     sta (ACTC_OVERLAY_CONTEXT_ZP),y
     sec
-    lda #ACTC_OVERLAY_STATUS_FAILED
     rts
 
 publish_builtin_runtime_table:
@@ -1946,12 +1944,20 @@ builtin_runtime_import_table:
     .byte (($00 << 6) | (>builtin_symbol_mouse_btn & $3F)), <builtin_symbol_mouse_btn, <runtime_symbol_rt_mb, >runtime_symbol_rt_mb
     .byte (($00 << 6) | (>builtin_symbol_mouse_btn1 & $3F)), <builtin_symbol_mouse_btn1, <runtime_symbol_rt_mb1, >runtime_symbol_rt_mb1
     .byte (($00 << 6) | (>builtin_symbol_mouse_btn2 & $3F)), <builtin_symbol_mouse_btn2, <runtime_symbol_rt_mb2, >runtime_symbol_rt_mb2
+    .byte (($01 << 6) | (>builtin_symbol_dbf_create & $3F)), <builtin_symbol_dbf_create, <runtime_symbol_rt_dbf_create, >runtime_symbol_rt_dbf_create
     .byte (($01 << 6) | (>builtin_symbol_dbf_open & $3F)), <builtin_symbol_dbf_open, <runtime_symbol_rt_dbf_open, >runtime_symbol_rt_dbf_open
     .byte (($01 << 6) | (>builtin_symbol_dbf_close & $3F)), <builtin_symbol_dbf_close, <runtime_symbol_rt_dbf_close, >runtime_symbol_rt_dbf_close
     .byte (($02 << 6) | (>builtin_symbol_dbf_go & $3F)), <builtin_symbol_dbf_go, <runtime_symbol_rt_dbf_go, >runtime_symbol_rt_dbf_go
     .byte (($01 << 6) | (>builtin_symbol_dbf_field_count & $3F)), <builtin_symbol_dbf_field_count, <runtime_symbol_rt_dbf_fieldcount, >runtime_symbol_rt_dbf_fieldcount
     .byte (($02 << 6) | (>builtin_symbol_dbf_field_len & $3F)), <builtin_symbol_dbf_field_len, <runtime_symbol_rt_dbf_fieldlen, >runtime_symbol_rt_dbf_fieldlen
     .byte (($02 << 6) | (>builtin_symbol_dbf_read_byte & $3F)), <builtin_symbol_dbf_read_byte, <runtime_symbol_rt_dbf_readbyte, >runtime_symbol_rt_dbf_readbyte
+    .byte (($03 << 6) | (>builtin_symbol_dbf_read_field_byte & $3F)), <builtin_symbol_dbf_read_field_byte, <runtime_symbol_rt_dbf_readfieldbyte, >runtime_symbol_rt_dbf_readfieldbyte
+    .byte (($03 << 6) | (>builtin_symbol_dbf_write_byte & $3F)), <builtin_symbol_dbf_write_byte, <runtime_symbol_rt_dbf_writebyte, >runtime_symbol_rt_dbf_writebyte
+    .byte (($01 << 6) | (>builtin_symbol_dbf_append & $3F)), <builtin_symbol_dbf_append, <runtime_symbol_rt_dbf_append, >runtime_symbol_rt_dbf_append
+    .byte (($01 << 6) | (>builtin_symbol_dbf_pack & $3F)), <builtin_symbol_dbf_pack, <runtime_symbol_rt_dbf_pack, >runtime_symbol_rt_dbf_pack
+    .byte (($01 << 6) | (>builtin_symbol_dbf_save & $3F)), <builtin_symbol_dbf_save, <runtime_symbol_rt_dbf_save, >runtime_symbol_rt_dbf_save
+    .byte (($01 << 6) | (>builtin_symbol_dbf_delete & $3F)), <builtin_symbol_dbf_delete, <runtime_symbol_rt_dbf_delete, >runtime_symbol_rt_dbf_delete
+    .byte (($01 << 6) | (>builtin_symbol_dbf_undelete & $3F)), <builtin_symbol_dbf_undelete, <runtime_symbol_rt_dbf_undelete, >runtime_symbol_rt_dbf_undelete
     .byte (($01 << 6) | (>builtin_symbol_dbf_deleted & $3F)), <builtin_symbol_dbf_deleted, <runtime_symbol_rt_dbf_deleted, >runtime_symbol_rt_dbf_deleted
     .byte (($01 << 6) | (>builtin_symbol_dbf_header_len & $3F)), <builtin_symbol_dbf_header_len, <runtime_symbol_rt_dbf_headerlen, >runtime_symbol_rt_dbf_headerlen
     .byte (($01 << 6) | (>builtin_symbol_dbf_record_len & $3F)), <builtin_symbol_dbf_record_len, <runtime_symbol_rt_dbf_recordlen, >runtime_symbol_rt_dbf_recordlen
@@ -2067,6 +2073,8 @@ runtime_symbol_rt_mb1:
     .asciiz "MB1"
 runtime_symbol_rt_mb2:
     .asciiz "MB2"
+runtime_symbol_rt_dbf_create:
+    .asciiz "DBF_CREATE"
 runtime_symbol_rt_dbf_open:
     .asciiz "DBF_OPEN"
 runtime_symbol_rt_dbf_close:
@@ -2079,6 +2087,20 @@ runtime_symbol_rt_dbf_fieldlen:
     .asciiz "DBF_FIELDLEN"
 runtime_symbol_rt_dbf_readbyte:
     .asciiz "DBF_READBYTE"
+runtime_symbol_rt_dbf_readfieldbyte:
+    .asciiz "DBF_READFIELDBYTE"
+runtime_symbol_rt_dbf_writebyte:
+    .asciiz "DBF_WRITEBYTE"
+runtime_symbol_rt_dbf_append:
+    .asciiz "DBF_APPEND"
+runtime_symbol_rt_dbf_pack:
+    .asciiz "DBF_PACK"
+runtime_symbol_rt_dbf_save:
+    .asciiz "DBF_SAVE"
+runtime_symbol_rt_dbf_delete:
+    .asciiz "DBF_DELETE"
+runtime_symbol_rt_dbf_undelete:
+    .asciiz "DBF_UNDELETE"
 runtime_symbol_rt_dbf_deleted:
     .asciiz "DBF_DELETED"
 runtime_symbol_rt_dbf_headerlen:
@@ -2137,6 +2159,8 @@ builtin_symbol_mouse_btn1:
     .asciiz "MOUSEBTN1"
 builtin_symbol_mouse_btn2:
     .asciiz "MOUSEBTN2"
+builtin_symbol_dbf_create:
+    .asciiz "DBFCREATE"
 builtin_symbol_dbf_open:
     .asciiz "DBFOPEN"
 builtin_symbol_dbf_close:
@@ -2149,6 +2173,20 @@ builtin_symbol_dbf_field_len:
     .asciiz "DBFFIELDLEN"
 builtin_symbol_dbf_read_byte:
     .asciiz "DBFREADBYTE"
+builtin_symbol_dbf_read_field_byte:
+    .asciiz "DBFREADFIELDBYTE"
+builtin_symbol_dbf_write_byte:
+    .asciiz "DBFWRITEBYTE"
+builtin_symbol_dbf_append:
+    .asciiz "DBFAPPEND"
+builtin_symbol_dbf_pack:
+    .asciiz "DBFPACK"
+builtin_symbol_dbf_save:
+    .asciiz "DBFSAVE"
+builtin_symbol_dbf_delete:
+    .asciiz "DBFDELETE"
+builtin_symbol_dbf_undelete:
+    .asciiz "DBFUNDELETE"
 builtin_symbol_dbf_deleted:
     .asciiz "DBFDELETED"
 builtin_symbol_dbf_header_len:

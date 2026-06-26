@@ -8,13 +8,16 @@
 ; - ALINK selects only the DBF routines referenced by the program
 ; - no runner-global DBF runtime is linked unless the program imports it
 ;
-; Initial support exposes a single read-only DBF handle with header-backed
-; metadata, field lengths, current-record delete status, and raw current-record
-; byte reads. Field read/write, append, create, and pack helpers should extend
-; this module as separate link-selected RT_DBF_*.OBJ routines.
+; Initial support exposes a single DBF handle with header-backed metadata,
+; field lengths, current-record delete status, raw current-record byte
+; reads/writes, field-byte reads/writes, empty DBF creation, blank-record
+; append, deleted-record pack, and explicit save-back to the staged filename.
 
 MODULE DBF1
 
+; DbfCreate takes a CARD pointer to a filename string, stages a new empty
+; zero-field DBF image, and returns handle 1. Call DbfSave to write it to disk.
+BYTE FUNC DbfCreate(CARD filename)
 ; DbfOpen takes a CARD pointer to a filename string and returns handle 1 when
 ; the DBF header can be staged and parsed, or zero on failure.
 BYTE FUNC DbfOpen(CARD filename)
@@ -23,6 +26,14 @@ BYTE FUNC DbfGo(BYTE handle,BYTE recno)
 BYTE FUNC DbfFieldCount(BYTE handle)
 BYTE FUNC DbfFieldLen(BYTE handle,BYTE field)
 BYTE FUNC DbfReadByte(BYTE handle,BYTE offset)
+BYTE FUNC DbfReadFieldByte(BYTE handle,BYTE field,BYTE offset)
+BYTE FUNC DbfWriteFieldByte(BYTE handle,BYTE field,BYTE offset,BYTE value)
+BYTE FUNC DbfWriteByte(BYTE handle,BYTE offset,BYTE value)
+BYTE FUNC DbfAppend(BYTE handle)
+BYTE FUNC DbfPack(BYTE handle)
+BYTE FUNC DbfSave(BYTE handle)
+BYTE FUNC DbfDelete(BYTE handle)
+BYTE FUNC DbfUndelete(BYTE handle)
 BYTE FUNC DbfDeleted(BYTE handle)
 BYTE FUNC DbfHeaderLen(BYTE handle)
 BYTE FUNC DbfRecordLen(BYTE handle)

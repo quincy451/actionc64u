@@ -36,7 +36,11 @@ save_content_buffer_len_done:
     lda #tool_file_status_fail
     sta save_params+6
     ldx #save_params
+.ifdef ACTADD_PRESERVE_ZP_SERVICES
+    jsr actadd_svc_file_save_sc0
+.else
     jsr svc_file_save_sc0
+.endif
     lda save_params+6
     cmp #tool_file_status_ok
     beq save_content_buffer_to_target_ok

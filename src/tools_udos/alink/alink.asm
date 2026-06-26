@@ -343,6 +343,8 @@ RUNTIME_HELPER_KIND_BYTE_READBACK = 12
 RUNTIME_HELPER_KIND_A_BYTE_READBACK = 13
 RUNTIME_HELPER_KIND_XY_WORD_READBACK = 14
 RUNTIME_HELPER_KIND_AY_BYTE_READBACK = 15
+RUNTIME_HELPER_KIND_AXY_BYTES_CLC_READBACK = 16
+RUNTIME_HELPER_KIND_AXY_E0_BYTES_CLC_READBACK = 17
 
 
 .segment "ZPTEMP": zeropage
@@ -4962,6 +4964,8 @@ linked_runtime_arg0:
 linked_runtime_arg1:
     .res 1
 linked_runtime_arg2:
+    .res 1
+linked_runtime_arg3:
     .res 1
 linked_runtime_call_count:
     .res 1

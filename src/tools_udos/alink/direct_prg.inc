@@ -313,7 +313,7 @@ find_linked_real_print_int_prg_case_body_ok:
     jmp fail_with_ptr
 find_linked_real_print_int_prg_case_have_externals:
     lda int_count
-    cmp #$03
+    cmp #$04
     bcs find_linked_real_print_int_prg_case_have_ints
     lda #<msg_bad_object
     ldy #>msg_bad_object
@@ -2576,7 +2576,7 @@ runtime_helper_sequence_store_arg_from_a:
     sta linked_runtime_result_store_ordinal
 :
     lda linked_runtime_arg_count
-    cmp #$03
+    cmp #$04
     bcc :+
     pla
     sec
@@ -2594,7 +2594,12 @@ runtime_helper_sequence_store_arg_from_a:
     sta linked_runtime_arg1
     jmp runtime_helper_sequence_store_arg_done
 :
+    cpx #$02
+    bne :+
     sta linked_runtime_arg2
+    jmp runtime_helper_sequence_store_arg_done
+:
+    sta linked_runtime_arg3
 runtime_helper_sequence_store_arg_done:
     inc linked_runtime_arg_count
     clc
@@ -2633,6 +2638,26 @@ runtime_helper_sequence_update_result_pending:
     rts
 :
     cmp #RUNTIME_HELPER_KIND_AY_BYTE_READBACK
+    bne :+
+    lda #$01
+    sta linked_runtime_result_pending
+    lda #$00
+    sta linked_runtime_result_arg_count
+    sta linked_runtime_result_loaded
+    sta linked_runtime_result_store_ordinal
+    rts
+:
+    cmp #RUNTIME_HELPER_KIND_AXY_BYTES_CLC_READBACK
+    bne :+
+    lda #$01
+    sta linked_runtime_result_pending
+    lda #$00
+    sta linked_runtime_result_arg_count
+    sta linked_runtime_result_loaded
+    sta linked_runtime_result_store_ordinal
+    rts
+:
+    cmp #RUNTIME_HELPER_KIND_AXY_E0_BYTES_CLC_READBACK
     bne :+
     lda #$01
     sta linked_runtime_result_pending
@@ -2734,17 +2759,21 @@ runtime_helper_sequence_note_runtime_load:
 
 runtime_helper_sequence_commit_loaded_arg_or_fail:
     lda linked_runtime_result_pending
-    beq runtime_helper_sequence_commit_loaded_arg_ok
+    bne :+
+    jmp runtime_helper_sequence_commit_loaded_arg_ok
+:
     lda linked_runtime_result_loaded
-    beq runtime_helper_sequence_commit_loaded_arg_ok
+    bne :+
+    jmp runtime_helper_sequence_commit_loaded_arg_ok
+:
     lda linked_runtime_arg_count
-    cmp #$03
+    cmp #$04
     bcc :+
     sec
     rts
 :
     lda linked_runtime_result_arg_count
-    cmp #$03
+    cmp #$04
     bcc :+
     sec
     rts
@@ -2756,6 +2785,15 @@ runtime_helper_sequence_commit_loaded_arg_or_fail:
     rts
 :
     sta linked_import_index
+    lda linked_runtime_arg_count
+    cmp #$03
+    bcc runtime_helper_sequence_commit_loaded_arg_shift_two
+    lda linked_import_index
+    cmp #$03
+    bcs runtime_helper_sequence_commit_loaded_arg_shift_two
+    lda linked_runtime_arg2
+    sta linked_runtime_arg3
+runtime_helper_sequence_commit_loaded_arg_shift_two:
     lda linked_runtime_arg_count
     cmp #$02
     bcc runtime_helper_sequence_commit_loaded_arg_shift_one
@@ -2787,7 +2825,12 @@ runtime_helper_sequence_commit_loaded_arg_store:
     sta linked_runtime_arg1
     jmp runtime_helper_sequence_commit_loaded_arg_done
 :
+    cpx #$02
+    bne :+
     sta linked_runtime_arg2
+    jmp runtime_helper_sequence_commit_loaded_arg_done
+:
+    sta linked_runtime_arg3
 runtime_helper_sequence_commit_loaded_arg_done:
     inc linked_runtime_arg_count
     lda #$00
@@ -3353,6 +3396,17 @@ runtime_helper_kind_for_external_index_x:
     clc
     rts
 :
+    lda #<runtime_name_rt_dbf_create
+    sta const_ptr
+    lda #>runtime_name_rt_dbf_create
+    sta const_ptr+1
+    ldx linked_external_index
+    jsr runtime_external_index_matches_const
+    bcs :+
+    lda #RUNTIME_HELPER_KIND_XY_WORD_READBACK
+    clc
+    rts
+:
     lda #<runtime_name_rt_dbf_open
     sta const_ptr
     lda #>runtime_name_rt_dbf_open
@@ -3416,6 +3470,94 @@ runtime_helper_kind_for_external_index_x:
     jsr runtime_external_index_matches_const
     bcs :+
     lda #RUNTIME_HELPER_KIND_AY_BYTE_READBACK
+    clc
+    rts
+:
+    lda #<runtime_name_rt_dbf_readfieldbyte
+    sta const_ptr
+    lda #>runtime_name_rt_dbf_readfieldbyte
+    sta const_ptr+1
+    ldx linked_external_index
+    jsr runtime_external_index_matches_const
+    bcs :+
+    lda #RUNTIME_HELPER_KIND_AXY_BYTES_CLC_READBACK
+    clc
+    rts
+:
+    lda #<runtime_name_rt_dbf_writefieldbyte
+    sta const_ptr
+    lda #>runtime_name_rt_dbf_writefieldbyte
+    sta const_ptr+1
+    ldx linked_external_index
+    jsr runtime_external_index_matches_const
+    bcs :+
+    lda #RUNTIME_HELPER_KIND_AXY_E0_BYTES_CLC_READBACK
+    clc
+    rts
+:
+    lda #<runtime_name_rt_dbf_writebyte
+    sta const_ptr
+    lda #>runtime_name_rt_dbf_writebyte
+    sta const_ptr+1
+    ldx linked_external_index
+    jsr runtime_external_index_matches_const
+    bcs :+
+    lda #RUNTIME_HELPER_KIND_AXY_BYTES_CLC_READBACK
+    clc
+    rts
+:
+    lda #<runtime_name_rt_dbf_append
+    sta const_ptr
+    lda #>runtime_name_rt_dbf_append
+    sta const_ptr+1
+    ldx linked_external_index
+    jsr runtime_external_index_matches_const
+    bcs :+
+    lda #RUNTIME_HELPER_KIND_A_BYTE_READBACK
+    clc
+    rts
+:
+    lda #<runtime_name_rt_dbf_pack
+    sta const_ptr
+    lda #>runtime_name_rt_dbf_pack
+    sta const_ptr+1
+    ldx linked_external_index
+    jsr runtime_external_index_matches_const
+    bcs :+
+    lda #RUNTIME_HELPER_KIND_A_BYTE_READBACK
+    clc
+    rts
+:
+    lda #<runtime_name_rt_dbf_save
+    sta const_ptr
+    lda #>runtime_name_rt_dbf_save
+    sta const_ptr+1
+    ldx linked_external_index
+    jsr runtime_external_index_matches_const
+    bcs :+
+    lda #RUNTIME_HELPER_KIND_A_BYTE_READBACK
+    clc
+    rts
+:
+    lda #<runtime_name_rt_dbf_delete
+    sta const_ptr
+    lda #>runtime_name_rt_dbf_delete
+    sta const_ptr+1
+    ldx linked_external_index
+    jsr runtime_external_index_matches_const
+    bcs :+
+    lda #RUNTIME_HELPER_KIND_A_BYTE_READBACK
+    clc
+    rts
+:
+    lda #<runtime_name_rt_dbf_undelete
+    sta const_ptr
+    lda #>runtime_name_rt_dbf_undelete
+    sta const_ptr+1
+    ldx linked_external_index
+    jsr runtime_external_index_matches_const
+    bcs :+
+    lda #RUNTIME_HELPER_KIND_A_BYTE_READBACK
     clc
     rts
 :
@@ -3645,6 +3787,14 @@ runtime_helper_sequence_validate_current_call:
     bne :+
     jmp runtime_helper_sequence_validate_axy_bytes
 :
+    cmp #RUNTIME_HELPER_KIND_AXY_BYTES_CLC_READBACK
+    bne :+
+    jmp runtime_helper_sequence_validate_axy_bytes
+:
+    cmp #RUNTIME_HELPER_KIND_AXY_E0_BYTES_CLC_READBACK
+    bne :+
+    jmp runtime_helper_sequence_validate_axy_e0_bytes
+:
     cmp #RUNTIME_HELPER_KIND_X1_A0_BYTES
     bne :+
     jmp runtime_helper_sequence_validate_x1_a0_bytes
@@ -3712,6 +3862,60 @@ runtime_helper_sequence_validate_axy_bytes_two_literal_args:
 :
     jmp runtime_helper_sequence_arg1_hi_zero
 runtime_helper_sequence_validate_axy_bytes_literal_args:
+    lda #$03
+    jsr runtime_helper_sequence_require_arg_count
+    bcc :+
+    rts
+:
+    jsr runtime_helper_sequence_arg0_hi_zero
+    bcc :+
+    rts
+:
+    jsr runtime_helper_sequence_arg1_hi_zero
+    bcc :+
+    rts
+:
+    jmp runtime_helper_sequence_arg2_hi_zero
+
+runtime_helper_sequence_validate_axy_e0_bytes:
+    jsr runtime_helper_sequence_pending_a_arg_active
+    bcc runtime_helper_sequence_validate_axy_e0_bytes_pending_arg0
+    jsr runtime_helper_sequence_pending_a_arg3_active
+    bcc runtime_helper_sequence_validate_axy_e0_bytes_pending_arg3
+    lda #$04
+    jsr runtime_helper_sequence_require_arg_count
+    bcc :+
+    rts
+:
+    jsr runtime_helper_sequence_arg0_hi_zero
+    bcc :+
+    rts
+:
+    jsr runtime_helper_sequence_arg1_hi_zero
+    bcc :+
+    rts
+:
+    jsr runtime_helper_sequence_arg2_hi_zero
+    bcc :+
+    rts
+:
+    jmp runtime_helper_sequence_arg3_hi_zero
+runtime_helper_sequence_validate_axy_e0_bytes_pending_arg0:
+    lda #$03
+    jsr runtime_helper_sequence_require_arg_count
+    bcc :+
+    rts
+:
+    jsr runtime_helper_sequence_arg0_hi_zero
+    bcc :+
+    rts
+:
+    jsr runtime_helper_sequence_arg1_hi_zero
+    bcc :+
+    rts
+:
+    jmp runtime_helper_sequence_arg2_hi_zero
+runtime_helper_sequence_validate_axy_e0_bytes_pending_arg3:
     lda #$03
     jsr runtime_helper_sequence_require_arg_count
     bcc :+
@@ -3931,6 +4135,14 @@ runtime_helper_sequence_arg2_hi_zero:
     beq runtime_helper_sequence_hi_ok
     sec
     rts
+runtime_helper_sequence_arg3_hi_zero:
+        ldx linked_runtime_arg3
+        bmi runtime_helper_sequence_hi_ok
+        jsr load_linked_literal_window_from_x_or_fail
+        lda linked_literal_window+LINKED_LITERAL_HI
+    beq runtime_helper_sequence_hi_ok
+    sec
+    rts
 runtime_helper_sequence_hi_ok:
     clc
     rts
@@ -3967,6 +4179,18 @@ runtime_helper_sequence_pending_a_arg2_active:
     clc
     rts
 runtime_helper_sequence_pending_a_arg2_inactive:
+    sec
+    rts
+
+runtime_helper_sequence_pending_a_arg3_active:
+    lda linked_runtime_result_pending
+    beq runtime_helper_sequence_pending_a_arg3_inactive
+    lda linked_runtime_result_arg_count
+    cmp #$03
+    bne runtime_helper_sequence_pending_a_arg3_inactive
+    clc
+    rts
+runtime_helper_sequence_pending_a_arg3_inactive:
     sec
     rts
 
@@ -5900,6 +6124,15 @@ runtime_helper_sequence_add_current_call_length:
     beq runtime_helper_sequence_add_arg0_five
     cmp #RUNTIME_HELPER_KIND_AXY_BYTES_CLC
     beq runtime_helper_sequence_add_arg0_eight
+    cmp #RUNTIME_HELPER_KIND_AXY_BYTES_CLC_READBACK
+    beq runtime_helper_sequence_add_arg0_eight
+    cmp #RUNTIME_HELPER_KIND_AXY_E0_BYTES_CLC_READBACK
+    bne :+
+    lda linked_runtime_result_loaded
+    beq runtime_helper_sequence_add_arg0_fourteen
+    lda #$0C
+    jmp runtime_helper_sequence_add_a_to_next_addr
+:
     cmp #RUNTIME_HELPER_KIND_SPRITE_POS
     beq runtime_helper_sequence_add_arg0_eight
     cmp #RUNTIME_HELPER_KIND_SPRITE_DATA
@@ -5918,13 +6151,18 @@ runtime_helper_sequence_add_arg0_seven:
 runtime_helper_sequence_add_arg0_eight:
     lda #$08
     jmp runtime_helper_sequence_add_a_to_next_addr
+runtime_helper_sequence_add_arg0_fourteen:
+    lda #$0E
+    jmp runtime_helper_sequence_add_a_to_next_addr
 runtime_helper_sequence_add_current_call_literal_args:
     jsr runtime_helper_sequence_pending_a_arg1_active
     bcs runtime_helper_sequence_add_current_call_arg2_literal_args
     jsr runtime_helper_sequence_add_pending_loaded_len
     lda linked_runtime_helper_kind
     cmp #RUNTIME_HELPER_KIND_XA_BYTE
-    beq runtime_helper_sequence_add_five_to_next_addr
+    bne :+
+    jmp runtime_helper_sequence_add_five_to_next_addr
+:
     cmp #RUNTIME_HELPER_KIND_AY_BYTE
     bne :+
     jmp runtime_helper_sequence_add_six_to_next_addr
@@ -5940,25 +6178,56 @@ runtime_helper_sequence_add_current_call_literal_args:
     cmp #RUNTIME_HELPER_KIND_SPRITE_DATA
     beq runtime_helper_sequence_add_arg0_eight
     cmp #RUNTIME_HELPER_KIND_AXY_BYTES_CLC
-    beq runtime_helper_sequence_add_nine_to_next_addr
+    bne :+
+    jmp runtime_helper_sequence_add_nine_to_next_addr
+:
+    cmp #RUNTIME_HELPER_KIND_AXY_BYTES_CLC_READBACK
+    bne :+
+    jmp runtime_helper_sequence_add_nine_to_next_addr
+:
     cmp #RUNTIME_HELPER_KIND_SPRITE_POS
-    beq runtime_helper_sequence_add_nine_to_next_addr
+    bne :+
+    jmp runtime_helper_sequence_add_nine_to_next_addr
+:
     cmp #RUNTIME_HELPER_KIND_SID_FREQ
     beq runtime_helper_sequence_add_arg0_eight
 runtime_helper_sequence_add_current_call_arg2_literal_args:
     jsr runtime_helper_sequence_pending_a_arg2_active
-    bcs runtime_helper_sequence_add_current_call_all_literal_args
+    bcs runtime_helper_sequence_add_current_call_arg3_literal_args
     jsr runtime_helper_sequence_add_pending_loaded_len
     lda linked_runtime_helper_kind
     cmp #RUNTIME_HELPER_KIND_AXY_BYTES_CLC
-    beq runtime_helper_sequence_add_nine_to_next_addr
+    bne :+
+    jmp runtime_helper_sequence_add_nine_to_next_addr
+:
+    cmp #RUNTIME_HELPER_KIND_AXY_BYTES_CLC_READBACK
+    bne :+
+    jmp runtime_helper_sequence_add_nine_to_next_addr
+:
     cmp #RUNTIME_HELPER_KIND_SPRITE_POS
-    beq runtime_helper_sequence_add_nine_to_next_addr
+    bne :+
+    jmp runtime_helper_sequence_add_nine_to_next_addr
+:
+runtime_helper_sequence_add_current_call_arg3_literal_args:
+    jsr runtime_helper_sequence_pending_a_arg3_active
+    bcs runtime_helper_sequence_add_current_call_all_literal_args
+    jsr runtime_helper_sequence_add_pending_loaded_len
+    lda linked_runtime_helper_kind
+    cmp #RUNTIME_HELPER_KIND_AXY_E0_BYTES_CLC_READBACK
+    bne runtime_helper_sequence_add_current_call_all_literal_args
+    lda #$0C
+    jmp runtime_helper_sequence_add_a_to_next_addr
 runtime_helper_sequence_add_current_call_all_literal_args:
     lda linked_runtime_helper_kind
+    cmp #RUNTIME_HELPER_KIND_AXY_E0_BYTES_CLC_READBACK
+    bne :+
+    jmp runtime_helper_sequence_add_arg0_fourteen
+:
     cmp #RUNTIME_HELPER_KIND_SPRITE_POS
     beq runtime_helper_sequence_add_ten_to_next_addr
     cmp #RUNTIME_HELPER_KIND_AXY_BYTES_CLC
+    beq runtime_helper_sequence_add_ten_to_next_addr
+    cmp #RUNTIME_HELPER_KIND_AXY_BYTES_CLC_READBACK
     bne :+
 runtime_helper_sequence_add_ten_to_next_addr:
     lda #$0A
@@ -6083,6 +6352,14 @@ append_runtime_helper_sequence_current_call_or_fail:
     cmp #RUNTIME_HELPER_KIND_AXY_BYTES_CLC
     bne :+
     jmp append_runtime_helper_sequence_axy_bytes_clc
+:
+    cmp #RUNTIME_HELPER_KIND_AXY_BYTES_CLC_READBACK
+    bne :+
+    jmp append_runtime_helper_sequence_axy_bytes_clc
+:
+    cmp #RUNTIME_HELPER_KIND_AXY_E0_BYTES_CLC_READBACK
+    bne :+
+    jmp append_runtime_helper_sequence_axy_e0_bytes_clc
 :
     cmp #RUNTIME_HELPER_KIND_X1_A0_BYTES
     bne :+
@@ -6295,12 +6572,60 @@ append_runtime_helper_sequence_axy_bytes_clc:
         lda #$18
         jmp append_payload_byte
 
+append_runtime_helper_sequence_axy_e0_bytes_clc:
+        jsr runtime_helper_sequence_pending_a_arg_active
+        bcs :+
+        lda linked_runtime_result_loaded
+        bne append_runtime_helper_sequence_axy_e0_bytes_pending_arg0_loaded
+        lda #$48
+        jsr append_payload_byte
+        jsr append_runtime_helper_sequence_lda_arg2_low
+        jsr append_runtime_helper_sequence_sta_e0
+        lda #$68
+        jsr append_payload_byte
+        jmp append_runtime_helper_sequence_axy_e0_bytes_pending_arg0_regs
+append_runtime_helper_sequence_axy_e0_bytes_pending_arg0_loaded:
+        jsr append_runtime_helper_sequence_lda_arg2_low
+        jsr append_runtime_helper_sequence_sta_e0
+        jsr append_runtime_helper_sequence_lda_pending_low
+append_runtime_helper_sequence_axy_e0_bytes_pending_arg0_regs:
+        jsr append_runtime_helper_sequence_ldx_arg0_low
+        jsr append_runtime_helper_sequence_ldy_arg1_low
+        lda #$18
+        jmp append_payload_byte
+    :
+        jsr runtime_helper_sequence_pending_a_arg3_active
+        bcs :+
+        jsr append_runtime_helper_sequence_lda_pending_low
+        jsr append_runtime_helper_sequence_sta_e0
+        jsr append_runtime_helper_sequence_lda_arg0_low
+        jsr append_runtime_helper_sequence_ldx_arg1_low
+        jsr append_runtime_helper_sequence_ldy_arg2_low
+        lda #$18
+        jmp append_payload_byte
+:
+        jsr append_runtime_helper_sequence_lda_arg3_low
+        jsr append_runtime_helper_sequence_sta_e0
+        jsr append_runtime_helper_sequence_lda_arg0_low
+        jsr append_runtime_helper_sequence_ldx_arg1_low
+        jsr append_runtime_helper_sequence_ldy_arg2_low
+        lda #$18
+        jmp append_payload_byte
+
 append_runtime_helper_sequence_lda_arg0_low:
     ldx linked_runtime_arg0
     jmp append_runtime_helper_sequence_lda_arg_x_low
 
 append_runtime_helper_sequence_lda_arg1_low:
     ldx linked_runtime_arg1
+    jmp append_runtime_helper_sequence_lda_arg_x_low
+
+append_runtime_helper_sequence_lda_arg2_low:
+    ldx linked_runtime_arg2
+    jmp append_runtime_helper_sequence_lda_arg_x_low
+
+append_runtime_helper_sequence_lda_arg3_low:
+    ldx linked_runtime_arg3
     jmp append_runtime_helper_sequence_lda_arg_x_low
 
 append_runtime_helper_sequence_ldx_arg0_low:
@@ -6409,6 +6734,12 @@ append_runtime_helper_sequence_ldy_arg_x_hi:
     lda #$A0
     jsr append_payload_byte
     lda #$00
+    jmp append_payload_byte
+
+append_runtime_helper_sequence_sta_e0:
+    lda #$85
+    jsr append_payload_byte
+    lda #$E0
     jmp append_payload_byte
 
 append_runtime_helper_sequence_lda_store_ordinal_x_low:
@@ -8065,6 +8396,8 @@ runtime_name_rt_mb2:
     .asciiz "rt_mb2"
 runtime_name_rt_mseen:
     .asciiz "rt_mseen"
+runtime_name_rt_dbf_create:
+    .asciiz "rt_dbf_create"
 runtime_name_rt_dbf_open:
     .asciiz "rt_dbf_open"
 runtime_name_rt_dbf_close:
@@ -8077,6 +8410,22 @@ runtime_name_rt_dbf_fieldlen:
     .asciiz "rt_dbf_fieldlen"
 runtime_name_rt_dbf_readbyte:
     .asciiz "rt_dbf_readbyte"
+runtime_name_rt_dbf_readfieldbyte:
+    .asciiz "rt_dbf_readfieldbyte"
+runtime_name_rt_dbf_writefieldbyte:
+    .asciiz "rt_dbf_writefieldbyte"
+runtime_name_rt_dbf_writebyte:
+    .asciiz "rt_dbf_writebyte"
+runtime_name_rt_dbf_append:
+    .asciiz "rt_dbf_append"
+runtime_name_rt_dbf_pack:
+    .asciiz "rt_dbf_pack"
+runtime_name_rt_dbf_save:
+    .asciiz "rt_dbf_save"
+runtime_name_rt_dbf_delete:
+    .asciiz "rt_dbf_delete"
+runtime_name_rt_dbf_undelete:
+    .asciiz "rt_dbf_undelete"
 runtime_name_rt_dbf_deleted:
     .asciiz "rt_dbf_deleted"
 runtime_name_rt_dbf_headerlen:

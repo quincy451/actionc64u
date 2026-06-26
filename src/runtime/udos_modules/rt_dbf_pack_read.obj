@@ -1,0 +1,5 @@
+OBJ1
+x rt_dbf_pack_read 0 50
+b M
+m A5 02 85 F0 A5 03 18 69 40 85 F1 A9 0F 69 00 85 F2 A9 E0 85 F3 A9 00 85 F4 A9 01 85 F5 A9 00 85 F6 A2 F0 20 39 CF A5 F7 C9 01 F0 03 A9 00 60 A5 E0 60
+n rt_dbf_pack_read

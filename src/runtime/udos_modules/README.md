@@ -218,13 +218,19 @@ Current status:
   button 1, bit 1 button 2.
 - `rt_mb1.obj` and `rt_mb2.obj` import `rt_mb` and return `1` when mouse
   button 1 or button 2 is active, otherwise `0`.
-- `rt_dbf_state.obj` exports nine bytes of linked DBF state: active handle,
+- `rt_dbf_state.obj` exports thirteen bytes of linked DBF state: active handle,
   total-record low/high bytes, current-record low/high bytes, DBF header-size
-  low/high bytes, and DBF record-size low/high bytes.
-- `rt_dbf_open.obj` expects a CARD filename pointer in `X`/`Y`, stages the file
-  into the DBF REU slot, reads the DBF header, and returns handle `1` in `A`
-  when the header can be parsed. It returns zero on missing file, missing REU,
-  too-short input, or staging failure.
+  low/high bytes, DBF record-size low/high bytes, original filename pointer
+  low/high bytes, and staged file-length low/high bytes.
+- `rt_dbf_open.obj` expects a CARD filename pointer in `X`/`Y`, stages up to a
+  16-bit DBF file into the DBF REU slot, reads the DBF header, and returns
+  handle `1` in `A` when the header can be parsed. It returns zero on missing
+  file, missing REU, too-short input, larger staged files, or staging failure.
+- `rt_dbf_create.obj` expects a CARD filename pointer in `X`/`Y`, clears the
+  DBF state, stages a new zero-field DBF image with header length 12 and record
+  length 1 in the DBF REU slot, remembers the filename pointer, and returns
+  handle `1` in `A` after all header bytes are staged. Use `rt_dbf_save.obj` to
+  persist the created image.
 - `rt_dbf_close.obj` expects a DBF handle in `A` and clears the active handle
   when it matches the current DBF state.
 - `rt_dbf_go.obj` expects a DBF handle in `A` and a one-based target record
@@ -241,6 +247,40 @@ Current status:
   offset in `Y`. It returns the raw byte from the staged DBF record, including
   offset zero for the delete flag, or zero when the handle is inactive, the
   current record is invalid, the offset is out of range, or the REU read fails.
+- `rt_dbf_readfieldbyte.obj` expects a DBF handle in `A`, a one-based field
+  index in `X`, and a zero-based field byte offset in `Y`. It imports
+  `rt_dbf_fieldlen` and `rt_dbf_readbyte`, validates the requested field and
+  offset, and returns zero on invalid inputs, offset overflow, or read failure.
+- `rt_dbf_writefieldbyte.obj` expects a DBF handle in `A`, a one-based field
+  index in `X`, a zero-based field byte offset in `Y`, and the byte value in
+  zero page `$E0`. It imports `rt_dbf_fieldlen` and `rt_dbf_writebyte`,
+  validates the requested field and offset, and returns `1` on success or zero
+  on invalid inputs, offset overflow, or write failure.
+- `rt_dbf_writebyte.obj` expects a DBF handle in `A`, a current-record byte
+  offset in `X`, and the byte value in `Y`. It writes into the staged DBF
+  record and returns `1` in `A` on success, or zero when the handle is inactive,
+  the current record is invalid, the offset is out of range, or the REU write
+  fails.
+- `rt_dbf_append.obj` expects a DBF handle in `A`, appends one blank record to
+  the staged DBF image, increments the staged record count, makes the appended
+  record current, and returns `1` in `A` on success.
+- `rt_dbf_pack.obj` expects a DBF handle in `A`, removes deleted records from
+  the staged DBF image while preserving non-deleted records in order, updates
+  the staged record count, sets the current record to one when records remain
+  or zero when none remain, and returns `1` in `A` on success. The helper
+  imports `rt_dbf_pack_step` and `rt_dbf_pack_write` so the lower-level staged
+  REU byte operations stay link-selected with the pack feature.
+- `rt_dbf_pack_read.obj`, `rt_dbf_pack_write.obj`, `rt_dbf_pack_copy.obj`, and
+  `rt_dbf_pack_step.obj` are internal support modules for `rt_dbf_pack.obj`.
+  They read, write, copy, and process one staged DBF record using UDOS REU
+  byte-transfer services.
+- `rt_dbf_save.obj` expects a DBF handle in `A`, streams the staged DBF image
+  back to the filename remembered by `rt_dbf_open` or `rt_dbf_create`, and
+  returns `1` in `A` after the write and close succeed.
+- `rt_dbf_delete.obj` imports `rt_dbf_writebyte`, writes `*` to current-record
+  offset zero, and returns `1` on success.
+- `rt_dbf_undelete.obj` imports `rt_dbf_writebyte`, writes space to
+  current-record offset zero, and returns `1` on success.
 - `rt_dbf_deleted.obj` imports `rt_dbf_readbyte`, reads current-record offset
   zero, and returns `1` when the DBF delete flag is `*`, otherwise `0`.
 - `rt_dbf_headerlen.obj` expects a DBF handle in `A` and returns the staged

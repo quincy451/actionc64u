@@ -2,6 +2,7 @@
 
 .export start
 
+ACTADD_PRESERVE_ZP_SERVICES = 1
 MANIFEST_LIMIT = 191
 
 .segment "ZPTEMP": zeropage
@@ -9,8 +10,7 @@ svc_retptr:
     .res 2
 file_params:
     .res 9
-save_params:
-    .res 7
+save_params = file_params
 src_ptr:
     .res 2
 scan_ptr:
@@ -22,7 +22,7 @@ entry_ptr:
 
 start:
     ldx #svc_retptr
-    jsr svc_program_get_cmdline_len
+    jsr actadd_svc_program_get_cmdline_len
     lda svc_retptr
     ora svc_retptr+1
     bne have_args
@@ -32,7 +32,7 @@ start:
 
 have_args:
     ldx #svc_retptr
-    jsr svc_program_get_cmdline_ptr
+    jsr actadd_svc_program_get_cmdline_ptr
     lda svc_retptr
     sta src_ptr
     lda svc_retptr+1
@@ -107,6 +107,104 @@ print_ptr:
     ldx #svc_retptr
     jmp svc_console_write_sc0
 
+actadd_save_zp_state:
+    ldx #$00
+actadd_save_zp_state_loop:
+    lda $00E0,x
+    sta actadd_zp_save,x
+    inx
+    cpx #$20
+    bcc actadd_save_zp_state_loop
+    rts
+
+actadd_restore_zp_state:
+    ldx #$00
+actadd_restore_zp_state_loop:
+    lda actadd_zp_save,x
+    sta $00E0,x
+    inx
+    cpx #$20
+    bcc actadd_restore_zp_state_loop
+    rts
+
+actadd_restore_service_status:
+    lda actadd_service_status
+    pha
+    plp
+    rts
+
+actadd_svc_program_get_cmdline_len:
+    jsr actadd_save_zp_state
+    ldx #svc_retptr
+    jsr svc_program_get_cmdline_len
+    php
+    pla
+    sta actadd_service_status
+    lda svc_retptr
+    sta actadd_service_out+0
+    lda svc_retptr+1
+    sta actadd_service_out+1
+    jsr actadd_restore_zp_state
+    lda actadd_service_out+0
+    sta svc_retptr
+    lda actadd_service_out+1
+    sta svc_retptr+1
+    jmp actadd_restore_service_status
+
+actadd_svc_program_get_cmdline_ptr:
+    jsr actadd_save_zp_state
+    ldx #svc_retptr
+    jsr svc_program_get_cmdline_ptr
+    php
+    pla
+    sta actadd_service_status
+    lda svc_retptr
+    sta actadd_service_out+0
+    lda svc_retptr+1
+    sta actadd_service_out+1
+    jsr actadd_restore_zp_state
+    lda actadd_service_out+0
+    sta svc_retptr
+    lda actadd_service_out+1
+    sta svc_retptr+1
+    jmp actadd_restore_service_status
+
+actadd_svc_file_load_sc0:
+    jsr actadd_save_zp_state
+    ldx #file_params
+    jsr svc_file_load_sc0
+    php
+    pla
+    sta actadd_service_status
+    lda file_params+6
+    sta actadd_service_out+0
+    lda file_params+7
+    sta actadd_service_out+1
+    lda file_params+8
+    sta actadd_service_out+2
+    jsr actadd_restore_zp_state
+    lda actadd_service_out+0
+    sta file_params+6
+    lda actadd_service_out+1
+    sta file_params+7
+    lda actadd_service_out+2
+    sta file_params+8
+    jmp actadd_restore_service_status
+
+actadd_svc_file_save_sc0:
+    jsr actadd_save_zp_state
+    ldx #save_params
+    jsr svc_file_save_sc0
+    php
+    pla
+    sta actadd_service_status
+    lda save_params+6
+    sta actadd_service_out+0
+    jsr actadd_restore_zp_state
+    lda actadd_service_out+0
+    sta save_params+6
+    jmp actadd_restore_service_status
+
 msg_no_name:
     .asciiz "NO NAME"
 msg_bad_name:
@@ -135,3 +233,11 @@ content_buffer:
     .res 64
 manifest_buffer:
     .res MANIFEST_LIMIT+1
+
+.segment "BSS"
+actadd_service_status:
+    .res 1
+actadd_service_out:
+    .res 3
+actadd_zp_save:
+    .res $20

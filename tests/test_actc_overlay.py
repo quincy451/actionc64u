@@ -5497,17 +5497,32 @@ class TestActcOverlay(unittest.TestCase):
             "BYTE FIELDLEN\r"
             "BYTE MOVED\r"
             "BYTE VALUE\r"
+            "BYTE FIELDVALUE\r"
+            "BYTE FIELDWROTE\r"
+            "BYTE WROTE\r"
+            "BYTE SAVED\r"
+            "BYTE DELOK\r"
+            "BYTE UNDELOK\r"
             "BYTE DELETED\r"
             "BYTE HEADERLEN\r"
             "BYTE RECORDLEN\r"
             "BYTE TOTAL\r"
             "BYTE RECNO\r"
             "PROC MAIN()\r"
+            "HANDLE=DbfCreate(12288)\r"
             "HANDLE=DbfOpen(12288)\r"
             "FIELDS=DbfFieldCount(HANDLE)\r"
             "FIELDLEN=DbfFieldLen(HANDLE,1)\r"
             "MOVED=DbfGo(HANDLE,2)\r"
             "VALUE=DbfReadByte(HANDLE,1)\r"
+            "FIELDVALUE=DbfReadFieldByte(HANDLE,1,0)\r"
+            "FIELDWROTE=DbfWriteFieldByte(HANDLE,1,0,90)\r"
+            "WROTE=DbfWriteByte(HANDLE,1,90)\r"
+            "WROTE=DbfAppend(HANDLE)\r"
+            "WROTE=DbfPack(HANDLE)\r"
+            "SAVED=DbfSave(HANDLE)\r"
+            "DELOK=DbfDelete(HANDLE)\r"
+            "UNDELOK=DbfUndelete(HANDLE)\r"
             "DELETED=DbfDeleted(HANDLE)\r"
             "HEADERLEN=DbfHeaderLen(HANDLE)\r"
             "RECORDLEN=DbfRecordLen(HANDLE)\r"
@@ -5519,11 +5534,20 @@ class TestActcOverlay(unittest.TestCase):
         )
 
         for runtime_import in (
+            "rt_dbf_create",
             "rt_dbf_open",
             "rt_dbf_fieldcount",
             "rt_dbf_fieldlen",
             "rt_dbf_go",
             "rt_dbf_readbyte",
+            "rt_dbf_readfieldbyte",
+            "rt_dbf_writefieldbyte",
+            "rt_dbf_writebyte",
+            "rt_dbf_append",
+            "rt_dbf_pack",
+            "rt_dbf_save",
+            "rt_dbf_delete",
+            "rt_dbf_undelete",
             "rt_dbf_deleted",
             "rt_dbf_headerlen",
             "rt_dbf_recordlen",
@@ -5534,11 +5558,20 @@ class TestActcOverlay(unittest.TestCase):
             self.assertIn(f"u {runtime_import}\n", obj)
 
         for builtin_name in (
+            "dbfcreate",
             "dbfopen",
             "dbffieldcount",
             "dbffieldlen",
             "dbfgo",
             "dbfreadbyte",
+            "dbfreadfieldbyte",
+            "dbfwritefieldbyte",
+            "dbfwritebyte",
+            "dbfappend",
+            "dbfpack",
+            "dbfsave",
+            "dbfdelete",
+            "dbfundelete",
             "dbfdeleted",
             "dbfheaderlen",
             "dbfrecordlen",

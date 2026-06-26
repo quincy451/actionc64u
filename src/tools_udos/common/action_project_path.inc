@@ -33,6 +33,8 @@ probe_target_path:
     ldx #file_params
 .ifdef ALINK_PRESERVE_ZP_SERVICES
     jmp alink_svc_file_load_sc0
+.elseif .defined(ACTADD_PRESERVE_ZP_SERVICES)
+    jmp actadd_svc_file_load_sc0
 .else
     jmp svc_file_load_sc0
 .endif

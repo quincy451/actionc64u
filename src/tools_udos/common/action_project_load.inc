@@ -27,6 +27,8 @@ load_project_manifest:
     ldx #file_params
 .ifdef ALINK_PRESERVE_ZP_SERVICES
     jsr alink_svc_file_load_sc0
+.elseif .defined(ACTADD_PRESERVE_ZP_SERVICES)
+    jsr actadd_svc_file_load_sc0
 .else
     jsr svc_file_load_sc0
 .endif

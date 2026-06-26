@@ -102,6 +102,30 @@ have_args:
     ldy #>msg_save_fail
     jmp fail_with_ptr
 :
+    lda #<project_manifest_text
+    sta src_ptr
+    lda #>project_manifest_text
+    sta src_ptr+1
+    lda #<project_catalog
+    ldy #>project_catalog
+    jsr save_text_file
+    bcc :+
+    lda #<msg_save_fail
+    ldy #>msg_save_fail
+    jmp fail_with_ptr
+:
+    lda #<src_manifest_text
+    sta src_ptr
+    lda #>src_manifest_text
+    sta src_ptr+1
+    lda #<project_src_catalog
+    ldy #>project_src_catalog
+    jsr save_text_file
+    bcc :+
+    lda #<msg_save_fail
+    ldy #>msg_save_fail
+    jmp fail_with_ptr
+:
     lda #<msg_ok
     ldy #>msg_ok
     jsr print_ptr
@@ -146,12 +170,13 @@ mkdir_ptr_ok:
 save_text_file:
     sta save_params+0
     sty save_params+1
+    jsr measure_src_text
     lda src_ptr
     sta save_params+2
     lda src_ptr+1
     sta save_params+3
+    sty save_params+4
     lda #$00
-    sta save_params+4
     sta save_params+5
     lda #tool_file_status_fail
     sta save_params+6
@@ -164,6 +189,16 @@ save_text_file:
     rts
 save_text_file_fail:
     sec
+    rts
+
+measure_src_text:
+    ldy #$00
+measure_src_text_loop:
+    lda (src_ptr),y
+    beq measure_src_text_done
+    iny
+    bne measure_src_text_loop
+measure_src_text_done:
     rts
 
 copy_first_arg:
@@ -267,6 +302,28 @@ build_paths:
     lda #<suffix_main
     ldy #>suffix_main
     jsr build_path_from_suffix
+    lda #<project_root
+    sta src_ptr
+    lda #>project_root
+    sta src_ptr+1
+    lda #<project_catalog
+    sta dst_ptr
+    lda #>project_catalog
+    sta dst_ptr+1
+    lda #<suffix_catalog
+    ldy #>suffix_catalog
+    jsr build_path_from_suffix
+    lda #<project_src
+    sta src_ptr
+    lda #>project_src
+    sta src_ptr+1
+    lda #<project_src_catalog
+    sta dst_ptr
+    lda #>project_src_catalog
+    sta dst_ptr+1
+    lda #<suffix_catalog
+    ldy #>suffix_catalog
+    jsr build_path_from_suffix
     rts
 
 build_path_from_suffix:
@@ -348,10 +405,22 @@ suffix_marker:
     .asciiz "/ACTION.PROJ"
 suffix_main:
     .asciiz "/SRC/MAIN.ACT"
+suffix_catalog:
+    .asciiz "/UDOSDIR.TXT"
 
 marker_text:
     .byte "ACTION PROJECT", 13
     .byte "MAIN.ACT", 13, 0
+
+project_manifest_text:
+    .byte "D BIN", 10
+    .byte "D OBJ", 10
+    .byte "D SRC", 10
+    .byte "F ACTION.PROJ", 10
+    .byte "F README.TXT", 10, 0
+
+src_manifest_text:
+    .byte "F MAIN.ACT", 10, 0
 
 readme_text:
     .byte "UPDATES", 13
@@ -378,4 +447,8 @@ project_marker:
 project_readme:
     .res 40
 project_main:
+    .res 40
+project_catalog:
+    .res 40
+project_src_catalog:
     .res 40

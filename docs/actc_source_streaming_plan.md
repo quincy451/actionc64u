@@ -115,8 +115,9 @@ arguments, expression comparisons, grouped expressions, decimal arithmetic,
 positive-word arithmetic, real conversion/comparison paths, conversion keyword
 open-paren parsing, resident declaration scans, body keyword scans, and
 pattern-location scans now all share the same narrow SourceReader read/consume
-primitives. Resident and body-collect overlay `THEN`/`DO` terminator probes now
-consume keyword characters through shared expected-character helpers. Keyword
+primitives. Resident, body-collect overlay, and body-preallocate overlay
+`THEN`/`DO` terminator probes now consume keyword characters through shared
+expected-character helpers. Keyword
 token pattern matching now routes each matched pattern
 character and post-keyword token-boundary check through SourceReader helpers
 that own the source peek, uppercase compare/classification, source consume, and

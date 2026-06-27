@@ -4624,25 +4624,10 @@ store_string_literal_from_scan_ptr:
     lda #$00
     sta reader_pattern_index_data
 store_string_literal_from_scan_ptr_loop:
-    jsr source_reader_peek_scan_ptr
-    beq store_string_literal_from_scan_ptr_fail
-    cmp #'"'
+    jsr source_reader_try_store_string_literal_byte_from_scan_ptr
+    bcc store_string_literal_from_scan_ptr_loop
+    cmp #$01
     beq store_string_literal_from_scan_ptr_done
-    ldx reader_pattern_index_data
-    cpx #23
-    bcs store_string_literal_from_scan_ptr_fail
-    sta compare_char
-    txa
-    tay
-    lda compare_char
-    sta (body_ptr),y
-    jsr source_reader_consume_scan_ptr
-    lda reader_token_ptr_lo_data
-    sta body_ptr
-    lda reader_token_ptr_hi_data
-    sta body_ptr+1
-    inc reader_pattern_index_data
-    jmp store_string_literal_from_scan_ptr_loop
 store_string_literal_from_scan_ptr_fail:
     sec
     rts
@@ -4657,6 +4642,37 @@ store_string_literal_from_scan_ptr_done:
 .endif
     inc string_count_data
     clc
+    rts
+
+source_reader_try_store_string_literal_byte_from_scan_ptr:
+    jsr source_reader_peek_scan_ptr
+    beq source_reader_try_store_string_literal_byte_from_scan_ptr_fail
+    cmp #'"'
+    beq source_reader_try_store_string_literal_byte_from_scan_ptr_done
+    ldx reader_pattern_index_data
+    cpx #23
+    bcs source_reader_try_store_string_literal_byte_from_scan_ptr_fail
+    sta compare_char
+    txa
+    tay
+    lda compare_char
+    sta (body_ptr),y
+    jsr source_reader_consume_scan_ptr
+    bcs source_reader_try_store_string_literal_byte_from_scan_ptr_fail
+    lda reader_token_ptr_lo_data
+    sta body_ptr
+    lda reader_token_ptr_hi_data
+    sta body_ptr+1
+    inc reader_pattern_index_data
+    clc
+    rts
+source_reader_try_store_string_literal_byte_from_scan_ptr_done:
+    lda #$01
+    sec
+    rts
+source_reader_try_store_string_literal_byte_from_scan_ptr_fail:
+    lda #$ff
+    sec
     rts
 
 store_small_decimal_literal_from_scan_ptr:

@@ -118,9 +118,9 @@ pattern-location scans now all share the same narrow SourceReader read/consume
 primitives. Keyword token pattern matching now routes each matched pattern
 character and post-keyword token-boundary check through SourceReader helpers
 that own the source peek, uppercase compare/classification, source consume, and
-pattern-index advance. The central string-literal
-helper now owns its token by peeking and
-consuming through the moving-base SourceReader path. Both resident symbol-copy
+pattern-index advance. The central string-literal helper now delegates each
+literal byte to a SourceReader helper that owns the peek, length check, store,
+source consume, and post-consume token-target restore. Both resident symbol-copy
 helpers now build tokens in a SourceReader-owned carry buffer before publishing
 to the legacy resolver scratch name, while
 preserving the existing returned-`Y` scanner ABI. The resident module-header

@@ -388,10 +388,35 @@ class TestActcReuSourceCache(unittest.TestCase):
         self.assertIsNotNone(match)
         assert match is not None
         body = match.group("body")
-        self.assertIn("jsr source_reader_peek_scan_ptr", body)
-        self.assertIn("jsr source_reader_consume_scan_ptr", body)
-        self.assertIn("reader_token_ptr_lo_data", body)
-        self.assertIn("reader_token_ptr_hi_data", body)
+        self.assertIn("jsr source_reader_try_store_string_literal_byte_from_scan_ptr", body)
+        loop_match = re.search(
+            r"store_string_literal_from_scan_ptr_loop:\n(?P<body>.*?)\n"
+            r"store_string_literal_from_scan_ptr_fail:",
+            body,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(loop_match)
+        assert loop_match is not None
+        loop_body = loop_match.group("body")
+        self.assertNotIn("jsr source_reader_peek_scan_ptr", loop_body)
+        self.assertNotIn("jsr source_reader_consume_scan_ptr", loop_body)
+
+        helper_match = re.search(
+            r"source_reader_try_store_string_literal_byte_from_scan_ptr:\n(?P<body>.*?)\n"
+            r"store_small_decimal_literal_from_scan_ptr:",
+            actc_text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(helper_match)
+        assert helper_match is not None
+        helper_body = helper_match.group("body")
+        self.assertIn("jsr source_reader_peek_scan_ptr", helper_body)
+        self.assertIn("jsr source_reader_consume_scan_ptr", helper_body)
+        self.assertIn("reader_token_ptr_lo_data", helper_body)
+        self.assertIn("reader_token_ptr_hi_data", helper_body)
+        self.assertIn("inc reader_pattern_index_data", helper_body)
+        self.assertIn("lda #$01", helper_body)
+        self.assertIn("lda #$ff", helper_body)
         self.assertNotIn("jsr source_reader_peek_scan_y", body)
 
     def test_stream_output_buffer_covers_tiny_source_window_builds(self) -> None:

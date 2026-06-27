@@ -1969,10 +1969,8 @@ preallocate_call_with_arg_externals_from_scan_y:
     bcs preallocate_call_with_arg_externals_fail
     ldy symbol_end_y_data
     jsr skip_inline_spaces_at_scan_y
-    jsr source_reader_peek_scan_y
-    cmp #'('
-    bne preallocate_call_with_arg_externals_fail
-    jsr source_reader_consume_scan_y
+    lda #'('
+    jsr source_reader_consume_char_from_scan_y
     bcs preallocate_call_with_arg_externals_fail
     jsr preallocate_plain_call_arg_externals_from_scan_y
     bcs preallocate_call_with_arg_externals_fail
@@ -1987,10 +1985,8 @@ preallocate_plain_call_externals_from_declared:
     bcs preallocate_plain_call_externals_fail
     ldy symbol_end_y_data
     jsr skip_inline_spaces_at_scan_y
-    jsr source_reader_peek_scan_y
-    cmp #'('
-    bne preallocate_plain_call_externals_done
-    jsr source_reader_consume_scan_y
+    lda #'('
+    jsr source_reader_consume_char_from_scan_y
     bcs preallocate_plain_call_externals_done
     jsr preallocate_plain_call_arg_externals_from_scan_y
 preallocate_plain_call_externals_done:
@@ -2018,11 +2014,13 @@ preallocate_plain_call_arg_externals_after_arg:
     beq preallocate_plain_call_arg_externals_consume_done
     jmp preallocate_plain_call_arg_externals_done
 preallocate_plain_call_arg_externals_next:
-    jsr source_reader_consume_scan_y
+    lda #','
+    jsr source_reader_consume_char_from_scan_y
     bcs preallocate_plain_call_arg_externals_done
     jmp preallocate_plain_call_arg_externals_loop
 preallocate_plain_call_arg_externals_consume_done:
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
 preallocate_plain_call_arg_externals_done:
     clc
     rts
@@ -2253,10 +2251,8 @@ preallocate_call_term_external_miss_restore:
 
 preallocate_consume_flat_call_args_from_scan_y:
     jsr skip_inline_spaces_at_scan_y
-    jsr source_reader_peek_scan_y
-    cmp #'('
-    bne preallocate_consume_flat_call_args_from_scan_y_fail
-    jsr source_reader_consume_scan_y
+    lda #'('
+    jsr source_reader_consume_char_from_scan_y
     bcs preallocate_consume_flat_call_args_from_scan_y_fail
 preallocate_consume_flat_call_args_from_scan_y_loop:
     jsr source_reader_peek_scan_y
@@ -2275,7 +2271,8 @@ preallocate_consume_flat_call_args_from_scan_y_loop:
     bcs preallocate_consume_flat_call_args_from_scan_y_fail
     jmp preallocate_consume_flat_call_args_from_scan_y_loop
 preallocate_consume_flat_call_args_from_scan_y_done:
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
     bcs preallocate_consume_flat_call_args_from_scan_y_fail
     clc
     rts
@@ -10436,6 +10433,19 @@ store_reader_prev_symbol_from_a:
 store_reader_prev_symbol_yes:
     lda #$01
     sta reader_prev_symbol_data
+    rts
+
+source_reader_consume_char_from_scan_y:
+    sta compare_char
+    jsr source_reader_peek_scan_y
+    cmp compare_char
+    bne source_reader_consume_char_from_scan_y_fail
+    jsr source_reader_consume_scan_y
+    bcs source_reader_consume_char_from_scan_y_fail
+    clc
+    rts
+source_reader_consume_char_from_scan_y_fail:
+    sec
     rts
 
 source_reader_consume_uppercase_char_from_scan_y:

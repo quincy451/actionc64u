@@ -1740,6 +1740,66 @@ class TestActcReuSourceCache(unittest.TestCase):
             self.assertIn("jsr source_reader_consume_scan_y", match.group("body"), msg=label)
             self.assertNotIn("jsr advance_scan_y", match.group("body"), msg=label)
 
+    def test_preallocate_call_arg_punctuation_uses_expected_char_helper(self) -> None:
+        actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"
+        actc_text = actc_path.read_text(encoding="ascii")
+        helper_match = re.search(
+            r"source_reader_consume_char_from_scan_y:\n(?P<body>.*?)\n"
+            r"source_reader_consume_uppercase_char_from_scan_y:",
+            actc_text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(helper_match)
+        assert helper_match is not None
+        helper_body = helper_match.group("body")
+        self.assertIn("sta compare_char", helper_body)
+        self.assertIn("jsr source_reader_peek_scan_y", helper_body)
+        self.assertIn("cmp compare_char", helper_body)
+        self.assertIn("jsr source_reader_consume_scan_y", helper_body)
+        self.assertNotIn("jsr uppercase_ascii", helper_body)
+
+        exact_punctuation_ranges = {
+            "preallocate_call_with_arg_externals_from_scan_y": (
+                "preallocate_plain_call_externals_from_declared:",
+                ["lda #'('"],
+            ),
+            "preallocate_plain_call_externals_from_declared": (
+                "preallocate_plain_call_arg_externals_from_scan_y:",
+                ["lda #'('"],
+            ),
+            "preallocate_plain_call_arg_externals_from_scan_y": (
+                "preallocate_scan_plain_call_arg_for_externals_from_scan_y:",
+                ["lda #','", "lda #')'"],
+            ),
+        }
+
+        for label, (next_label, expected_literals) in exact_punctuation_ranges.items():
+            match = re.search(
+                rf"{label}:\n(?P<body>.*?)\n{re.escape(next_label)}",
+                actc_text,
+                re.DOTALL,
+            )
+            self.assertIsNotNone(match, msg=label)
+            assert match is not None
+            body = match.group("body")
+            self.assertIn("jsr source_reader_consume_char_from_scan_y", body, msg=label)
+            self.assertNotIn("jsr source_reader_consume_scan_y", body, msg=label)
+            for expected in expected_literals:
+                self.assertIn(expected, body, msg=label)
+
+        flat_match = re.search(
+            r"preallocate_consume_flat_call_args_from_scan_y:\n(?P<body>.*?)\n"
+            r"preallocate_real_explicit_assignment_external_from_scan_y:",
+            actc_text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(flat_match)
+        assert flat_match is not None
+        flat_body = flat_match.group("body")
+        self.assertIn("lda #'('", flat_body)
+        self.assertIn("lda #')'", flat_body)
+        self.assertIn("jsr source_reader_consume_char_from_scan_y", flat_body)
+
     def test_speculative_scan_loops_consume_through_source_reader(self) -> None:
         actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"
         actc_text = actc_path.read_text(encoding="ascii")

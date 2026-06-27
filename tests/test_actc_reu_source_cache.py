@@ -1870,6 +1870,24 @@ class TestActcReuSourceCache(unittest.TestCase):
             self.assertNotIn("jsr source_reader_consume_scan_y", body, msg=label)
             self.assertNotIn("jsr advance_scan_y", body, msg=label)
 
+    def test_preallocate_signed_word_prefix_uses_expected_char_helper(self) -> None:
+        actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"
+        actc_text = actc_path.read_text(encoding="ascii")
+        match = re.search(
+            r"preallocate_consume_signed_word_prefix_from_scan_y:\n(?P<body>.*?)\n"
+            r"preallocate_consume_signed_word_prefix_fail:",
+            actc_text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        assert match is not None
+        body = match.group("body")
+        self.assertIn("lda #'0'", body)
+        self.assertIn("lda #'-'", body)
+        self.assertIn("jsr source_reader_consume_char_from_scan_y", body)
+        self.assertNotIn("jsr source_reader_consume_scan_y", body)
+        self.assertNotIn("jsr advance_scan_y", body)
+
     def test_speculative_scan_loops_consume_through_source_reader(self) -> None:
         actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"
         actc_text = actc_path.read_text(encoding="ascii")

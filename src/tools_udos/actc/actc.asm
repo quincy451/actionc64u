@@ -2377,16 +2377,12 @@ preallocate_real_explicit_decimal_assignment_external_done:
 
 preallocate_consume_signed_word_prefix_from_scan_y:
     jsr skip_inline_spaces_at_scan_y
-    jsr source_reader_peek_scan_y
-    cmp #'0'
-    bne preallocate_consume_signed_word_prefix_fail
-    jsr source_reader_consume_scan_y
+    lda #'0'
+    jsr source_reader_consume_char_from_scan_y
     bcs preallocate_consume_signed_word_prefix_fail
     jsr skip_inline_spaces_at_scan_y
-    jsr source_reader_peek_scan_y
-    cmp #'-'
-    bne preallocate_consume_signed_word_prefix_fail
-    jsr source_reader_consume_scan_y
+    lda #'-'
+    jsr source_reader_consume_char_from_scan_y
     bcs preallocate_consume_signed_word_prefix_fail
     clc
     rts

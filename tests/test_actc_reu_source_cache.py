@@ -1826,6 +1826,50 @@ class TestActcReuSourceCache(unittest.TestCase):
         self.assertIn("lda #')'", flat_body)
         self.assertIn("jsr source_reader_consume_char_from_scan_y", flat_body)
 
+    def test_preallocate_conversion_close_parens_use_expected_char_helper(self) -> None:
+        actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"
+        actc_text = actc_path.read_text(encoding="ascii")
+        close_paren_ranges = {
+            "preallocate_int_conversion_external_from_scan_y": (
+                "preallocate_int_conversion_external_miss_restore:",
+            ),
+            "preallocate_real_bridge_conversion_external_from_scan_y": (
+                "preallocate_real_bridge_conversion_external_miss_restore:",
+            ),
+            "preallocate_real_numeric_positive_conversion_external_from_scan_y": (
+                "preallocate_real_numeric_positive_conversion_external_miss:",
+            ),
+            "preallocate_real_numeric_signed_conversion_external_from_scan_y": (
+                "preallocate_real_numeric_signed_conversion_external_miss:",
+            ),
+            "preallocate_real_explicit_bridge_assignment_external_from_scan_y": (
+                "preallocate_real_explicit_bridge_assignment_external_miss:",
+            ),
+            "preallocate_real_explicit_positive_assignment_external_from_scan_y": (
+                "preallocate_real_explicit_positive_assignment_external_miss:",
+            ),
+            "preallocate_real_explicit_signed_assignment_external_from_scan_y": (
+                "preallocate_real_explicit_signed_assignment_external_miss:",
+            ),
+            "preallocate_real_unary_operator_assignment_external_from_scan_y": (
+                "preallocate_real_unary_operator_assignment_external_miss:",
+            ),
+        }
+
+        for label, (next_label,) in close_paren_ranges.items():
+            match = re.search(
+                rf"{label}:\n(?P<body>.*?)\n{re.escape(next_label)}",
+                actc_text,
+                re.DOTALL,
+            )
+            self.assertIsNotNone(match, msg=label)
+            assert match is not None
+            body = match.group("body")
+            self.assertIn("lda #')'", body, msg=label)
+            self.assertIn("jsr source_reader_consume_char_from_scan_y", body, msg=label)
+            self.assertNotIn("jsr source_reader_consume_scan_y", body, msg=label)
+            self.assertNotIn("jsr advance_scan_y", body, msg=label)
+
     def test_speculative_scan_loops_consume_through_source_reader(self) -> None:
         actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"
         actc_text = actc_path.read_text(encoding="ascii")

@@ -1810,10 +1810,8 @@ preallocate_int_conversion_external_from_scan_y:
     jsr require_var_index_real_or_fail
     bcs preallocate_int_conversion_external_miss_restore
     jsr skip_inline_spaces_at_scan_y
-    jsr source_reader_peek_scan_y
-    cmp #')'
-    bne preallocate_int_conversion_external_miss_restore
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
     bcs preallocate_int_conversion_external_miss_restore
     jsr find_or_store_rt_f_to_i_external
     bcs preallocate_int_conversion_external_miss_restore
@@ -1839,10 +1837,8 @@ preallocate_real_bridge_conversion_external_from_scan_y:
     jsr require_var_index_real_bridge_word_or_fail
     bcs preallocate_real_bridge_conversion_external_miss_restore
     jsr skip_inline_spaces_at_scan_y
-    jsr source_reader_peek_scan_y
-    cmp #')'
-    bne preallocate_real_bridge_conversion_external_miss_restore
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
     bcs preallocate_real_bridge_conversion_external_miss_restore
     sty symbol_end_y_data
     jsr find_or_store_real_bridge_external_from_x
@@ -1886,10 +1882,8 @@ preallocate_real_numeric_positive_conversion_external_from_scan_y:
     jsr parse_positive_word_sum_at_scan_y
     bcs preallocate_real_numeric_positive_conversion_external_miss
     jsr skip_inline_spaces_at_scan_y
-    jsr source_reader_peek_scan_y
-    cmp #')'
-    bne preallocate_real_numeric_positive_conversion_external_miss
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
     bcs preallocate_real_numeric_positive_conversion_external_miss
     lda expr_value_lo
     ora expr_value_hi
@@ -1909,10 +1903,8 @@ preallocate_real_numeric_signed_conversion_external_from_scan_y:
     jsr parse_optional_grouped_positive_word_sum_at_scan_y
     bcs preallocate_real_numeric_signed_conversion_external_miss
     jsr skip_inline_spaces_at_scan_y
-    jsr source_reader_peek_scan_y
-    cmp #')'
-    bne preallocate_real_numeric_signed_conversion_external_miss
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
     bcs preallocate_real_numeric_signed_conversion_external_miss
     lda expr_value_lo
     ora expr_value_hi
@@ -2307,10 +2299,8 @@ preallocate_real_explicit_bridge_assignment_external_from_scan_y:
     jsr require_var_index_real_bridge_word_or_fail
     bcs preallocate_real_explicit_bridge_assignment_external_miss
     jsr skip_inline_spaces_at_scan_y
-    jsr source_reader_peek_scan_y
-    cmp #')'
-    bne preallocate_real_explicit_bridge_assignment_external_miss
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
     bcs preallocate_real_explicit_bridge_assignment_external_miss
     jsr require_line_end_at_scan_y
     bcs preallocate_real_explicit_bridge_assignment_external_miss
@@ -2341,10 +2331,8 @@ preallocate_real_explicit_positive_assignment_external_from_scan_y:
     jsr parse_positive_word_sum_at_scan_y
     bcs preallocate_real_explicit_positive_assignment_external_miss
     jsr skip_inline_spaces_at_scan_y
-    jsr source_reader_peek_scan_y
-    cmp #')'
-    bne preallocate_real_explicit_positive_assignment_external_miss
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
     bcs preallocate_real_explicit_positive_assignment_external_miss
     jsr require_line_end_at_scan_y
     bcs preallocate_real_explicit_positive_assignment_external_miss
@@ -2366,10 +2354,8 @@ preallocate_real_explicit_signed_assignment_external_from_scan_y:
     jsr parse_optional_grouped_positive_word_sum_at_scan_y
     bcs preallocate_real_explicit_signed_assignment_external_miss
     jsr skip_inline_spaces_at_scan_y
-    jsr source_reader_peek_scan_y
-    cmp #')'
-    bne preallocate_real_explicit_signed_assignment_external_miss
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
     bcs preallocate_real_explicit_signed_assignment_external_miss
     jsr require_line_end_at_scan_y
     bcs preallocate_real_explicit_signed_assignment_external_miss
@@ -2442,10 +2428,8 @@ preallocate_real_unary_operator_assignment_external_parse:
     jsr require_var_index_real_or_fail
     bcs preallocate_real_unary_operator_assignment_external_miss
     jsr skip_inline_spaces_at_scan_y
-    jsr source_reader_peek_scan_y
-    cmp #')'
-    bne preallocate_real_unary_operator_assignment_external_miss
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
     bcs preallocate_real_unary_operator_assignment_external_miss
     jsr require_line_end_at_scan_y
     bcs preallocate_real_unary_operator_assignment_external_miss

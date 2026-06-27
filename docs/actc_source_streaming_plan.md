@@ -135,6 +135,8 @@ generic SourceReader expected-character helper while leaving broader scan loops
 as byte consumers.
 Declared real/word assignment `=` preallocation uses the same helper so the
 delimiter consume remains bound to the SourceReader boundary.
+Resident preallocation conversion/operator `)` delimiters also use the exact
+helper rather than open-coded peek/cmp/consume sequences.
 Parser-side symbol helpers now store and terminate token bytes through
 SourceReader token helpers rather than writing the token buffer directly, and
 resident streaming symbol-copy plus module-header copy loops now share one

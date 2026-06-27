@@ -1681,10 +1681,8 @@ preallocate_consume_real_assignment_equals_from_declared:
     bcs preallocate_consume_real_assignment_equals_from_declared_miss
     ldy symbol_end_y_data
     jsr skip_inline_spaces_at_scan_y
-    jsr source_reader_peek_scan_y
-    cmp #'='
-    bne preallocate_consume_real_assignment_equals_from_declared_miss
-    jsr source_reader_consume_scan_y
+    lda #'='
+    jsr source_reader_consume_char_from_scan_y
     bcs preallocate_consume_real_assignment_equals_from_declared_miss
     jsr skip_inline_spaces_at_scan_y
     clc
@@ -1773,10 +1771,8 @@ preallocate_consume_word_assignment_equals_from_declared:
     bcs preallocate_consume_word_assignment_equals_from_declared_miss
     ldy symbol_end_y_data
     jsr skip_inline_spaces_at_scan_y
-    jsr source_reader_peek_scan_y
-    cmp #'='
-    bne preallocate_consume_word_assignment_equals_from_declared_miss
-    jsr source_reader_consume_scan_y
+    lda #'='
+    jsr source_reader_consume_char_from_scan_y
     bcs preallocate_consume_word_assignment_equals_from_declared_miss
     jsr skip_inline_spaces_at_scan_y
     clc

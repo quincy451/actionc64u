@@ -133,6 +133,8 @@ copy helper uses the same carry-buffer publish path for `declared_module_name`.
 Preallocation call-argument `(`, `,`, and `)` punctuation now routes through a
 generic SourceReader expected-character helper while leaving broader scan loops
 as byte consumers.
+Declared real/word assignment `=` preallocation uses the same helper so the
+delimiter consume remains bound to the SourceReader boundary.
 Parser-side symbol helpers now store and terminate token bytes through
 SourceReader token helpers rather than writing the token buffer directly, and
 resident streaming symbol-copy plus module-header copy loops now share one

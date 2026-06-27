@@ -1648,6 +1648,32 @@ class TestActcReuSourceCache(unittest.TestCase):
             self.assertIn("jsr source_reader_consume_scan_y", match.group("body"), msg=label)
             self.assertNotIn("jsr advance_scan_y", match.group("body"), msg=label)
 
+    def test_preallocate_assignment_equals_uses_expected_char_helper(self) -> None:
+        actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"
+        actc_text = actc_path.read_text(encoding="ascii")
+        assignment_ranges = {
+            "preallocate_consume_real_assignment_equals_from_declared": (
+                "preallocate_consume_real_assignment_equals_from_declared_miss:",
+            ),
+            "preallocate_consume_word_assignment_equals_from_declared": (
+                "preallocate_consume_word_assignment_equals_from_declared_miss:",
+            ),
+        }
+
+        for label, (next_label,) in assignment_ranges.items():
+            match = re.search(
+                rf"{label}:\n(?P<body>.*?)\n{re.escape(next_label)}",
+                actc_text,
+                re.DOTALL,
+            )
+            self.assertIsNotNone(match, msg=label)
+            assert match is not None
+            body = match.group("body")
+            self.assertIn("lda #'='", body, msg=label)
+            self.assertIn("jsr source_reader_consume_char_from_scan_y", body, msg=label)
+            self.assertNotIn("jsr source_reader_consume_scan_y", body, msg=label)
+            self.assertNotIn("jsr advance_scan_y", body, msg=label)
+
     def test_runtime_expression_operators_consume_through_source_reader(self) -> None:
         actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"
         actc_text = actc_path.read_text(encoding="ascii")

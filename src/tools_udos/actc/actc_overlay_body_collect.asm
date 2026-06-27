@@ -642,6 +642,21 @@ read_scan_char_at_y:
     plp
     rts
 
+consume_uppercase_char_local:
+    sta stored_byte_local
+    jsr read_scan_char_at_y
+    jsr uppercase_ascii_local
+    cmp stored_byte_local
+    bne consume_uppercase_char_local_fail
+    lda #ACTC_OVERLAY_CTX_ADVANCE_SCAN_Y_FN_LO
+    jsr call_context_function
+    bcs consume_uppercase_char_local_fail
+    clc
+    rts
+consume_uppercase_char_local_fail:
+    sec
+    rts
+
 uppercase_ascii_local:
     cmp #'a'
     bcc uppercase_ascii_local_done
@@ -2436,32 +2451,17 @@ require_then_or_line_end_local:
     beq require_then_or_line_end_local_ok
     cmp #13
     beq require_then_or_line_end_local_ok
-    jsr uppercase_ascii_local
-    cmp #'T'
-    bne require_then_or_line_end_local_fail
-    lda #ACTC_OVERLAY_CTX_ADVANCE_SCAN_Y_FN_LO
-    jsr call_context_function
+    lda #'T'
+    jsr consume_uppercase_char_local
     bcs require_then_or_line_end_local_fail
-    jsr read_scan_char_at_y
-    jsr uppercase_ascii_local
-    cmp #'H'
-    bne require_then_or_line_end_local_fail
-    lda #ACTC_OVERLAY_CTX_ADVANCE_SCAN_Y_FN_LO
-    jsr call_context_function
+    lda #'H'
+    jsr consume_uppercase_char_local
     bcs require_then_or_line_end_local_fail
-    jsr read_scan_char_at_y
-    jsr uppercase_ascii_local
-    cmp #'E'
-    bne require_then_or_line_end_local_fail
-    lda #ACTC_OVERLAY_CTX_ADVANCE_SCAN_Y_FN_LO
-    jsr call_context_function
+    lda #'E'
+    jsr consume_uppercase_char_local
     bcs require_then_or_line_end_local_fail
-    jsr read_scan_char_at_y
-    jsr uppercase_ascii_local
-    cmp #'N'
-    bne require_then_or_line_end_local_fail
-    lda #ACTC_OVERLAY_CTX_ADVANCE_SCAN_Y_FN_LO
-    jsr call_context_function
+    lda #'N'
+    jsr consume_uppercase_char_local
     bcs require_then_or_line_end_local_fail
     lda #ACTC_OVERLAY_CTX_SKIP_INLINE_SPACES_FN_LO
     jsr call_context_function
@@ -2487,18 +2487,11 @@ require_do_or_line_end_local:
     beq require_do_or_line_end_local_ok
     cmp #13
     beq require_do_or_line_end_local_ok
-    jsr uppercase_ascii_local
-    cmp #'D'
-    bne require_do_or_line_end_local_fail
-    lda #ACTC_OVERLAY_CTX_ADVANCE_SCAN_Y_FN_LO
-    jsr call_context_function
+    lda #'D'
+    jsr consume_uppercase_char_local
     bcs require_do_or_line_end_local_fail
-    jsr read_scan_char_at_y
-    jsr uppercase_ascii_local
-    cmp #'O'
-    bne require_do_or_line_end_local_fail
-    lda #ACTC_OVERLAY_CTX_ADVANCE_SCAN_Y_FN_LO
-    jsr call_context_function
+    lda #'O'
+    jsr consume_uppercase_char_local
     bcs require_do_or_line_end_local_fail
     lda #ACTC_OVERLAY_CTX_SKIP_INLINE_SPACES_FN_LO
     jsr call_context_function

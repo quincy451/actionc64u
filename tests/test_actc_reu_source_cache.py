@@ -1368,6 +1368,49 @@ class TestActcReuSourceCache(unittest.TestCase):
         self.assertIn("jsr call_loaded_target_with_a", helper_body)
         self.assertNotIn("jsr load_resident_scan_ptr_to_scan_zp", helper_body)
 
+    def test_body_collect_overlay_terminator_keywords_use_local_source_reader_helper(self) -> None:
+        overlay_path = self.root / "src" / "tools_udos" / "actc" / "actc_overlay_body_collect.asm"
+        overlay_text = overlay_path.read_text(encoding="ascii")
+        terminator_ranges = {
+            "require_then_or_line_end_local": (
+                "require_do_or_line_end_local:",
+                "lda #'T'",
+            ),
+            "require_do_or_line_end_local": (
+                "emit_real_small_int_assignment_local_or_fail:",
+                "lda #'D'",
+            ),
+        }
+
+        for label, (next_label, expected_first_char) in terminator_ranges.items():
+            match = re.search(
+                rf"^{re.escape(label)}:\n(?P<body>.*?)\n^{re.escape(next_label)}",
+                overlay_text,
+                re.DOTALL | re.MULTILINE,
+            )
+            self.assertIsNotNone(match, msg=label)
+            assert match is not None
+            body = match.group("body")
+            self.assertIn("jsr consume_uppercase_char_local", body, msg=label)
+            self.assertIn(expected_first_char, body, msg=label)
+            self.assertNotIn("jsr uppercase_ascii_local", body, msg=label)
+            self.assertNotIn("ACTC_OVERLAY_CTX_ADVANCE_SCAN_Y_FN_LO", body, msg=label)
+
+        helper_match = re.search(
+            r"consume_uppercase_char_local:\n(?P<body>.*?)\nuppercase_ascii_local:",
+            overlay_text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(helper_match)
+        assert helper_match is not None
+        helper_body = helper_match.group("body")
+        self.assertIn("sta stored_byte_local", helper_body)
+        self.assertIn("jsr read_scan_char_at_y", helper_body)
+        self.assertIn("jsr uppercase_ascii_local", helper_body)
+        self.assertIn("cmp stored_byte_local", helper_body)
+        self.assertIn("ACTC_OVERLAY_CTX_ADVANCE_SCAN_Y_FN_LO", helper_body)
+        self.assertIn("jsr call_context_function", helper_body)
+
     def test_payload_layout_overlay_payload_reads_go_through_local_peek(self) -> None:
         overlay_path = self.root / "src" / "tools_udos" / "actc" / "actc_overlay_payload_layout.asm"
         overlay_text = overlay_path.read_text(encoding="ascii")

@@ -161,6 +161,8 @@ Small decimal grouping punctuation `(` and `)` uses the helper after the group
 entry and close-paren checks have matched.
 Preallocation positive-word arithmetic operators `+`, `-`, `*`, and `/` use the
 same helper after their operator branches have matched.
+Preallocation positive-word grouping punctuation `(` and `)` uses the helper in
+both factor and optional grouped-sum parsing.
 Parser-side symbol helpers now store and terminate token bytes through
 SourceReader token helpers rather than writing the token buffer directly, and
 resident streaming symbol-copy plus module-header copy loops now share one

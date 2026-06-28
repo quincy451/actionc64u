@@ -1934,6 +1934,29 @@ class TestActcReuSourceCache(unittest.TestCase):
             for expected in expected_literals:
                 self.assertIn(expected, body, msg=label)
 
+    def test_positive_word_group_punctuation_uses_expected_char_helper(self) -> None:
+        actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"
+        actc_text = actc_path.read_text(encoding="ascii")
+        ranges = {
+            "parse_positive_word_factor_group": "parse_optional_grouped_positive_word_sum_at_scan_y:",
+            "parse_optional_grouped_positive_word_sum_at_scan_y": "parse_positive_word_decimal_at_scan_y:",
+        }
+
+        for label, next_label in ranges.items():
+            match = re.search(
+                rf"{label}:\n(?P<body>.*?)\n{re.escape(next_label)}",
+                actc_text,
+                re.DOTALL,
+            )
+            self.assertIsNotNone(match, msg=label)
+            assert match is not None
+            body = match.group("body")
+            self.assertIn("lda #'('", body, msg=label)
+            self.assertIn("lda #')'", body, msg=label)
+            self.assertIn("jsr source_reader_consume_char_from_scan_y", body, msg=label)
+            self.assertNotIn("jsr source_reader_consume_scan_y", body, msg=label)
+            self.assertNotIn("jsr advance_scan_y", body, msg=label)
+
     def test_runtime_call_arg_punctuation_uses_expected_char_helper(self) -> None:
         actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"
         actc_text = actc_path.read_text(encoding="ascii")

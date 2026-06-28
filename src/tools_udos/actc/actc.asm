@@ -8021,7 +8021,8 @@ parse_positive_word_factor_group:
     sta expr_group_saved_saved_lo
     lda expr_saved_hi
     sta expr_group_saved_saved_hi
-    jsr source_reader_consume_scan_y
+    lda #'('
+    jsr source_reader_consume_char_from_scan_y
     jsr parse_positive_word_sum_at_scan_y
     bcc :+
     sec
@@ -8032,7 +8033,8 @@ parse_positive_word_factor_group:
     beq :+
     jmp parse_positive_word_decimal_at_scan_y_fail
 :
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
     lda expr_group_saved_compare_lo
     sta expr_compare_lo
     lda expr_group_saved_compare_hi
@@ -8051,7 +8053,8 @@ parse_optional_grouped_positive_word_sum_at_scan_y:
     beq :+
     jmp parse_positive_word_sum_at_scan_y
 :
-    jsr source_reader_consume_scan_y
+    lda #'('
+    jsr source_reader_consume_char_from_scan_y
     bcs parse_positive_word_term_at_scan_y_fail
     jsr parse_positive_word_sum_at_scan_y
     bcs parse_positive_word_term_at_scan_y_fail
@@ -8059,7 +8062,8 @@ parse_optional_grouped_positive_word_sum_at_scan_y:
     jsr source_reader_peek_scan_y
     cmp #')'
     bne parse_positive_word_decimal_at_scan_y_fail
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
     clc
     rts
 

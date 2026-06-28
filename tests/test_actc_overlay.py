@@ -925,6 +925,40 @@ class TestActcOverlay(unittest.TestCase):
         ):
             self.assertNotIn(f"u {builtin_name}\n", obj)
 
+    def test_actc_preallocation_body_overlay_mode_maps_input_conditions_to_runtime_objs(self) -> None:
+        obj = self.compile_overlay_object(
+            "MODULE MAIN\r"
+            "PROC MAIN()\r"
+            "IF JoyBtn1(2) THEN\r"
+            "FI\r"
+            "WHILE MouseSeen() DO\r"
+            "OD\r"
+            "DO\r"
+            "UNTIL MouseBtn2()\r"
+            "RETURN\r",
+            "actc-overlay-preallocation-body-mode-input-conditions",
+            {"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+        )
+
+        runtime_imports = ("rt_jb1", "rt_mseen", "rt_mb2")
+        for runtime_import in runtime_imports:
+            self.assertIn(f"u {runtime_import}\n", obj)
+        for earlier, later in zip(runtime_imports, runtime_imports[1:]):
+            self.assertLess(obj.index(f"u {earlier}\n"), obj.index(f"u {later}\n"), msg=obj)
+        for unused_runtime_import in (
+            "rt_joy",
+            "rt_jp",
+            "rt_jb2",
+            "rt_mp",
+            "rt_mx",
+            "rt_my",
+            "rt_mb",
+            "rt_mb1",
+        ):
+            self.assertNotIn(f"u {unused_runtime_import}\n", obj)
+        for builtin_name in ("joybtn1", "mouseseen", "mousebtn2", "if", "while", "until", "then", "do"):
+            self.assertNotIn(f"u {builtin_name}\n", obj)
+
     def test_actc_preallocation_body_overlay_mode_maps_real_unary_assignments(self) -> None:
         obj = self.compile_overlay_object(
             "MODULE MAIN\r"

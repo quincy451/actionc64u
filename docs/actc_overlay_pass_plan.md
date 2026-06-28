@@ -171,8 +171,9 @@ under BASIC ROM.
    `FABS(...)`, `FSQRT(...)`, `realVar (+|-|*|/) realVar`, and bare real vars
    through `rt_f_cmp`, and table-driven SID/GFX/sprite/input/DBF helper family
    runtime imports. The explicit overlay-preallocation gate now covers the
-   complete joystick/mouse input helper family from `INPUT1.ACT` while
-   preserving the same resident resolver seam,
+   complete joystick/mouse input helper family from `INPUT1.ACT`, including
+   direct `IF`/`WHILE`/`UNTIL` condition references while preserving the same
+   resident resolver seam,
    builtin runtime table handoff, reserved-keyword filtering, and `uN`
    object-code output.
 5. `actc_p4_layout`: compute proc sizes, offsets, and literal offsets. Current

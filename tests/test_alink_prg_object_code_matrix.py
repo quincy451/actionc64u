@@ -462,6 +462,11 @@ class TestAlinkPrgObjectCodeMatrix(unittest.TestCase):
             "Object-code graph matrix must cover project dependency lettered imports resolving to library OBJs",
         )
         self.assertIn(
+            "object_code_project_dependency_dual_lettered_import_mixed_helpers",
+            graph_shapes,
+            "Object-code graph matrix must cover project dependency dual lettered imports resolving to mixed helper OBJs",
+        )
+        self.assertIn(
             "object_code_lowercase_z_import_call",
             graph_shapes,
             "Object-code graph matrix must cover lowercase high-index OBJ imports",
@@ -500,6 +505,24 @@ class TestAlinkPrgObjectCodeMatrix(unittest.TestCase):
         self.assertEqual(case["expected_alink_loads"], ["OBJ/A.OBJ", "LIB/HELPER.OBJ"])
         self.assertEqual(sorted(case["extra_objects"]), ["A.OBJ"])
         for unexpected_path in ("LIB/A.OBJ", "LIB/D0.OBJ", "LIB/D9.OBJ"):
+            self.assertIn(unexpected_path, case["unexpected_alink_loads"])
+
+    def test_object_code_graph_matrix_covers_project_dependency_dual_lettered_mixed_helpers(self) -> None:
+        sys.path.insert(0, str(self.workspace / "udos" / "tools"))
+        import run_action_alink_prg_probe as probe
+
+        shape = "object_code_project_dependency_dual_lettered_import_mixed_helpers"
+        groups = self._makefile_object_code_shape_groups(self.make_text)
+        graph_shapes = groups.get("ACTION_ALINK_PRG_OBJECT_CODE_GRAPH_SHAPES", set())
+        case = probe.DIRECT_PRG_CASES[shape]
+
+        self.assertIn(shape, graph_shapes)
+        self.assertEqual(
+            case["expected_alink_loads"],
+            ["OBJ/A.OBJ", "OBJ/PROJHELPER.OBJ", "LIB/LIBHELPER.OBJ"],
+        )
+        self.assertEqual(sorted(case["extra_objects"]), ["A.OBJ", "PROJHELPER.OBJ"])
+        for unexpected_path in ("LIB/A.OBJ", "LIB/PROJHELPER.OBJ", "LIB/D0.OBJ", "LIB/D9.OBJ"):
             self.assertIn(unexpected_path, case["unexpected_alink_loads"])
 
     def test_object_code_graph_matrix_covers_project_dependency_lowercase_library_helper(self) -> None:

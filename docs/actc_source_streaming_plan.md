@@ -141,6 +141,8 @@ Signed word prefix preallocation now uses the exact helper for the literal `0`
 and `-` tokens.
 Runtime grouped value term `(` and `)` delimiters now use the same exact helper,
 keeping group punctuation ownership with SourceReader.
+Runtime boolean primary grouping `(` and `)` delimiters also use the helper
+after the group branch has matched.
 Runtime call-argument `(`, `,`, and `)` delimiters also route through the exact
 helper while leaving the argument scan and separator-choice peeks unchanged.
 Runtime value optional `=`, group-open `[`, and group-close `]` delimiters use

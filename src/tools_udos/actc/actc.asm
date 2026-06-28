@@ -5881,17 +5881,6 @@ emit_real_copy_assignment_from_scan_y_ok:
     jsr append_body_op_for_current_proc
     clc
     rts
-emit_real_zero_assignment_from_scan_y_or_fail:
-    jsr store_zero_int_literal
-    bcs emit_real_add_assignment_from_scan_y_or_fail_fail
-    stx keyword_scan_ptr_lo_data
-    jsr source_reader_consume_scan_y
-    bcs emit_real_add_assignment_from_scan_y_or_fail_fail
-    jsr require_line_end_at_scan_y
-    bcs emit_real_add_assignment_from_scan_y_or_fail_fail
-    lda keyword_scan_ptr_lo_data
-    sta keyword_scan_ptr_hi_data
-    jmp emit_real_literal_assignment_from_saved_indexes
 emit_real_add_assignment_from_scan_y_or_fail_fail:
     sec
     rts

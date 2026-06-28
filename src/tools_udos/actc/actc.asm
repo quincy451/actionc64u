@@ -3709,7 +3709,8 @@ collect_proc_body_ops_after_space_check:
         bcc collect_proc_body_ops_try_local_real_assignment
         jmp collect_proc_body_ops_bad_var
 collect_proc_body_ops_try_local_int_assignment:
-        jsr source_reader_consume_scan_y
+        lda #'='
+        jsr source_reader_consume_char_from_scan_y
         bcc :+
         jmp collect_proc_body_ops_bad_literal
 :
@@ -3717,7 +3718,8 @@ collect_proc_body_ops_try_local_int_assignment:
         jsr source_reader_peek_scan_y
         cmp #'='
         bne :+
-        jsr source_reader_consume_scan_y
+        lda #'='
+        jsr source_reader_consume_char_from_scan_y
         bcc :+
         jmp collect_proc_body_ops_bad_literal
 :
@@ -3727,7 +3729,8 @@ collect_proc_body_ops_try_local_int_assignment:
         beq :+
         jmp collect_proc_body_ops_try_local_int_parse_value
 :
-        jsr source_reader_consume_scan_y
+        lda #'['
+        jsr source_reader_consume_char_from_scan_y
         bcc :+
         jmp collect_proc_body_ops_bad_literal
 :
@@ -3741,7 +3744,8 @@ collect_proc_body_ops_try_local_int_assignment:
         beq :+
         jmp collect_proc_body_ops_bad_literal
 :
-        jsr source_reader_consume_scan_y
+        lda #']'
+        jsr source_reader_consume_char_from_scan_y
         bcc :+
         jmp collect_proc_body_ops_bad_literal
 :
@@ -3762,7 +3766,8 @@ collect_proc_body_ops_try_local_int_after_value:
         jmp collect_proc_body_ops_skip_line
 
 collect_proc_body_ops_try_local_real_assignment:
-        jsr source_reader_consume_scan_y
+        lda #'='
+        jsr source_reader_consume_char_from_scan_y
         bcc :+
         jmp collect_proc_body_ops_bad_literal
 :
@@ -3770,7 +3775,8 @@ collect_proc_body_ops_try_local_real_assignment:
         jsr source_reader_peek_scan_y
         cmp #'='
         bne :+
-        jsr source_reader_consume_scan_y
+        lda #'='
+        jsr source_reader_consume_char_from_scan_y
         bcc :+
         jmp collect_proc_body_ops_bad_literal
 :       jsr emit_real_add_assignment_from_scan_y_or_fail
@@ -4058,7 +4064,8 @@ collect_proc_body_ops_try_assignment:
     jmp collect_proc_body_ops_bad_var
 collect_proc_body_ops_try_assignment_word:
     ldy symbol_end_y_data
-    jsr source_reader_consume_scan_y
+    lda #'='
+    jsr source_reader_consume_char_from_scan_y
     bcc :+
     jmp collect_proc_body_ops_bad_literal
 :
@@ -4072,7 +4079,8 @@ collect_proc_body_ops_try_assignment_word:
     jmp collect_proc_body_ops_skip_line
 collect_proc_body_ops_try_assignment_real:
     ldy symbol_end_y_data
-    jsr source_reader_consume_scan_y
+    lda #'='
+    jsr source_reader_consume_char_from_scan_y
     bcc :+
     jmp collect_proc_body_ops_bad_literal
 :

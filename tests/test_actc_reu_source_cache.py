@@ -1651,12 +1651,21 @@ class TestActcReuSourceCache(unittest.TestCase):
         actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"
         actc_text = actc_path.read_text(encoding="ascii")
         delimiter_ranges = {
-            "collect_proc_body_ops_try_local_int_assignment": "collect_proc_body_ops_try_local_int_parse_value:",
-            "collect_proc_body_ops_try_local_real_assignment": "collect_proc_body_ops_try_od:",
-            "collect_proc_body_ops_try_assignment_word": "collect_proc_body_ops_try_local_call:",
+            "collect_proc_body_ops_try_local_int_assignment": (
+                "collect_proc_body_ops_try_local_int_parse_value:",
+                ["lda #'='", "lda #'['", "lda #']'"],
+            ),
+            "collect_proc_body_ops_try_local_real_assignment": (
+                "collect_proc_body_ops_try_od:",
+                ["lda #'='"],
+            ),
+            "collect_proc_body_ops_try_assignment_word": (
+                "collect_proc_body_ops_try_local_call:",
+                ["lda #'='"],
+            ),
         }
 
-        for label, next_label in delimiter_ranges.items():
+        for label, (next_label, expected_lines) in delimiter_ranges.items():
             match = re.search(
                 rf"{label}:\n(?P<body>.*?)\n{next_label}",
                 actc_text,
@@ -1664,8 +1673,12 @@ class TestActcReuSourceCache(unittest.TestCase):
             )
             self.assertIsNotNone(match, msg=label)
             assert match is not None
-            self.assertIn("jsr source_reader_consume_scan_y", match.group("body"), msg=label)
-            self.assertNotIn("jsr advance_scan_y", match.group("body"), msg=label)
+            body = match.group("body")
+            for expected in expected_lines:
+                self.assertIn(expected, body, msg=label)
+            self.assertIn("jsr source_reader_consume_char_from_scan_y", body, msg=label)
+            self.assertNotIn("jsr source_reader_consume_scan_y", body, msg=label)
+            self.assertNotIn("jsr advance_scan_y", body, msg=label)
 
     def test_module_var_initializer_punctuation_uses_expected_char_helper(self) -> None:
         actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"

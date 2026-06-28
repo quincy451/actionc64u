@@ -7224,14 +7224,16 @@ parse_small_bool_primary_at_scan_y:
     tya
     pha
     jsr save_group_reader_mark
-    jsr source_reader_consume_scan_y
+    lda #'('
+    jsr source_reader_consume_char_from_scan_y
     jsr parse_small_bool_or_at_scan_y
     bcs parse_small_bool_primary_restore_clause
     jsr skip_inline_spaces_at_scan_y
     jsr source_reader_peek_scan_y
     cmp #')'
     bne parse_small_bool_primary_restore_clause
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
     sty compare_char
     jsr skip_inline_spaces_at_scan_y
     jsr source_reader_peek_scan_y

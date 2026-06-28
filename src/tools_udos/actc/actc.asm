@@ -5960,14 +5960,13 @@ resolve_unresolved_external_call_target_from_declared_or_fail_fail:
 
 emit_call_args_from_scan_y_or_fail:
     jsr skip_inline_spaces_at_scan_y
-    jsr source_reader_peek_scan_y
-    cmp #'('
-    beq :+
+    lda #'('
+    jsr source_reader_consume_char_from_scan_y
+    bcs :+
+    jmp :++
+:
     sec
     rts
-:   jsr source_reader_consume_scan_y
-    bcc :+
-    jmp emit_call_args_from_scan_y_or_fail_fail
 :
     lda #$00
     sta call_arg_count_data
@@ -6016,14 +6015,16 @@ emit_call_args_from_scan_y_or_fail_restore_ok:
     sec
     rts
 emit_call_args_from_scan_y_or_fail_next:
-    jsr source_reader_consume_scan_y
+    lda #','
+    jsr source_reader_consume_char_from_scan_y
     bcc :+
     jmp emit_call_args_from_scan_y_or_fail_fail
 :
     jsr skip_inline_spaces_at_scan_y
     jmp emit_call_args_from_scan_y_or_fail_loop
 emit_call_args_from_scan_y_or_fail_done:
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
     bcc :+
     jmp emit_call_args_from_scan_y_or_fail_fail
 :

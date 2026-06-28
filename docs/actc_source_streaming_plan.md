@@ -155,6 +155,8 @@ Small condition-clause comparison operators `=`, `<`, `>`, `<=`, `>=`, and `<>`
 route each matched operator byte through the helper.
 Small decimal-expression comparison operators use the same per-byte helper for
 the matching operator forms.
+Small decimal arithmetic operators `+`, `-`, `*`, and `/` use the helper after
+their operator branches have matched.
 Parser-side symbol helpers now store and terminate token bytes through
 SourceReader token helpers rather than writing the token buffer directly, and
 resident streaming symbol-copy plus module-header copy loops now share one

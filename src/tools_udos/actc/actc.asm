@@ -7574,7 +7574,8 @@ parse_small_decimal_sum_try_or:
     jmp parse_small_decimal_sum_at_scan_y_fail
 
 parse_small_decimal_sum_add:
-    jsr source_reader_consume_scan_y
+    lda #'+'
+    jsr source_reader_consume_char_from_scan_y
     jsr parse_small_decimal_term_at_scan_y
     bcc :+
     jmp parse_small_decimal_sum_at_scan_y_fail
@@ -7587,7 +7588,8 @@ parse_small_decimal_sum_add:
     jmp parse_small_decimal_sum_loop
 
 parse_small_decimal_sum_sub:
-    jsr source_reader_consume_scan_y
+    lda #'-'
+    jsr source_reader_consume_char_from_scan_y
     jsr parse_small_decimal_term_at_scan_y
     bcc :+
     jmp parse_small_decimal_sum_at_scan_y_fail
@@ -7628,7 +7630,8 @@ parse_small_decimal_term_loop:
     rts
 
 parse_small_decimal_term_mul:
-    jsr source_reader_consume_scan_y
+    lda #'*'
+    jsr source_reader_consume_char_from_scan_y
     jsr parse_small_decimal_factor_at_scan_y
     bcs parse_small_decimal_term_at_scan_y_fail
     lda expr_term_lo
@@ -7649,7 +7652,8 @@ parse_small_decimal_term_mul_loop:
     jmp parse_small_decimal_term_mul_loop
 
 parse_small_decimal_term_div:
-    jsr source_reader_consume_scan_y
+    lda #'/'
+    jsr source_reader_consume_char_from_scan_y
     jsr parse_small_decimal_factor_at_scan_y
     bcs parse_small_decimal_term_at_scan_y_fail
     lda expr_value_lo

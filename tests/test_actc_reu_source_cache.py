@@ -1858,6 +1858,35 @@ class TestActcReuSourceCache(unittest.TestCase):
         self.assertNotIn("jsr source_reader_consume_scan_y", body)
         self.assertNotIn("jsr advance_scan_y", body)
 
+    def test_small_decimal_arithmetic_operators_use_expected_char_helper(self) -> None:
+        actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"
+        actc_text = actc_path.read_text(encoding="ascii")
+        ranges = {
+            "parse_small_decimal_sum_at_scan_y": (
+                "parse_small_decimal_term_at_scan_y:",
+                ["lda #'+'", "lda #'-'"],
+            ),
+            "parse_small_decimal_term_at_scan_y": (
+                "parse_small_decimal_factor_at_scan_y:",
+                ["lda #'*'", "lda #'/'"],
+            ),
+        }
+
+        for label, (next_label, expected_literals) in ranges.items():
+            match = re.search(
+                rf"{label}:\n(?P<body>.*?)\n{re.escape(next_label)}",
+                actc_text,
+                re.DOTALL,
+            )
+            self.assertIsNotNone(match, msg=label)
+            assert match is not None
+            body = match.group("body")
+            self.assertIn("jsr source_reader_consume_char_from_scan_y", body, msg=label)
+            self.assertNotIn("jsr source_reader_consume_scan_y", body, msg=label)
+            self.assertNotIn("jsr advance_scan_y", body, msg=label)
+            for expected in expected_literals:
+                self.assertIn(expected, body, msg=label)
+
     def test_runtime_call_arg_punctuation_uses_expected_char_helper(self) -> None:
         actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"
         actc_text = actc_path.read_text(encoding="ascii")

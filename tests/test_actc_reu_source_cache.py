@@ -1820,6 +1820,25 @@ class TestActcReuSourceCache(unittest.TestCase):
         self.assertNotIn("jsr source_reader_consume_scan_y", body)
         self.assertNotIn("jsr advance_scan_y", body)
 
+    def test_small_condition_operators_use_expected_char_helper(self) -> None:
+        actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"
+        actc_text = actc_path.read_text(encoding="ascii")
+        match = re.search(
+            r"parse_small_condition_clause_at_scan_y:\n(?P<body>.*?)\n"
+            r"parse_small_decimal_expr_at_scan_y:",
+            actc_text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        assert match is not None
+        body = match.group("body")
+        self.assertIn("lda #'='", body)
+        self.assertIn("lda #'<'", body)
+        self.assertIn("lda #'>'", body)
+        self.assertIn("jsr source_reader_consume_char_from_scan_y", body)
+        self.assertNotIn("jsr source_reader_consume_scan_y", body)
+        self.assertNotIn("jsr advance_scan_y", body)
+
     def test_runtime_call_arg_punctuation_uses_expected_char_helper(self) -> None:
         actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"
         actc_text = actc_path.read_text(encoding="ascii")

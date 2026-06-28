@@ -147,6 +147,8 @@ Runtime value optional `=`, group-open `[`, and group-close `]` delimiters use
 the exact helper after their existing match peeks.
 Runtime sum `+` and `-` operators use the same helper after the operator branch
 has selected the matched token.
+Small value parser optional `=`, group-open `[`, and group-close `]` delimiters
+also use the exact helper after their existing match peeks.
 Parser-side symbol helpers now store and terminate token bytes through
 SourceReader token helpers rather than writing the token buffer directly, and
 resident streaming symbol-copy plus module-header copy loops now share one

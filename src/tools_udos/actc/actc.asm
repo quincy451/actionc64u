@@ -7101,14 +7101,16 @@ parse_small_value_expr_at_scan_y:
     jsr source_reader_peek_scan_y
     cmp #'='
     bne parse_small_value_expr_at_scan_y_after_equals
-    jsr source_reader_consume_scan_y
+    lda #'='
+    jsr source_reader_consume_char_from_scan_y
     bcs parse_small_value_expr_at_scan_y_fail
     jsr skip_inline_spaces_at_scan_y
 parse_small_value_expr_at_scan_y_after_equals:
     jsr source_reader_peek_scan_y
     cmp #'['
     bne parse_small_value_expr_at_scan_y_after_group
-    jsr source_reader_consume_scan_y
+    lda #'['
+    jsr source_reader_consume_char_from_scan_y
     bcs parse_small_value_expr_at_scan_y_fail
     jsr parse_small_value_expr_at_scan_y
     bcs parse_small_value_expr_at_scan_y_fail
@@ -7116,7 +7118,8 @@ parse_small_value_expr_at_scan_y_after_equals:
     jsr source_reader_peek_scan_y
     cmp #']'
     bne parse_small_value_expr_at_scan_y_fail
-    jsr source_reader_consume_scan_y
+    lda #']'
+    jsr source_reader_consume_char_from_scan_y
     bcs parse_small_value_expr_at_scan_y_fail
     clc
     rts

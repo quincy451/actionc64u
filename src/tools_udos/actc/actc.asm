@@ -3259,7 +3259,8 @@ store_module_var_from_scan_ptr_or_fail_save_name_done:
     cmp #'r'
     bne store_module_var_from_scan_ptr_or_fail_bad
 :
-    jsr source_reader_consume_scan_y
+    lda #'='
+    jsr source_reader_consume_char_from_scan_y
     bcc :+
     jmp store_module_var_from_scan_ptr_or_fail_bad
 :
@@ -3267,7 +3268,8 @@ store_module_var_from_scan_ptr_or_fail_save_name_done:
     jsr source_reader_peek_scan_y
     cmp #'['
     bne store_module_var_from_scan_ptr_or_fail_parse_value
-    jsr source_reader_consume_scan_y
+    lda #'['
+    jsr source_reader_consume_char_from_scan_y
     bcc :+
     jmp store_module_var_from_scan_ptr_or_fail_bad
 :
@@ -3277,7 +3279,8 @@ store_module_var_from_scan_ptr_or_fail_save_name_done:
     jsr source_reader_peek_scan_y
     cmp #']'
     bne store_module_var_from_scan_ptr_or_fail_bad
-    jsr source_reader_consume_scan_y
+    lda #']'
+    jsr source_reader_consume_char_from_scan_y
     bcc :+
     jmp store_module_var_from_scan_ptr_or_fail_bad
 :

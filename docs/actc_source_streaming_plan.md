@@ -135,6 +135,8 @@ generic SourceReader expected-character helper while leaving broader scan loops
 as byte consumers.
 Declared real/word assignment `=` preallocation uses the same helper so the
 delimiter consume remains bound to the SourceReader boundary.
+Resident module variable initializer `=`, `[`, and `]` delimiters now use the
+helper after their existing match peeks.
 Resident preallocation conversion/operator `)` delimiters also use the exact
 helper rather than open-coded peek/cmp/consume sequences.
 Preallocation REAL unary print close parens and binary assignment/print

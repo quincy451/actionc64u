@@ -1651,7 +1651,6 @@ class TestActcReuSourceCache(unittest.TestCase):
         actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"
         actc_text = actc_path.read_text(encoding="ascii")
         delimiter_ranges = {
-            "store_module_var_from_scan_ptr_or_fail_save_name_done": "store_module_var_from_scan_ptr_or_fail_parse_value:",
             "collect_proc_body_ops_try_local_int_assignment": "collect_proc_body_ops_try_local_int_parse_value:",
             "collect_proc_body_ops_try_local_real_assignment": "collect_proc_body_ops_try_od:",
             "collect_proc_body_ops_try_assignment_word": "collect_proc_body_ops_try_local_call:",
@@ -1667,6 +1666,24 @@ class TestActcReuSourceCache(unittest.TestCase):
             assert match is not None
             self.assertIn("jsr source_reader_consume_scan_y", match.group("body"), msg=label)
             self.assertNotIn("jsr advance_scan_y", match.group("body"), msg=label)
+
+    def test_module_var_initializer_punctuation_uses_expected_char_helper(self) -> None:
+        actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"
+        actc_text = actc_path.read_text(encoding="ascii")
+        match = re.search(
+            r"store_module_var_from_scan_ptr_or_fail_save_name_done:\n(?P<body>.*?)\n"
+            r"store_module_var_from_scan_ptr_or_fail_parse_value:",
+            actc_text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        assert match is not None
+        body = match.group("body")
+        for expected in ("lda #'='", "lda #'['", "lda #']'"):
+            self.assertIn(expected, body)
+        self.assertIn("jsr source_reader_consume_char_from_scan_y", body)
+        self.assertNotIn("jsr source_reader_consume_scan_y", body)
+        self.assertNotIn("jsr advance_scan_y", body)
 
     def test_preallocate_assignment_equals_uses_expected_char_helper(self) -> None:
         actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"

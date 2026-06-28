@@ -4798,11 +4798,13 @@ store_small_runtime_expr_compare_entry:
 store_small_runtime_expr_eq:
     lda #'q'
     sta expr_runtime_op
-    jsr source_reader_consume_scan_y
+    lda #'='
+    jsr source_reader_consume_char_from_scan_y
     bcs store_small_runtime_expr_fail
     jmp store_small_runtime_expr_rhs
 store_small_runtime_expr_lt_entry:
-    jsr source_reader_consume_scan_y
+    lda #'<'
+    jsr source_reader_consume_char_from_scan_y
     bcs store_small_runtime_expr_fail
     jsr source_reader_peek_scan_y
     cmp #'>'
@@ -4813,7 +4815,8 @@ store_small_runtime_expr_lt_entry:
     sta expr_runtime_op
     jmp store_small_runtime_expr_rhs
 store_small_runtime_expr_gt_entry:
-    jsr source_reader_consume_scan_y
+    lda #'>'
+    jsr source_reader_consume_char_from_scan_y
     bcs store_small_runtime_expr_fail
     jsr source_reader_peek_scan_y
     cmp #'='
@@ -4826,7 +4829,8 @@ store_small_runtime_expr_le:
     sta expr_runtime_op
     lda #$01
     sta expr_runtime_post_zero
-    jsr source_reader_consume_scan_y
+    lda #'='
+    jsr source_reader_consume_char_from_scan_y
     bcs store_small_runtime_expr_fail
     jmp store_small_runtime_expr_rhs
 store_small_runtime_expr_ge:
@@ -4834,13 +4838,15 @@ store_small_runtime_expr_ge:
     sta expr_runtime_op
     lda #$01
     sta expr_runtime_post_zero
-    jsr source_reader_consume_scan_y
+    lda #'='
+    jsr source_reader_consume_char_from_scan_y
     bcs store_small_runtime_expr_fail
     jmp store_small_runtime_expr_rhs
 store_small_runtime_expr_ne:
     lda #'n'
     sta expr_runtime_op
-    jsr source_reader_consume_scan_y
+    lda #'>'
+    jsr source_reader_consume_char_from_scan_y
     bcs store_small_runtime_expr_fail
 store_small_runtime_expr_rhs:
     jsr emit_runtime_sum_from_scan_y_or_fail
@@ -4920,7 +4926,8 @@ store_runtime_real_print_with_newline_flag_from_scan_ptr:
     beq :+
     jmp store_small_runtime_expr_fail
 :
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
     bcc :+
     jmp store_small_runtime_expr_fail
 :
@@ -5230,7 +5237,8 @@ emit_runtime_int_explicit_value_from_scan_y_or_fail:
     jsr source_reader_peek_scan_y
     cmp #')'
     bne emit_runtime_int_explicit_value_from_scan_y_or_fail_fail
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
     bcs emit_runtime_int_explicit_value_from_scan_y_or_fail_fail
     ldx real_lhs_index_data
     lda #'L'

@@ -475,6 +475,8 @@ plus procedure-call argument and page-boundary punctuation paths and
 procedure parameter delimiter wrap, conversion keyword parsing at a page-aligned
 zero-lookahead source-window boundary, builtin helper-name parsing at the same
 kind of boundary, builtin helper constants at the same kind of boundary,
+body-resident runtime fallback condition operators and conversion close
+punctuation through exact-character SourceReader consumes,
 group-speculation restore across the first 20 KiB boundary, and grouped-expression
 punctuation at a page-aligned
 zero-lookahead source-window boundary, plus semicolon comment skipping at and

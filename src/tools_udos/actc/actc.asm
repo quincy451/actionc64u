@@ -5331,7 +5331,8 @@ emit_real_explicit_bridge_assignment_from_scan_y_or_fail:
     jsr source_reader_peek_scan_y
     cmp #')'
     bne emit_real_explicit_bridge_assignment_from_scan_y_or_fail_fail
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
     bcs emit_real_explicit_bridge_assignment_from_scan_y_or_fail_fail
     jsr skip_inline_spaces_at_scan_y
     jsr require_line_end_at_scan_y
@@ -5362,7 +5363,8 @@ emit_real_explicit_value_after_open_from_scan_y_or_fail:
     beq :+
     jmp emit_real_explicit_value_after_open_from_scan_y_or_fail_wide
 :
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
     bcc :+
     jmp emit_real_explicit_value_after_open_from_scan_y_or_fail_wide
 :
@@ -5427,7 +5429,8 @@ emit_real_explicit_value_after_open_from_scan_y_or_fail_wide:
     beq :+
     jmp emit_real_explicit_value_after_open_from_scan_y_or_fail_signed
 :
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
     bcc :+
     jmp emit_real_explicit_value_after_open_from_scan_y_or_fail_signed
 :
@@ -5475,7 +5478,8 @@ emit_real_explicit_value_after_open_from_scan_y_or_fail_signed:
     beq :+
     jmp emit_real_explicit_value_after_open_from_scan_y_or_fail_fail
 :
-    jsr source_reader_consume_scan_y
+    lda #'0'
+    jsr source_reader_consume_char_from_scan_y
     bcc :+
     jmp emit_real_explicit_value_after_open_from_scan_y_or_fail_fail
 :
@@ -5485,7 +5489,8 @@ emit_real_explicit_value_after_open_from_scan_y_or_fail_signed:
     beq :+
     jmp emit_real_explicit_value_after_open_from_scan_y_or_fail_fail
 :
-    jsr source_reader_consume_scan_y
+    lda #'-'
+    jsr source_reader_consume_char_from_scan_y
     bcc :+
     jmp emit_real_explicit_value_after_open_from_scan_y_or_fail_fail
 :
@@ -5499,7 +5504,8 @@ emit_real_explicit_value_after_open_from_scan_y_or_fail_signed:
     beq :+
     jmp emit_real_explicit_value_after_open_from_scan_y_or_fail_fail
 :
-    jsr source_reader_consume_scan_y
+    lda #')'
+    jsr source_reader_consume_char_from_scan_y
     bcc :+
     jmp emit_real_explicit_value_after_open_from_scan_y_or_fail_fail
 :
@@ -5649,13 +5655,15 @@ emit_real_wide_signed_int_assignment_from_scan_y_or_fail:
     jsr source_reader_peek_scan_y
     cmp #'0'
     bne emit_real_wide_signed_int_assignment_from_scan_y_or_fail_fail
-    jsr source_reader_consume_scan_y
+    lda #'0'
+    jsr source_reader_consume_char_from_scan_y
     bcs emit_real_wide_signed_int_assignment_from_scan_y_or_fail_fail
     jsr skip_inline_spaces_at_scan_y
     jsr source_reader_peek_scan_y
     cmp #'-'
     bne emit_real_wide_signed_int_assignment_from_scan_y_or_fail_fail
-    jsr source_reader_consume_scan_y
+    lda #'-'
+    jsr source_reader_consume_char_from_scan_y
     bcs emit_real_wide_signed_int_assignment_from_scan_y_or_fail_fail
     jsr parse_optional_grouped_positive_word_sum_at_scan_y
     bcs emit_real_wide_signed_int_assignment_from_scan_y_or_fail_fail

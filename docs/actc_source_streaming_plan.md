@@ -172,6 +172,8 @@ the signed `0-` prefix bytes.
 Runtime REAL assignment binary operators `+`, `-`, `*`, and `/`, plus unary
 `FABS(...)`/`FSQRT(...)` close parens, use the same helper after their matched
 bytes have been selected.
+Runtime explicit REAL assignment parsing also uses the helper for bridge and
+numeric close parens plus signed `0-` prefixes.
 Runtime REAL condition comparison operators `=`, `<`, `>`, `<>`, `<=`, and
 `>=` use the expected-character helper for each matched byte.
 Runtime integer condition comparison operators use the same helper for their

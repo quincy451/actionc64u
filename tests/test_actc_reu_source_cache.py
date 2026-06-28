@@ -2252,9 +2252,6 @@ class TestActcReuSourceCache(unittest.TestCase):
         actc_text = actc_path.read_text(encoding="ascii")
         real_ranges = {
             "emit_runtime_int_explicit_value_from_scan_y_or_fail": "pack_expr_value_lo_as_positive_real_high_word:",
-            "emit_real_explicit_bridge_assignment_from_scan_y_or_fail": "emit_real_explicit_value_after_open_from_scan_y_or_fail:",
-            "emit_real_explicit_value_after_open_from_scan_y_or_fail": "emit_real_explicit_value_assignment_from_scan_y_or_fail:",
-            "emit_real_wide_signed_int_assignment_from_scan_y_or_fail": "emit_real_bridge_assignment_from_var_index_ok:",
         }
 
         for label, next_label in real_ranges.items():
@@ -2267,6 +2264,39 @@ class TestActcReuSourceCache(unittest.TestCase):
             assert match is not None
             self.assertIn("jsr source_reader_consume_scan_y", match.group("body"), msg=label)
             self.assertNotIn("jsr advance_scan_y", match.group("body"), msg=label)
+
+    def test_real_explicit_assignment_delimiters_use_expected_char_helper(self) -> None:
+        actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"
+        actc_text = actc_path.read_text(encoding="ascii")
+        exact_ranges = {
+            "emit_real_explicit_bridge_assignment_from_scan_y_or_fail": (
+                "emit_real_explicit_bridge_assignment_from_scan_y_or_fail_fail:",
+                ["cmp #')'", "lda #')'"],
+            ),
+            "emit_real_explicit_value_after_open_from_scan_y_or_fail": (
+                "emit_real_explicit_value_assignment_from_scan_y_or_fail:",
+                ["cmp #')'", "lda #')'", "cmp #'0'", "lda #'0'", "cmp #'-'", "lda #'-'"],
+            ),
+            "emit_real_wide_signed_int_assignment_from_scan_y_or_fail": (
+                "emit_real_wide_signed_int_assignment_from_scan_y_or_fail_fail:",
+                ["cmp #'0'", "lda #'0'", "cmp #'-'", "lda #'-'"],
+            ),
+        }
+
+        for label, (next_label, expected_lines) in exact_ranges.items():
+            match = re.search(
+                rf"{label}:\n(?P<body>.*?)\n{re.escape(next_label)}",
+                actc_text,
+                re.DOTALL,
+            )
+            self.assertIsNotNone(match, msg=label)
+            assert match is not None
+            body = match.group("body")
+            for expected in expected_lines:
+                self.assertIn(expected, body, msg=label)
+            self.assertIn("jsr source_reader_consume_char_from_scan_y", body, msg=label)
+            self.assertNotIn("jsr source_reader_consume_scan_y", body, msg=label)
+            self.assertNotIn("jsr advance_scan_y", body, msg=label)
 
     def test_real_assignment_operators_use_expected_char_helper(self) -> None:
         actc_path = self.root / "src" / "tools_udos" / "actc" / "actc.asm"

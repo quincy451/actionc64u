@@ -8169,6 +8169,71 @@ class TestActcOverlay(unittest.TestCase):
                 self.assertNotIn(f"u {other_module}\n", obj)
                 self.assertNotIn(f"u {function_name.lower()}\n", obj)
 
+    def test_native_real_emitter_owns_math1_clamp_call(self) -> None:
+        obj = self.compile_overlay_object(
+            "MODULE MAIN\r"
+            "REAL A\r"
+            "REAL B\r"
+            "REAL C\r"
+            "REAL X\r"
+            "PROC MAIN()\r"
+            "A=REAL(2)\r"
+            "B=REAL(1)\r"
+            "C=REAL(3)\r"
+            "X=FClamp(A,B,C)\r"
+            "PrintRE(X)\r"
+            "RETURN\r",
+            "actc-overlay-native-real-fclamp",
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [20])
+        self.assertIn(
+            "x main 0 171\n"
+            "x __idata 147 16\n"
+            "x __ireala 147 4\n"
+            "x __irealb 151 4\n"
+            "x __irealc 155 4\n"
+            "x __irealx 159 4\n"
+            "x __iptr 163 8\n",
+            obj,
+        )
+        self.assertIn("b u0u1u2M\nb M\nb M\nb M\nb M\nb M\nb M\n", obj)
+        self.assertIn(
+            "r 3 x __iptr\n"
+            "r 9 x __iptr\n"
+            "r 18 u0\n"
+            "r 23 x __iptr\n"
+            "r 29 x __iptr\n"
+            "r 38 u0\n"
+            "r 43 x __iptr\n"
+            "r 49 x __iptr\n"
+            "r 58 u0\n"
+            "r 63 x __iptr\n"
+            "r 69 x __iptr\n"
+            "r 76 x __iptr\n"
+            "r 82 x __iptr\n"
+            "r 89 x __iptr\n"
+            "r 95 x __iptr\n"
+            "r 102 x __iptr\n"
+            "r 108 x __iptr\n"
+            "r 113 u1\n"
+            "r 118 x __iptr\n"
+            "r 124 x __iptr\n"
+            "r 129 u2\n"
+            "r 163 x __ireala\n"
+            "r 165 x __irealb\n"
+            "r 167 x __irealc\n"
+            "r 169 x __irealx\n",
+            obj,
+        )
+        self.assertIn("u rt_f_clamp\n", obj)
+        self.assertIn("u rt_i_to_f\n", obj)
+        self.assertIn("u rt_print_f\n", obj)
+        self.assertNotIn("u rt_f_min\n", obj)
+        self.assertNotIn("u rt_f_max\n", obj)
+        self.assertNotIn("u rt_f_cmp\n", obj)
+        self.assertNotIn("u fclamp\n", obj)
+
     def test_native_real_emitter_owns_input_print_sequences(self) -> None:
         cases = (
             (

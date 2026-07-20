@@ -460,6 +460,95 @@ def minmax_module(module: str, *, maximum: bool) -> ObjectBuilder:
     return b
 
 
+def clamp_module() -> ObjectBuilder:
+    """Build FClamp from the link-selected comparison/min/max primitives."""
+    b = ObjectBuilder("rt_f_clamp")
+
+    # Entry pointers are value=$02, lower=$04, destination=$06, upper=$08.
+    # Save them before calling dependencies because their zero-page workspaces
+    # overlap the public argument area.
+    b.immediate(0xA2, 0x07)  # LDX #7
+    b.label("save_pointers")
+    b.emit(0xB5, 0x02)  # LDA $02,X
+    b.local_reference(0x9D, "state")  # STA state,X
+    b.emit(0xCA)  # DEX
+    b.branch(0x10, "save_pointers")  # BPL
+
+    # Reject NaN value/lower/upper inputs exactly as the portable MATH1 source.
+    for offset, tag in ((0, "value"), (2, "lower"), (6, "upper")):
+        b.immediate(0xA2, offset)
+        b.local_reference(0x20, "set_left")
+        b.immediate(0xA2, offset)
+        b.local_reference(0x20, "set_right")
+        b.jsr("rt_f_cmp")
+        b.immediate(0xC9, 0x02)
+        far_branch(b, 0xF0, "qnan", f"{tag}_nan")
+
+    # An inverted interval is invalid even when value happens to be in range.
+    b.immediate(0xA2, 0x02)
+    b.local_reference(0x20, "set_left")
+    b.immediate(0xA2, 0x06)
+    b.local_reference(0x20, "set_right")
+    b.jsr("rt_f_cmp")
+    b.immediate(0xC9, 0x01)
+    b.branch(0xF0, "qnan")
+
+    # temp = FMax(value, lower)
+    b.immediate(0xA2, 0x00)
+    b.local_reference(0x20, "set_left")
+    b.immediate(0xA2, 0x02)
+    b.local_reference(0x20, "set_right")
+    b.immediate(0xA2, 0x08)
+    b.local_reference(0x20, "set_dst")
+    b.jsr("rt_f_max")
+
+    # destination = FMin(temp, upper)
+    b.immediate(0xA2, 0x08)
+    b.local_reference(0x20, "set_left")
+    b.immediate(0xA2, 0x06)
+    b.local_reference(0x20, "set_right")
+    b.immediate(0xA2, 0x04)
+    b.local_reference(0x20, "set_dst")
+    b.jsr("rt_f_min")
+    b.emit(0x60)  # RTS
+
+    b.label("qnan")
+    b.immediate(0xA2, 0x04)
+    b.local_reference(0x20, "set_dst")
+    b.immediate(0xA0, 0x00)
+    b.immediate(0xA9, 0x00)
+    b.emit(0x91, 0x06, 0xC8, 0x91, 0x06, 0xC8)
+    b.immediate(0xA9, 0xC0)
+    b.emit(0x91, 0x06, 0xC8)
+    b.immediate(0xA9, 0x7F)
+    b.emit(0x91, 0x06, 0x60)
+
+    for label, destination in (
+        ("set_left", 0x02),
+        ("set_right", 0x04),
+        ("set_dst", 0x06),
+    ):
+        b.label(label)
+        b.local_reference(0xBD, "state")  # LDA state,X
+        b.zero_page(0x85, destination)
+        b.emit(0xE8)  # INX
+        b.local_reference(0xBD, "state")
+        b.zero_page(0x85, destination + 1)
+        b.emit(0x60)
+
+    b.label("state")
+    b.emit(*([0x00] * 8))  # Four saved entry pointers.
+    temp_pointer_offset = len(b.code)
+    b.emit(0x00, 0x00)
+    b.local_relocations.append((temp_pointer_offset, "temp"))
+    b.label("temp")
+    b.emit(0x00, 0x00, 0x00, 0x00)
+    # The primary export owns the private state and temporary storage too;
+    # ALINK only retains relocations inside a selected export's byte range.
+    b.export("rt_f_clamp")
+    return b
+
+
 def sign_module() -> ObjectBuilder:
     """Build FSign with canonical NaN and signed-zero preservation."""
     b = ObjectBuilder("rt_f_sign")
@@ -2543,6 +2632,7 @@ def main() -> int:
             sign_module(),
             minmax_module("rt_f_min", maximum=False),
             minmax_module("rt_f_max", maximum=True),
+            clamp_module(),
             float_to_int_module(),
             addsub_core_module(),
             multiply_module(),

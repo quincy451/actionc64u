@@ -1656,7 +1656,8 @@ emit_runtime_real_binary_value_local_or_fail:
     sty symbol_start_y_local
     lda #ACTC_OVERLAY_CTX_SAVE_SOURCE_MARK_FN_LO
     jsr call_context_function
-    lsr real_binary_function_local
+    lda #$00
+    sta real_binary_function_local
     jsr call_copy_symbol_from_scan_y_context
     bcc :+
     jmp emit_runtime_real_binary_value_local_or_fail_restore
@@ -1669,7 +1670,17 @@ emit_runtime_real_binary_value_local_or_fail:
     lda #<pattern_fmax
     ldy #>pattern_fmax
     jsr symbol_buffer_matches_local_const
+    bcc emit_runtime_real_binary_value_local_fmax
+    lda #<pattern_fclamp
+    ldy #>pattern_fclamp
+    jsr symbol_buffer_matches_local_const
     bcs emit_runtime_real_binary_value_local_first_symbol
+    lda #'k'
+    sta real_operator_local
+    inc real_binary_function_local
+    inc real_binary_function_local
+    bne emit_runtime_real_binary_value_local_consume_open
+emit_runtime_real_binary_value_local_fmax:
     lda #'>'
     bne emit_runtime_real_binary_value_local_function
 emit_runtime_real_binary_value_local_fmin:
@@ -1677,6 +1688,7 @@ emit_runtime_real_binary_value_local_fmin:
 emit_runtime_real_binary_value_local_function:
     sta real_operator_local
     inc real_binary_function_local
+emit_runtime_real_binary_value_local_consume_open:
     ldy symbol_end_y_local
     jsr call_skip_inline_spaces_context
     lda #'('
@@ -1729,27 +1741,48 @@ emit_runtime_real_binary_value_local_operator:
     sta real_operator_local
     lda real_operator_local
     jsr consume_scan_char_local
-    bcs emit_runtime_real_binary_value_local_or_fail_restore
+    bcs emit_runtime_real_binary_value_local_fail_near
 emit_runtime_real_binary_value_local_after_operator:
     jsr call_skip_inline_spaces_context
     jsr call_copy_symbol_from_scan_y_context
-    bcs emit_runtime_real_binary_value_local_or_fail_restore
+    bcs emit_runtime_real_binary_value_local_fail_near
     sty symbol_end_y_local
     jsr call_find_var_index_context
-    bcs emit_runtime_real_binary_value_local_or_fail_restore
+    bcs emit_runtime_real_binary_value_local_fail_near
     stx real_rhs_index_local
     lda #ACTC_OVERLAY_CTX_REQUIRE_REAL_VAR_FN_LO
     jsr call_indexed_context_function
-    bcs emit_runtime_real_binary_value_local_or_fail_restore
+    bcs emit_runtime_real_binary_value_local_fail_near
     ldy symbol_end_y_local
     jsr call_skip_inline_spaces_context
     lda real_binary_function_local
-    beq :+
+    beq emit_runtime_real_binary_value_local_args_done
+    cmp #$02
+    bne emit_runtime_real_binary_value_local_consume_close
+    lda #','
+    jsr consume_scan_char_local
+    bcs emit_runtime_real_binary_value_local_fail_near
+    jsr call_skip_inline_spaces_context
+    jsr call_copy_symbol_from_scan_y_context
+    bcs emit_runtime_real_binary_value_local_fail_near
+    sty symbol_end_y_local
+    jsr call_find_var_index_context
+    bcs emit_runtime_real_binary_value_local_fail_near
+    stx real_third_index_local
+    lda #ACTC_OVERLAY_CTX_REQUIRE_REAL_VAR_FN_LO
+    jsr call_indexed_context_function
+    bcs emit_runtime_real_binary_value_local_fail_near
+    ldy symbol_end_y_local
+    jsr call_skip_inline_spaces_context
+    jmp emit_runtime_real_binary_value_local_consume_close
+emit_runtime_real_binary_value_local_fail_near:
+    jmp emit_runtime_real_binary_value_local_or_fail_restore
+emit_runtime_real_binary_value_local_consume_close:
     lda #')'
     jsr consume_scan_char_local
     bcs emit_runtime_real_binary_value_local_or_fail_restore
     jsr call_skip_inline_spaces_context
-:
+emit_runtime_real_binary_value_local_args_done:
     sty symbol_end_y_local
     jsr load_append_body_op_ptr
     ldx real_lhs_index_local
@@ -1764,6 +1797,16 @@ emit_runtime_real_binary_value_local_after_operator:
     ldx real_rhs_index_local
     lda #'U'
     jsr call_loaded_target_with_a
+    lda real_binary_function_local
+    cmp #$02
+    bne :+
+    ldx real_third_index_local
+    lda #'L'
+    jsr call_loaded_target_with_a
+    ldx real_third_index_local
+    lda #'U'
+    jsr call_loaded_target_with_a
+:
     lda #ACTC_OVERLAY_CTX_FIND_OR_STORE_REAL_OPERATOR_EXTERNAL_FN_LO
     jsr load_context_function_ptr
     lda real_operator_local
@@ -2848,6 +2891,8 @@ pattern_fmin:
     .asciiz "FMIN"
 pattern_fmax:
     .asciiz "FMAX"
+pattern_fclamp:
+    .asciiz "FCLAMP"
 pattern_proc:
     .asciiz "PROC"
 pattern_func:
@@ -2937,6 +2982,8 @@ param_bind_base_local:
 real_lhs_index_local:
     .byte $00
 real_rhs_index_local:
+    .byte $00
+real_third_index_local:
     .byte $00
 real_operator_local:
     .byte $00

@@ -66,6 +66,11 @@ Current status:
   operand, and equal ordered values preserve the left operand bit-for-bit,
   including its signed-zero representation. The two selectors remain separate
   modules so ALINK includes only the function referenced by source.
+- `rt_f_clamp.obj` is a 199-byte ternary selector. It reads value, lower, and
+  upper pointers through `$02/$03`, `$04/$05`, and `$08/$09`, writes through
+  `$06/$07`, and imports `rt_f_cmp.obj`, `rt_f_max.obj`, and `rt_f_min.obj`.
+  Any NaN input or `lower>upper` produces canonical quiet NaN; otherwise it
+  computes `min(max(value,lower),upper)` while preserving selected operand bits.
 - `rt_f_abs.obj` copies a REAL32 value read through zero page `$02/$03` to the
   destination pointer in `$06/$07`, clearing the sign bit in the copied value.
 - `rt_f_sign.obj` reads a REAL32 value through `$02/$03` and writes through

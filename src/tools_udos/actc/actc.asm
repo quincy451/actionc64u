@@ -12730,6 +12730,14 @@ find_or_store_rt_f_max_external:
     jsr copy_const_ptr_to_declared_module_name
     jmp find_or_store_external_from_declared
 
+find_or_store_rt_f_clamp_external:
+    lda #<runtime_symbol_rt_f_clamp
+    sta const_ptr
+    lda #>runtime_symbol_rt_f_clamp
+    sta const_ptr+1
+    jsr copy_const_ptr_to_declared_module_name
+    jmp find_or_store_external_from_declared
+
 find_or_store_rt_s_to_f_external:
     lda #<runtime_symbol_rt_s_to_f
     sta const_ptr
@@ -12785,6 +12793,9 @@ find_or_store_real_operator_external_from_a:
 :   cmp #'>'
     bne :+
     jmp find_or_store_rt_f_max_external
+:   cmp #'k'
+    bne :+
+    jmp find_or_store_rt_f_clamp_external
 :   sec
     rts
 
@@ -16166,6 +16177,8 @@ runtime_symbol_rt_f_min:
     .asciiz "RT_F_MIN"
 runtime_symbol_rt_f_max:
     .asciiz "RT_F_MAX"
+runtime_symbol_rt_f_clamp:
+    .asciiz "RT_F_CLAMP"
 runtime_symbol_rt_s_to_f:
     .asciiz "RT_S_TO_F"
 runtime_symbol_rt_print_f:

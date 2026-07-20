@@ -50,11 +50,11 @@ not parity artifacts.
 | Program-owned overlay sections | `OVERLAY`/`ENDOVERLAY` and relocated `OverlayCall` | No native source lowering | Native compiler gap; ACTC tool overlays are not equivalent |
 | Program argument entry | `MAIN(argc,argv)` through the Idun target service | `MAIN()` and UDOS command-tail workflow | OS-specific contracts; expose equivalent user arguments without copying the Idun upload ABI |
 | IEEE-754 binary32 arithmetic and exceptional values | Standalone modules | Standalone modules plus native support modules | Parity at runtime |
-| General REAL source expressions, calls, and returns | Full binary32 compiler path | Core operations, direct `FSign`/`FMin`/`FMax` on named REAL values, and constrained zero-, one-, and two-parameter native function shapes | Native compiler gap; these builtin semantics are complete, but arbitrary expression trees, calls, and returns are not |
+| General REAL source expressions, calls, and returns | Full binary32 compiler path | Core operations, direct `FSign`/`FMin`/`FMax` on named REAL values, a constrained `FClamp` ternary root, and constrained zero-, one-, and two-parameter native function shapes | Native compiler gap; these builtin semantics are complete, but arbitrary expression trees, calls, and returns are not |
 | INPUT1 joystick/two-button mouse API | 19 declarations | 19 declarations | Parity; physical checks remain |
 | DBF1 API | 20 declarations | 20 declarations | Parity; physical REU/disk checks remain |
 | SIDSPR1 API | 37 declarations | 37 declarations | Parity; physical SID/display checks remain |
-| Full MATH1 source library | 43 public routines plus 8 constants, 51 catalog features; one private helper | Seven callable declarations: `PrintR`, `PrintRE`, `FAbs`, `FSqrt`, `FSign`, `FMin`, and `FMax` | Native implementation gap |
+| Full MATH1 source library | 43 public routines plus 8 constants, 51 catalog features; one private helper | Eight callable declarations: `PrintR`, `PrintRE`, `FAbs`, `FSqrt`, `FSign`, `FMin`, `FMax`, and `FClamp` | Native implementation gap; 35 public routines and 8 constants remain to be compiled from portable source |
 | Full GFX1 source library | 67 public source routines plus 16 constants; 60 routines plus the constants form the 76-feature GFX1 catalog, while seven low-level sprite aliases are cataloged under SIDSPR1 | Fifteen low-level callable declarations | Native implementation gap |
 | ASP1/ABM1 resources and compiler embedding | Linux editors and ACTC loader | Contract documented only | Native implementation gap |
 | Source formatting | `actspc` and ACTEDIT F6 | No complete UDOS formatter | Native workflow gap |
@@ -77,7 +77,7 @@ constant-only arithmetic does not select target conversion or arithmetic
 helpers. The evaluator is resident, while pass I retains its full 512-byte code
 reserve.
 
-The first item now has four tested checkpoints. Native pass A accepts two named
+The first item now has five tested checkpoints. Native pass A accepts two named
 REAL arguments after their immediate `REAL(integer)` initializers, copies both
 values into distinct parameter storage, and returns the first parameter by
 pointer. Dedicated pass K then lowers the exact finite comparison/select form
@@ -89,8 +89,13 @@ positions. Their 77-byte modules implement the complete MATH1 NaN and signed-
 zero selection policy through ordinary `RT_F_CMP.OBJ` closure. Native ACTC also
 lowers `FSign(A)` in those positions through a dependency-free 123-byte helper
 that canonicalizes NaN, preserves signed zero, and returns signed one for every
-other input. General REAL expression trees, nested calls, and the rest of MATH1
-remain incomplete.
+other input. Pass K also owns the exact four-REAL root that initializes three
+values, assigns `X=FClamp(A,B,C)`, prints the result, and returns. Its 199-byte
+selected helper validates all three inputs and bound order, then uses the
+ordinary comparison/minimum/maximum closure. This establishes the ternary ABI
+and complete portable clamp semantics without claiming arbitrary
+three-argument expression lowering. General REAL expression trees, nested
+calls, and the rest of MATH1 remain incomplete.
 
 Remaining work is dependency ordered:
 
@@ -217,7 +222,7 @@ make sync-native-check NATIVE_ACTION_ROOT=/path/to/actionc64u
 
 The 2026-07-20 current cross-product baseline passed:
 
-- 792 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
+- 793 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
   ALINK closure, IEEE-754, ACTEDIT, ACTDBG, Linux compatibility, export, and
   release-image checks;
 - 133 UDOS integration tests, with one intentional embedded-AUTOEXEC capacity
@@ -321,8 +326,8 @@ edge/random input pairs per operation, including one-NaN, two-NaN, signed-zero,
 and equal-value bit preservation. Native ACTC focused OBJ checks and live VICE
 launches print `1` for minimum and `2` for maximum while proving that the
 unselected sibling helper is absent. The broad direct-PRG inventory is now
-1,330 shapes, the source-backed object-emission inventory remains 171 shapes,
-and the compiled-runtime relocation oracle covers 289 cases. Idun carries the
+1,331 shapes, the source-backed object-emission inventory remains 171 shapes,
+and the compiled-runtime relocation oracle covers 290 cases. Idun carries the
 same generated target modules and manifest; its portable MATH1 source remains
 the general implementation. Current hardware-independent Idun release gates
 also pass: 151 active Linux tests, 136 sanitizer tests, 21 direct-PRG tests with
@@ -343,6 +348,18 @@ increases its 8 KiB overlay reserve from 96 to 230 bytes despite adding this
 syntax. This closes only the seventh native MATH1 declaration; portable
 multi-function MATH1 still depends on work items 1 and 2.
 
+The following native `FClamp` slice adds byte-identical `RT_F_CLAMP.OBJ` to
+both products. The 199-byte module reads value/lower/upper pointers through
+`$02-$05` and `$08/$09`, writes through `$06/$07`, rejects any NaN or inverted
+bounds with canonical quiet NaN, and otherwise preserves the selected operand
+through `FMin(FMax(value,lower),upper)`. Pass K emits the exact constrained
+three-initializer assignment-and-print root because adding it to pass A would
+have violated that overlay's enforced 768-byte growth reserve. Pass A remains
+7,406 bytes with 786 bytes free; pass K is 4,208 bytes with 3,984 bytes free.
+The direct-PRG matrix now has 1,331 shapes and the independent relocation oracle
+has 290 cases. This closes the eighth native declaration; the other 35 public
+MATH1 routines and all 8 constants still depend on general REAL source lowering.
+
 Pass 1 now contains only the streamed module-header validator. Moving the
 transform into `ACTC_OVLI.BIN` reduced pass 1 to 788 bytes. Integer folding,
 the packed definition store, address canonicalization, and the resident
@@ -354,8 +371,8 @@ Tool-ABI-preserved and active only before body/ASMBLOCK work. All pass code is
 hard-limited to `$A000-$BFFF`; UDOS live state at `$C000+` is forbidden.
 Linker-allocated pass BSS is limited to `$8000-$9DFF`; ASMBLOCK's transfer page,
 label index, and emitter state occupy the reserved `$9E00-$9F1E` range. Pass J
-is 7,901 bytes with 291 bytes free under its 256-byte reserve; pass K is 3,257
-bytes with 4,935 bytes free. The complete
+is 7,901 bytes with 291 bytes free under its 256-byte reserve; pass K is 4,208
+bytes with 3,984 bytes free. The complete
 204-test overlay suite and 198-test source-cache suite pass with this layout.
 
 Shipped and ordinary harness builds default to

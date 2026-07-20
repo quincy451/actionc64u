@@ -14,7 +14,8 @@ The exponent bias is `127`.
 ## Source Semantics
 
 Supported forms include decimal literals, exponent notation, arithmetic
-operators, comparisons, `REAL(x)`, and `INT(r)`.
+operators, comparisons, `REAL(x)`, `INT(r)`, and the bounded named-value
+`FSign`, `FMin`, `FMax`, and `FClamp` calls.
 
 Rules:
 
@@ -28,6 +29,9 @@ Rules:
 - arithmetic can produce signed infinity and canonical quiet NaN; native
   `REAL CONST` also accepts `INF`/`INFINITY` and `NAN`
 - NaN is unordered: `<`, `<=`, `=`, `>=`, and `>` are false, while `<>` is true
+- `FClamp(value,lower,upper)` returns canonical quiet NaN if any argument is
+  NaN or if `lower>upper`; otherwise it returns
+  `FMin(FMax(value,lower),upper)` with the selected operand bits preserved
 - the runtime uses the default round-to-nearest, ties-to-even environment; it
   does not expose exception flags, traps, or alternate rounding modes
 
@@ -60,6 +64,7 @@ The linker-level REAL runtime surface uses stable helper symbols:
 - `rt_f_sign`
 - `rt_f_min`
 - `rt_f_max`
+- `rt_f_clamp`
 - `rt_f_abs`
 - `rt_f_sqrt`
 - `rt_i_to_f`
@@ -122,6 +127,11 @@ The first implemented target-side helper ABI is intentionally narrow:
   representation. One NaN is ignored, two NaNs select the right operand, and
   equal ordered operands select the left operand. Each imports `rt_f_cmp`, so
   comparison and exceptional-value support are selected transitively
+- `rt_f_clamp` reads value, lower-bound, and upper-bound pointers from
+  `$02/$03`, `$04/$05`, and `$08/$09`, writes through `$06/$07`, and imports
+  `rt_f_cmp`, `rt_f_max`, and `rt_f_min`. Any NaN argument or inverted bounds
+  produce canonical quiet NaN; valid bounds preserve the exact selected value,
+  including signed zero
 - `rt_f_abs` reads a REAL32 value through zero page `$02/$03`, copies it to the
   destination pointer in `$06/$07`, and clears the sign bit in the copied value
 - `rt_f_sqrt` reads a REAL32 value through zero page `$02/$03`, writes through
@@ -167,6 +177,8 @@ Examples:
 - `FSign(r)` imports only `rt_f_sign`
 - `FMin(a,b)` imports `rt_f_min` and its comparison closure
 - `FMax(a,b)` imports `rt_f_max` and its comparison closure
+- `FClamp(value,lower,upper)` imports `rt_f_clamp` plus its
+  comparison/minimum/maximum closure
 - `PrintR` / `PrintRE` imports `rt_print_f` plus required text output support
 
 Programs that do not use REAL must not pay for REAL helper code. Programs that
@@ -191,7 +203,8 @@ work; they are not REAL32 range limitations.
 `LIB/MATH1.ACT` is the shipped Action-facing reference for the currently
 implemented REAL32 helper surface. It documents the core source forms that ACTC
 already recognizes directly: `REAL(x)`, `INT(x)`, REAL arithmetic/comparison
-operators, `FAbs`, `FSqrt`, `FSign`, `FMin`, `FMax`, and `PrintR` / `PrintRE`.
+operators, `FAbs`, `FSqrt`, `FSign`, `FMin`, `FMax`, `FClamp`, and
+`PrintR` / `PrintRE`.
 
 `SRC/MATH1_DEMO.ACT` validates the exported-library path by compiling a small
 REAL absolute-value program through ACTC, linking it with ALINK, and running
@@ -204,7 +217,7 @@ implemented.
 
 The core REAL32 runtime helpers now implement default IEEE-754 binary32 value
 semantics for addition, subtraction, multiplication, division, square root,
-comparison, minimum/maximum selection, and signed decimal printing across
+comparison, sign, minimum/maximum/clamp selection, and signed decimal printing across
 finite values, subnormals, signed zeroes, infinities, and NaNs. REAL-to-INT
 remains the language conversion
 defined above: out-of-range or non-finite input returns zero. The helpers

@@ -1342,9 +1342,34 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   assignments, REAL prints, and conditions. The compiler emits only
   `RT_F_SIGN.OBJ`; no sibling MATH1 helper becomes reachable.
 - Passed 2,304 exact edge/random runtime cases, focused compiler object checks,
-  and the direct-link matrix case that prints `-1`. The broad direct-PRG matrix
-  now contains 1,330 shapes, its compiled-runtime relocation oracle covers 289
-  cases, and the source-backed object-emission matrix remains at 171 shapes.
+  and the direct-link matrix case that prints `-1`. At this checkpoint, the
+  broad direct-PRG matrix contained 1,330 shapes, its compiled-runtime
+  relocation oracle covered 289 cases, and the source-backed object-emission
+  matrix remained at 171 shapes.
 - Native MATH1 now exposes seven low-level calls. General REAL expression,
   function, and frame lowering remains the dependency for the other 36 public
+  MATH1 routines and eight constants.
+
+## 2026-07-20 Native MATH1 Clamp Slice
+
+- Added generated, independently link-selected `RT_F_CLAMP.OBJ` modules to the
+  native and UDOS-format runtime trees. The 199-byte helper reads value, lower,
+  and upper pointers through `$02-$05` and `$08/$09`, writes through `$06/$07`,
+  and imports only comparison, minimum, and maximum.
+- Matched portable MATH1 behavior: any NaN argument or `lower>upper` produces
+  canonical quiet NaN; valid bounds compute
+  `FMin(FMax(value,lower),upper)` while preserving selected operand bits and
+  signed zero.
+- Extended preallocation and body collection for the ternary call and placed
+  its exact three-initializer assignment/print root in pass K. Keeping the
+  171-byte emitter out of pass A preserves that overlay's enforced 768-byte
+  reserve: pass A is 7,406 bytes with 786 free, while pass K is 4,208 bytes
+  with 3,984 free.
+- Added an exact three-input host oracle, focused compiler object assertions,
+  a direct-link runtime case, and live VICE coverage. The broad direct-PRG
+  matrix now contains 1,331 shapes, its compiled-runtime relocation oracle
+  covers 290 cases, and the source-backed object-emission matrix remains at
+  171 shapes.
+- Native MATH1 now exposes eight low-level calls. General REAL expression,
+  function, and frame lowering remains the dependency for the other 35 public
   MATH1 routines and eight constants.

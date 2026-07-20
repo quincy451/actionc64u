@@ -33,7 +33,7 @@ class TestMathRuntime(unittest.TestCase):
         output = self.run_tool(
             "verify_f_ieee_runtime.py", "--random-cases", "64"
         )
-        for operation in ("add", "sub", "mul", "cmp"):
+        for operation in ("add", "sub", "mul", "cmp", "sign", "min", "max", "clamp"):
             self.assertIn(f"rt_f_{operation}", output)
         self.assertIn("exact edge/random cases passed", output)
 

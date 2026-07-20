@@ -15,6 +15,7 @@ from generate_math_runtime import (
     addsub_core_module,
     addsub_wrapper_module,
     compare_module,
+    clamp_module,
     link_runtime_builders,
     minmax_module,
     multiply_module,
@@ -56,7 +57,8 @@ int main(int argc, char **argv)
         load_addr = 0x2000,
         left_addr = 0x3000,
         right_addr = 0x3010,
-        result_addr = 0x3020,
+        upper_addr = 0x3020,
+        result_addr = 0x3030,
         stop_addr = 0x1000,
     };
     static M6502_Memory memory;
@@ -67,12 +69,15 @@ int main(int argc, char **argv)
     size_t image_size;
     unsigned left;
     unsigned right;
+    unsigned upper = 0;
     int comparison;
+    int clamp;
 
     if (argc != 3) {
         return 2;
     }
     comparison = strcmp(argv[2], "compare") == 0;
+    clamp = strcmp(argv[2], "clamp") == 0;
     runtime = fopen(argv[1], "rb");
     if (!runtime) {
         return 3;
@@ -88,13 +93,21 @@ int main(int argc, char **argv)
     if (!cpu) {
         return 5;
     }
-    while (scanf("%x %x", &left, &right) == 2) {
+    for (;;) {
         unsigned steps = 0;
+        int fields = clamp
+            ? scanf("%x %x %x", &left, &right, &upper)
+            : scanf("%x %x", &left, &right);
+
+        if (fields != (clamp ? 3 : 2)) {
+            break;
+        }
 
         memcpy(memory + load_addr, image, image_size);
         memset(memory, 0, 0x100);
         put32(memory, left_addr, left);
         put32(memory, right_addr, right);
+        put32(memory, upper_addr, upper);
         put32(memory, result_addr, 0xccccccccu);
         memory[0x02] = left_addr & 0xff;
         memory[0x03] = left_addr >> 8;
@@ -102,6 +115,8 @@ int main(int argc, char **argv)
         memory[0x05] = right_addr >> 8;
         memory[0x06] = result_addr & 0xff;
         memory[0x07] = result_addr >> 8;
+        memory[0x08] = upper_addr & 0xff;
+        memory[0x09] = upper_addr >> 8;
 
         cpu->registers->a = 0;
         cpu->registers->x = 0;
@@ -272,6 +287,15 @@ def expected_sign(value: int) -> int:
     return 0xBF800000 if value >> 31 else 0x3F800000
 
 
+def expected_clamp(value: int, lower: int, upper: int) -> int:
+    if is_nan(value) or is_nan(lower) or is_nan(upper):
+        return CANONICAL_QNAN
+    if expected_compare(lower, upper) > 0:
+        return CANONICAL_QNAN
+    bounded_low = expected_minmax(value, lower, maximum=True)
+    return expected_minmax(bounded_low, upper, maximum=False)
+
+
 def runtime_builders(operation: str):
     special = special_value_module()
     if operation == "add":
@@ -295,6 +319,14 @@ def runtime_builders(operation: str):
     if operation in ("min", "max"):
         return [
             minmax_module(f"rt_f_{operation}", maximum=operation == "max"),
+            compare_module(),
+            special,
+        ]
+    if operation == "clamp":
+        return [
+            clamp_module(),
+            minmax_module("rt_f_min", maximum=False),
+            minmax_module("rt_f_max", maximum=True),
             compare_module(),
             special,
         ]
@@ -329,10 +361,49 @@ def verification_cases(random_count: int, seed: int) -> list[tuple[int, int]]:
     return cases
 
 
+def verification_clamp_cases(
+    random_count: int, seed: int
+) -> list[tuple[int, int, int]]:
+    edges = [
+        0x00000000,
+        0x80000000,
+        0x00000001,
+        0x007FFFFF,
+        0x00800000,
+        0x3F000000,
+        0x3F800000,
+        0x7F7FFFFF,
+        0x80800000,
+        0xBF800000,
+        0xFF7FFFFF,
+        0x7F800000,
+        0xFF800000,
+        0x7F800001,
+        0x7FC00000,
+        0xFFC00001,
+    ]
+    cases = [
+        (value, lower, upper)
+        for value in edges
+        for lower in edges
+        for upper in edges
+    ]
+    randomizer = random.Random(seed ^ 0xC1A0)
+    cases.extend(
+        (
+            randomizer.getrandbits(32),
+            randomizer.getrandbits(32),
+            randomizer.getrandbits(32),
+        )
+        for _ in range(random_count)
+    )
+    return cases
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/sign/min/max code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/min/max/clamp code against exact IEEE "
             "binary32"
         )
     )
@@ -352,6 +423,7 @@ def main() -> int:
         raise SystemExit(f"lib6502 source not found: {lib6502}")
 
     cases = verification_cases(args.random_cases, args.seed)
+    clamp_cases = verification_clamp_cases(args.random_cases, args.seed)
     with tempfile.TemporaryDirectory(prefix="action-f-ieee-") as temporary:
         work = Path(temporary)
         source_path = work / "verify.c"
@@ -374,7 +446,17 @@ def main() -> int:
             check=True,
         )
 
-        for operation in ("add", "sub", "mul", "cmp", "sign", "min", "max"):
+        for operation in (
+            "add",
+            "sub",
+            "mul",
+            "cmp",
+            "sign",
+            "min",
+            "max",
+            "clamp",
+        ):
+            operation_cases = clamp_cases if operation == "clamp" else cases
             runtime_path = work / f"rt_f_{operation}.bin"
             image = link_runtime_builders(runtime_builders(operation), LOAD_ADDR)
             runtime_path.write_bytes(image)
@@ -382,19 +464,28 @@ def main() -> int:
                 [
                     str(harness_path),
                     str(runtime_path),
-                    "compare" if operation == "cmp" else "value",
+                    "compare"
+                    if operation == "cmp"
+                    else "clamp"
+                    if operation == "clamp"
+                    else "value",
                 ],
-                input="".join(f"{left:08x} {right:08x}\n" for left, right in cases),
+                input="".join(
+                    " ".join(f"{value:08x}" for value in case) + "\n"
+                    for case in operation_cases
+                ),
                 text=True,
                 capture_output=True,
                 check=True,
             )
             results = [int(line, 16) for line in completed.stdout.splitlines()]
-            if len(results) != len(cases):
+            if len(results) != len(operation_cases):
                 raise SystemExit(
-                    f"{operation}: expected {len(cases)} results, received {len(results)}"
+                    f"{operation}: expected {len(operation_cases)} results, "
+                    f"received {len(results)}"
                 )
-            for index, ((left, right), actual) in enumerate(zip(cases, results)):
+            for index, (case, actual) in enumerate(zip(operation_cases, results)):
+                left, right = case[:2]
                 if operation == "add":
                     expected = expected_addsub(left, right, False)
                 elif operation == "sub":
@@ -405,18 +496,21 @@ def main() -> int:
                     expected = expected_compare(left, right) & 0xFFFF
                 elif operation == "sign":
                     expected = expected_sign(left)
+                elif operation == "clamp":
+                    expected = expected_clamp(left, right, case[2])
                 else:
                     expected = expected_minmax(
                         left, right, maximum=operation == "max"
                     )
                 if actual != expected:
                     raise SystemExit(
-                        f"{operation} case {index}: {left:08x}, {right:08x}: "
+                        f"{operation} case {index}: "
+                        f"{', '.join(f'{value:08x}' for value in case)}: "
                         f"got {actual:08x}, expected {expected:08x}"
                     )
             print(
                 f"rt_f_{operation} {len(image)} linked bytes: "
-                f"{len(cases)} exact edge/random cases passed"
+                f"{len(operation_cases)} exact edge/random cases passed"
             )
     return 0
 

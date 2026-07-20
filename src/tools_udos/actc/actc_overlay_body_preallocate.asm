@@ -566,6 +566,8 @@ preallocate_real_binary_function_assignment_external_from_scan_y_overlay_miss:
 
 preallocate_real_binary_function_external_from_scan_y_overlay:
     sty keyword_scan_y_local
+    lda #$02
+    sta real_function_arity_local
     lda #<pattern_fmin
     ldy #>pattern_fmin
     jsr preallocate_consume_keyword_open_from_scan_y_overlay
@@ -577,26 +579,58 @@ preallocate_real_binary_function_external_from_scan_y_overlay_try_fmax:
     lda #<pattern_fmax
     ldy #>pattern_fmax
     jsr preallocate_consume_keyword_open_from_scan_y_overlay
-    bcs preallocate_real_binary_function_external_from_scan_y_overlay_miss
+    bcc preallocate_real_binary_function_external_from_scan_y_overlay_fmax
+    ldy keyword_scan_y_local
+    lda #<pattern_fclamp
+    ldy #>pattern_fclamp
+    jsr preallocate_consume_keyword_open_from_scan_y_overlay
+    bcc :+
+    jmp preallocate_real_binary_function_external_from_scan_y_overlay_miss
+:
+    inc real_function_arity_local
+    lda #'k'
+    bne preallocate_real_binary_function_external_from_scan_y_overlay_operator
+preallocate_real_binary_function_external_from_scan_y_overlay_fmax:
     lda #'>'
 preallocate_real_binary_function_external_from_scan_y_overlay_operator:
     sta real_operator_local
     lda #ACTC_OVERLAY_CTX_COPY_SYMBOL_FROM_SCAN_Y_FN_LO
     jsr call_context_function
-    bcs preallocate_real_binary_function_external_from_scan_y_overlay_miss
+    bcs preallocate_real_binary_function_external_from_scan_y_overlay_fail_near
     sty symbol_end_y_local
     lda #ACTC_OVERLAY_CTX_FIND_VAR_INDEX_FN_LO
     jsr call_context_function
-    bcs preallocate_real_binary_function_external_from_scan_y_overlay_miss
+    bcs preallocate_real_binary_function_external_from_scan_y_overlay_fail_near
     lda #ACTC_OVERLAY_CTX_REQUIRE_REAL_VAR_FN_LO
     jsr call_indexed_context_function
-    bcs preallocate_real_binary_function_external_from_scan_y_overlay_miss
+    bcs preallocate_real_binary_function_external_from_scan_y_overlay_fail_near
     ldy symbol_end_y_local
     lda #ACTC_OVERLAY_CTX_SKIP_INLINE_SPACES_FN_LO
     jsr call_context_function
     lda #','
     jsr preallocate_consume_scan_char_from_y_overlay
-    bcs preallocate_real_binary_function_external_from_scan_y_overlay_miss
+    bcs preallocate_real_binary_function_external_from_scan_y_overlay_fail_near
+    lda #ACTC_OVERLAY_CTX_SKIP_INLINE_SPACES_FN_LO
+    jsr call_context_function
+    lda #ACTC_OVERLAY_CTX_COPY_SYMBOL_FROM_SCAN_Y_FN_LO
+    jsr call_context_function
+    bcs preallocate_real_binary_function_external_from_scan_y_overlay_fail_near
+    sty symbol_end_y_local
+    lda #ACTC_OVERLAY_CTX_FIND_VAR_INDEX_FN_LO
+    jsr call_context_function
+    bcs preallocate_real_binary_function_external_from_scan_y_overlay_fail_near
+    lda #ACTC_OVERLAY_CTX_REQUIRE_REAL_VAR_FN_LO
+    jsr call_indexed_context_function
+    bcs preallocate_real_binary_function_external_from_scan_y_overlay_fail_near
+    ldy symbol_end_y_local
+    lda #ACTC_OVERLAY_CTX_SKIP_INLINE_SPACES_FN_LO
+    jsr call_context_function
+    lda real_function_arity_local
+    cmp #$03
+    bne preallocate_real_binary_function_external_from_scan_y_overlay_close
+    lda #','
+    jsr preallocate_consume_scan_char_from_y_overlay
+    bcs preallocate_real_binary_function_external_from_scan_y_overlay_fail_near
     lda #ACTC_OVERLAY_CTX_SKIP_INLINE_SPACES_FN_LO
     jsr call_context_function
     lda #ACTC_OVERLAY_CTX_COPY_SYMBOL_FROM_SCAN_Y_FN_LO
@@ -612,6 +646,10 @@ preallocate_real_binary_function_external_from_scan_y_overlay_operator:
     ldy symbol_end_y_local
     lda #ACTC_OVERLAY_CTX_SKIP_INLINE_SPACES_FN_LO
     jsr call_context_function
+    jmp preallocate_real_binary_function_external_from_scan_y_overlay_close
+preallocate_real_binary_function_external_from_scan_y_overlay_fail_near:
+    jmp preallocate_real_binary_function_external_from_scan_y_overlay_miss
+preallocate_real_binary_function_external_from_scan_y_overlay_close:
     lda #')'
     jsr preallocate_consume_scan_char_from_y_overlay
     bcs preallocate_real_binary_function_external_from_scan_y_overlay_miss
@@ -2047,6 +2085,8 @@ pattern_fmin:
     .asciiz "FMIN"
 pattern_fmax:
     .asciiz "FMAX"
+pattern_fclamp:
+    .asciiz "FCLAMP"
 pattern_and:
     .asciiz "AND"
 pattern_or:
@@ -2148,6 +2188,8 @@ assignment_target_end_y_local:
 assignment_value_start_y_local:
     .byte $00
 real_operator_local:
+    .byte $00
+real_function_arity_local:
     .byte $00
 rhs_var_index_local:
     .byte $00

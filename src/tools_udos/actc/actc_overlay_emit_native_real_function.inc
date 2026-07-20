@@ -20,6 +20,16 @@ NATIVE_REAL_FUNCTION_NAME_DATA = 5
 NATIVE_REAL_FUNCTION_NAME_POINTER = 6
 NATIVE_REAL_FUNCTION_NAME_COUNT = 7
 
+NATIVE_REAL_FUNCTION_TARGET_MAIN_INIT_LEFT = 0
+NATIVE_REAL_FUNCTION_TARGET_MAIN_INIT_RIGHT = 1
+NATIVE_REAL_FUNCTION_TARGET_MAIN_ARG_LEFT = 2
+NATIVE_REAL_FUNCTION_TARGET_MAIN_ARG_RIGHT = 3
+NATIVE_REAL_FUNCTION_TARGET_MAIN_RESULT = 4
+NATIVE_REAL_FUNCTION_TARGET_SELECT_STORE_TOP = 5
+NATIVE_REAL_FUNCTION_TARGET_SELECT_STORE_NEXT = 6
+NATIVE_REAL_FUNCTION_TARGET_SELECT_LEFT = 7
+NATIVE_REAL_FUNCTION_TARGET_SELECT_RIGHT = 8
+
 NATIVE_REAL_CLAMP_CODE_SIZE = 147
 NATIVE_REAL_CLAMP_DATA_OFFSET = NATIVE_REAL_CLAMP_CODE_SIZE
 NATIVE_REAL_CLAMP_A_OFFSET = NATIVE_REAL_CLAMP_DATA_OFFSET
@@ -159,9 +169,7 @@ native_real_function_detect_var_loop:
     lda #ACTC_OVERLAY_CTX_SET_BODY_PTR_FN_LO
     jsr call_indexed_context_function
     jsr load_resident_body_ptr_to_scan_zp
-    lda #<native_real_function_select_body_pattern
-    ldy #>native_real_function_select_body_pattern
-    jsr native_real_function_match_scan_pattern
+    jsr native_real_function_match_select_body_pattern
     bcs :+
     jmp native_real_function_detect_no
 :
@@ -169,9 +177,7 @@ native_real_function_detect_var_loop:
     lda #ACTC_OVERLAY_CTX_SET_BODY_PTR_FN_LO
     jsr call_indexed_context_function
     jsr load_resident_body_ptr_to_scan_zp
-    lda #<native_real_function_main_body_pattern
-    ldy #>native_real_function_main_body_pattern
-    jsr native_real_function_match_scan_pattern
+    jsr native_real_function_match_main_body_pattern
     bcs :+
     jmp native_real_function_detect_no
 :
@@ -362,24 +368,139 @@ native_real_function_external_x_matches:
     sta ACTC_OVERLAY_WORK_ZP+1
     jmp native_real_function_compare_scan_pattern
 
-native_real_function_match_scan_pattern:
+native_real_function_match_select_body_pattern:
+    lda #<native_real_function_select_body_pattern
+    ldy #>native_real_function_select_body_pattern
+    jsr native_real_function_match_body_pattern
+    bcs :+
+    jmp native_real_function_match_select_body_pattern_no
+:
+    lda native_real_function_var_captures+2
+    cmp native_real_function_var_captures+3
+    bne native_real_function_match_select_body_pattern_no
+    cmp native_real_function_var_captures+6
+    bne native_real_function_match_select_body_pattern_no
+    cmp native_real_function_var_captures+7
+    bne native_real_function_match_select_body_pattern_no
+    lda native_real_function_var_captures+4
+    cmp native_real_function_var_captures+5
+    bne native_real_function_match_select_body_pattern_no
+    cmp native_real_function_var_captures+8
+    bne native_real_function_match_select_body_pattern_no
+    cmp native_real_function_var_captures+9
+    bne native_real_function_match_select_body_pattern_no
+
+    lda native_real_function_var_captures
+    cmp #'3'
+    bcc native_real_function_match_select_body_pattern_no
+    cmp native_real_function_var_captures+1
+    beq native_real_function_match_select_body_pattern_no
+    lda native_real_function_var_captures+1
+    cmp #'3'
+    bcc native_real_function_match_select_body_pattern_no
+
+    lda native_real_function_var_captures+2
+    cmp native_real_function_var_captures
+    beq :+
+    cmp native_real_function_var_captures+1
+    bne native_real_function_match_select_body_pattern_no
+:
+    lda native_real_function_var_captures+4
+    cmp native_real_function_var_captures
+    beq :+
+    cmp native_real_function_var_captures+1
+    bne native_real_function_match_select_body_pattern_no
+:
+    lda native_real_function_var_captures+2
+    cmp native_real_function_var_captures+4
+    beq native_real_function_match_select_body_pattern_no
+
+    lda native_real_function_var_captures
+    sec
+    sbc #'0'
+    sta native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_STORE_TOP
+    lda native_real_function_var_captures+1
+    sec
+    sbc #'0'
+    sta native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_STORE_NEXT
+    lda native_real_function_var_captures+2
+    sec
+    sbc #'0'
+    sta native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_LEFT
+    lda native_real_function_var_captures+4
+    sec
+    sbc #'0'
+    sta native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_RIGHT
+    sec
+    rts
+native_real_function_match_select_body_pattern_no:
+    clc
+    rts
+
+native_real_function_match_main_body_pattern:
+    lda #<native_real_function_main_body_pattern
+    ldy #>native_real_function_main_body_pattern
+    jsr native_real_function_match_body_pattern
+    bcs :+
+    clc
+    rts
+:
+    ldx #$00
+    ldy #$00
+native_real_function_match_main_body_pattern_pair_loop:
+    lda native_real_function_var_captures,x
+    cmp native_real_function_var_captures+1,x
+    bne native_real_function_match_main_body_pattern_no
+    cmp #'3'
+    bcs native_real_function_match_main_body_pattern_no
+    sec
+    sbc #'0'
+    sta native_real_function_name_targets,y
+    inx
+    inx
+    iny
+    cpy #$05
+    bcc native_real_function_match_main_body_pattern_pair_loop
+    sec
+    rts
+native_real_function_match_main_body_pattern_no:
+    clc
+    rts
+
+native_real_function_match_body_pattern:
     sta ACTC_OVERLAY_WORK_ZP
     sty ACTC_OVERLAY_WORK_ZP+1
     ldy #$00
-native_real_function_match_scan_pattern_loop:
+    ldx #$00
+native_real_function_match_body_pattern_loop:
     lda (ACTC_OVERLAY_WORK_ZP),y
+    beq native_real_function_match_body_pattern_end
+    cmp #'?'
+    beq native_real_function_match_body_pattern_var
     sta native_real_function_byte
     jsr emit_object_peek_payload_y
     cmp native_real_function_byte
-    bne native_real_function_match_scan_pattern_no
-    lda native_real_function_byte
-    beq native_real_function_match_scan_pattern_yes
+    bne native_real_function_match_body_pattern_no
+    jmp native_real_function_match_body_pattern_next
+native_real_function_match_body_pattern_var:
+    jsr emit_object_peek_payload_y
+    cmp #'0'
+    bcc native_real_function_match_body_pattern_no
+    cmp #'5'
+    bcs native_real_function_match_body_pattern_no
+    sta native_real_function_var_captures,x
+    inx
+native_real_function_match_body_pattern_next:
     iny
-    bne native_real_function_match_scan_pattern_loop
-native_real_function_match_scan_pattern_no:
+    bne native_real_function_match_body_pattern_loop
+native_real_function_match_body_pattern_no:
     clc
     rts
-native_real_function_match_scan_pattern_yes:
+native_real_function_match_body_pattern_end:
+    jsr emit_object_peek_payload_y
+    bne native_real_function_match_body_pattern_no
+    cpx #10
+    bne native_real_function_match_body_pattern_no
     sec
     rts
 
@@ -406,7 +527,7 @@ native_real_clamp_match_body_pattern_var:
     bcc native_real_clamp_match_body_pattern_no
     cmp #'4'
     bcs native_real_clamp_match_body_pattern_no
-    sta native_real_clamp_var_captures,x
+    sta native_real_function_var_captures,x
     inx
 native_real_clamp_match_body_pattern_next:
     iny
@@ -422,8 +543,8 @@ native_real_clamp_match_body_pattern_end:
 
     ldx #$00
 native_real_clamp_match_body_pattern_pair_loop:
-    lda native_real_clamp_var_captures,x
-    cmp native_real_clamp_var_captures+1,x
+    lda native_real_function_var_captures,x
+    cmp native_real_function_var_captures+1,x
     bne native_real_clamp_match_body_pattern_no
     inx
     inx
@@ -433,7 +554,7 @@ native_real_clamp_match_body_pattern_pair_loop:
     ldx #$00
     ldy #$00
 native_real_clamp_match_body_pattern_offset_loop:
-    lda native_real_clamp_var_captures,x
+    lda native_real_function_var_captures,x
     sec
     sbc #'0'
     asl
@@ -745,88 +866,88 @@ native_real_function_emit_reloc_list:
     ldx #NATIVE_REAL_FUNCTION_NAME_POINTER
     jsr native_real_function_emit_named_word_reloc
     lda #14
-    ldx #NATIVE_REAL_FUNCTION_NAME_V0
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_MAIN_INIT_LEFT
     ldy #'l'
     jsr native_real_function_emit_named_byte_reloc
     lda #18
-    ldx #NATIVE_REAL_FUNCTION_NAME_V0
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_MAIN_INIT_LEFT
     ldy #'h'
     jsr native_real_function_emit_named_byte_reloc
     lda #26
     ldx #$01
     jsr native_real_function_emit_import_reloc
     lda #29
-    ldx #NATIVE_REAL_FUNCTION_NAME_V1
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_MAIN_INIT_RIGHT
     ldy #'l'
     jsr native_real_function_emit_named_byte_reloc
     lda #33
-    ldx #NATIVE_REAL_FUNCTION_NAME_V1
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_MAIN_INIT_RIGHT
     ldy #'h'
     jsr native_real_function_emit_named_byte_reloc
     lda #41
     ldx #$01
     jsr native_real_function_emit_import_reloc
     lda #44
-    ldx #NATIVE_REAL_FUNCTION_NAME_V0
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_MAIN_ARG_LEFT
     ldy #'l'
     jsr native_real_function_emit_named_byte_reloc
     lda #47
-    ldx #NATIVE_REAL_FUNCTION_NAME_V0
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_MAIN_ARG_LEFT
     ldy #'h'
     jsr native_real_function_emit_named_byte_reloc
     lda #50
-    ldx #NATIVE_REAL_FUNCTION_NAME_V1
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_MAIN_ARG_RIGHT
     ldy #'l'
     jsr native_real_function_emit_named_byte_reloc
     lda #53
-    ldx #NATIVE_REAL_FUNCTION_NAME_V1
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_MAIN_ARG_RIGHT
     ldy #'h'
     jsr native_real_function_emit_named_byte_reloc
     lda #56
     ldx #$00
     jsr native_real_function_emit_export_reloc
     lda #67
-    ldx #NATIVE_REAL_FUNCTION_NAME_V2
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_MAIN_RESULT
     jsr native_real_function_emit_named_word_reloc
     lda #104
-    ldx #NATIVE_REAL_FUNCTION_NAME_V4
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_STORE_TOP
     jsr native_real_function_emit_named_word_reloc
     lda #120
-    ldx #NATIVE_REAL_FUNCTION_NAME_V3
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_STORE_NEXT
     jsr native_real_function_emit_named_word_reloc
     lda #131
-    ldx #NATIVE_REAL_FUNCTION_NAME_V4
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_LEFT
     ldy #'l'
     jsr native_real_function_emit_named_byte_reloc
     lda #135
-    ldx #NATIVE_REAL_FUNCTION_NAME_V4
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_LEFT
     ldy #'h'
     jsr native_real_function_emit_named_byte_reloc
     lda #139
-    ldx #NATIVE_REAL_FUNCTION_NAME_V3
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_RIGHT
     ldy #'l'
     jsr native_real_function_emit_named_byte_reloc
     lda #143
-    ldx #NATIVE_REAL_FUNCTION_NAME_V3
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_RIGHT
     ldy #'h'
     jsr native_real_function_emit_named_byte_reloc
     lda #147
     ldx #$00
     jsr native_real_function_emit_import_reloc
     lda #154
-    ldx #NATIVE_REAL_FUNCTION_NAME_V4
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_LEFT
     ldy #'l'
     jsr native_real_function_emit_named_byte_reloc
     lda #156
-    ldx #NATIVE_REAL_FUNCTION_NAME_V4
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_LEFT
     ldy #'h'
     jsr native_real_function_emit_named_byte_reloc
     lda #159
-    ldx #NATIVE_REAL_FUNCTION_NAME_V3
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_RIGHT
     ldy #'l'
     jsr native_real_function_emit_named_byte_reloc
     lda #161
-    ldx #NATIVE_REAL_FUNCTION_NAME_V3
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_RIGHT
     ldy #'h'
     jsr native_real_function_emit_named_byte_reloc
     lda #NATIVE_REAL_FUNCTION_POINTER_OFFSET
@@ -937,9 +1058,9 @@ native_real_clamp_set_name_x:
     rts
 
 native_real_function_select_body_pattern:
-    .asciiz "S4S3L4U4L3U3u0p0lhL4U4rvL3U3r"
+    .asciiz "S?S?L?U?L?U?u0p0lhL?U?rvL?U?r"
 native_real_function_main_body_pattern:
-    .asciiz "p2u1T0S0p4u1T1S1L0U0L1U1C0T2S2r"
+    .asciiz "p2u1T?S?p4u1T?S?L?U?L?U?C0T?S?r"
 native_real_clamp_body_pattern:
     .asciiz "p1u0T?S?p3u0T?S?p5u0T?S?L?U?L?U?L?U?u1T?S?L?U?p6u2r"
 native_real_function_external_cmp:
@@ -1079,11 +1200,13 @@ native_real_clamp_third_lo:
     .byte $00
 native_real_clamp_third_hi:
     .byte $00
-native_real_clamp_var_captures:
+native_real_function_var_captures:
     .byte $00,$00,$00,$00,$00,$00,$00,$00
     .byte $00,$00,$00,$00,$00,$00,$00,$00
 native_real_clamp_pointer_offsets:
     .byte $00,$00,$00,$00,$00,$00,$00,$00
+native_real_function_name_targets:
+    .byte $00,$00,$00,$00,$00,$00,$00,$00,$00
 native_real_function_literal_lo:
     .byte $00
 native_real_function_literal_hi:

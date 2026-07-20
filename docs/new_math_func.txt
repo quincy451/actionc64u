@@ -16,7 +16,10 @@ otherwise preserves the selected operand bits. Native source lowering remains
 intentionally bounded to named REAL operands. Its pass-K clamp form captures
 the three initializer destinations, three arguments, result destination, and
 printed value independently, but still requires the fixed four-REAL,
-three-initializer, one-call, one-print statement skeleton. The
+three-initializer, one-call, one-print statement skeleton. The same pass
+captures every caller and callee storage role in its bounded finite
+two-REAL-parameter comparison/select function, including permuted declaration
+and parameter names. The
 Idun/Alpine fork implements the complete source library: 8 public constants,
 43 public routines, and 1 private helper, producing 51 public help features.
 Native delivery still requires general REAL function parameters, locals,

@@ -332,6 +332,34 @@ class TestAlinkPrgObjectCodeMatrix(unittest.TestCase):
         self.assertIn({"addr": 0x10B1, "value": 0x00}, case["extra_store_checks"])
         self.assertIn({"addr": 0x10B5, "value": 0x80}, case["extra_store_checks"])
 
+    def test_real_function_finite_min_permuted_case_tracks_named_storage(self) -> None:
+        sys.path.insert(0, str(self.workspace / "udos" / "tools"))
+        import run_action_alink_prg_probe as probe
+
+        case = probe.DIRECT_PRG_CASES[
+            "actc_real_function_finite_min_permuted_linked"
+        ]
+        fragments = "".join(case["expected_object_fragments"])
+
+        self.assertIn("REAL RESULT\rREAL RIGHT\rREAL LEFT", case["source"])
+        self.assertIn("REAL FUNC MIN2(REAL B,A)", case["source"])
+        self.assertIn("r 14 l x __v2\nr 18 h x __v2\n", fragments)
+        self.assertIn("r 67 x __v0\n", fragments)
+        self.assertIn("r 131 l x __v3\nr 135 h x __v3\n", fragments)
+        self.assertIn("r 139 l x __v4\nr 143 h x __v4\n", fragments)
+        self.assertEqual(
+            case["runtime_library_objects"],
+            ["rt_f_cmp", "rt_i_to_f", "rt_f_special"],
+        )
+        self.assertEqual(
+            case["expected_alink_loads"],
+            ["LIB/RT_F_CMP.OBJ", "LIB/RT_I_TO_F.OBJ", "LIB/RT_F_SPECIAL.OBJ"],
+        )
+        self.assertTrue(case["expected_tail_from_compiled_object"])
+        self.assertEqual(case["store_check_addr"], 0x10A5)
+        self.assertIn({"addr": 0x10B2, "value": 0x40}, case["extra_store_checks"])
+        self.assertIn({"addr": 0x10B5, "value": 0x80}, case["extra_store_checks"])
+
     def test_full_range_multiply_probe_forces_staged_root_object_path(self) -> None:
         sys.path.insert(0, str(self.workspace / "udos" / "tools"))
         import run_action_alink_prg_probe as probe

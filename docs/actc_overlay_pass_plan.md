@@ -155,13 +155,15 @@ The overlay artifacts share one stable execution ABI:
   runtime units so pass H can own them. Its 7,901-byte image leaves 291 bytes
   free in the 8 KiB execution window, guarded by a 256-byte reserve.
 - `tools/build_actc_overlay_emit_native_real_function_object.sh` builds
-  `ACTC_OVLK.BIN`, pass id `20`. It owns the exact finite
-  `REAL FUNC MIN2(REAL A,B)` comparison/select checkpoint plus the bounded
-  four-REAL `FClamp` assignment/print skeleton. The clamp matcher captures its
-  initializer, argument, destination, and print storage indices instead of
-  assuming declaration order. The pass emits ordinary named/import relocations
-  and declines unsupported bodies before opening output. Its 4,359-byte image
-  leaves 3,833 bytes free in the 8 KiB execution window.
+  `ACTC_OVLK.BIN`, pass id `20`. It owns the bounded finite
+  two-REAL-parameter comparison/select checkpoint plus the bounded four-REAL
+  `FClamp` assignment/print skeleton. The function matcher captures caller and
+  parameter storage roles while retaining the exact finite select statement
+  shape; the clamp matcher captures initializer, argument, destination, and
+  print storage indices. Neither assumes declaration order. The pass emits
+  ordinary named/import relocations and declines unsupported bodies before
+  opening output. Its 4,594-byte image leaves 3,598 bytes free in the 8 KiB
+  execution window.
 - `tools/build_actc_overlay_emit_native_object.sh` builds
   `build/udos_tools/ACTC_OVL8.BIN`, pass id `8`. In addition to straight-line
   word expressions and integer IF/DO control flow, it owns two word FOR loop

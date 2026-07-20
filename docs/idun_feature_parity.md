@@ -77,13 +77,15 @@ constant-only arithmetic does not select target conversion or arithmetic
 helpers. The evaluator is resident, while pass I retains its full 512-byte code
 reserve.
 
-The first item now has six tested checkpoints. Native pass A accepts two named
+The first item now has seven tested checkpoints. Native pass A accepts two named
 REAL arguments after their immediate `REAL(integer)` initializers, copies both
 values into distinct parameter storage, and returns the first parameter by
 pointer. Dedicated pass K then lowers the exact finite comparison/select form
 `IF B<A THEN RETURN(B) FI RETURN(A)`. Its focused OBJ/ALINK/VICE proof selects
 `RT_I_TO_F.OBJ`, `RT_F_CMP.OBJ`, and transitive `RT_F_SPECIAL.OBJ`, while
-unrelated REAL helpers remain absent. Native ACTC now also lowers `FMin(A,B)`
+unrelated REAL helpers remain absent. The bounded matcher captures all caller
+and callee storage roles, including either parameter-name ordering, while still
+requiring the exact finite select skeleton. Native ACTC now also lowers `FMin(A,B)`
 and `FMax(A,B)` for named REAL operands in assignment, print, and REAL-condition
 positions. Their 77-byte modules implement the complete MATH1 NaN and signed-
 zero selection policy through ordinary `RT_F_CMP.OBJ` closure. Native ACTC also
@@ -224,7 +226,7 @@ make sync-native-check NATIVE_ACTION_ROOT=/path/to/actionc64u
 
 The 2026-07-20 current cross-product baseline passed:
 
-- 794 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
+- 796 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
   ALINK closure, IEEE-754, ACTEDIT, ACTDBG, Linux compatibility, export, and
   release-image checks;
 - 133 UDOS integration tests, with one intentional embedded-AUTOEXEC capacity
@@ -360,12 +362,22 @@ have violated that overlay's enforced 768-byte growth reserve. A follow-up
 matcher captures all eight named-storage uses and patches the same 171-byte
 machine root, proving permuted initializer, argument, destination, and print
 roles without widening the statement grammar. Pass A remains 7,406 bytes with
-786 bytes free; pass K is 4,359 bytes with 3,833 bytes free. The current
-direct-PRG inventory is 1,332 shapes, the non-runtime source-backed
+786 bytes free; pass K is 4,359 bytes with 3,833 bytes free. At that checkpoint,
+the direct-PRG inventory was 1,332 shapes, the non-runtime source-backed
 object-emission inventory remains 171 shapes, and the compiled-runtime
 relocation oracle covers 291 cases. This closes the eighth native declaration;
 the other 35 public MATH1 routines and all 8 constants still depend on general
 REAL source lowering.
+
+The next finite-function storage slice replaces pass K's fixed root and callee
+slot assumptions with bounded role captures. A shared permuted fixture declares
+`RESULT/RIGHT/LEFT`, names the parameters `B/A`, and still returns 1.0 from the
+same 185-byte object layout. Native object assertions and a direct VICE launch
+verify all five REAL cells; Idun compiles, links, and executes both fixtures with
+its existing general Linux compiler. Current inventories are 1,333 broad
+direct-PRG shapes, 172 non-runtime source-backed object-emission shapes, and 291
+compiled-runtime relocation-oracle cases. Pass K is 4,594 bytes with 3,598
+bytes free; no shared runtime module changed.
 
 Pass 1 now contains only the streamed module-header validator. Moving the
 transform into `ACTC_OVLI.BIN` reduced pass 1 to 788 bytes. Integer folding,
@@ -378,9 +390,9 @@ Tool-ABI-preserved and active only before body/ASMBLOCK work. All pass code is
 hard-limited to `$A000-$BFFF`; UDOS live state at `$C000+` is forbidden.
 Linker-allocated pass BSS is limited to `$8000-$9DFF`; ASMBLOCK's transfer page,
 label index, and emitter state occupy the reserved `$9E00-$9F1E` range. Pass J
-is 7,901 bytes with 291 bytes free under its 256-byte reserve; pass K is 4,359
-bytes with 3,833 bytes free. The complete
-207-test overlay suite and 198-test source-cache suite pass with this layout.
+is 7,901 bytes with 291 bytes free under its 256-byte reserve; pass K is 4,594
+bytes with 3,598 bytes free. The complete
+208-test overlay suite and 198-test source-cache suite pass with this layout.
 
 Shipped and ordinary harness builds default to
 `ACTC_ENABLE_REAL_CONST_EVALUATOR=1`. The legacy all-resident body, layout, and

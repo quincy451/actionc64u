@@ -158,8 +158,8 @@ Current state:
   Function-aware pass G is 6,645 bytes with 1,547 bytes free under a 512-byte
   gate. Universal mixed pass H is 8,064 bytes with exactly 128 bytes free under a
   128-byte gate. Fixed-address and register-machine pass J is 7,901 bytes with
-  291 bytes free under a 256-byte gate. REAL function/ternary pass K is 4,359
-  bytes with 3,833 bytes free in its 8 KiB window. Native REAL emitter pass A
+  291 bytes free under a 256-byte gate. REAL function/ternary pass K is 4,594
+  bytes with 3,598 bytes free in its 8 KiB window. Native REAL emitter pass A
   is 7,406 bytes with 786 bytes free under its 768-byte growth reserve.
   Passes H and J share pass 9's typed-parameter bind prologue, so runtime helper calls
   inside supported functions retain the word-return ABI. Pass F is 6,709 bytes
@@ -241,8 +241,12 @@ Current state:
   import union and the function body remains comparison-only, so ALINK's normal
   closure selects comparison, integer conversion, and transitive special-value
   support while pruning unrelated REAL helpers. Exact OBJ, deterministic link,
-  and live VICE checks pass for finite inputs 2.0 and 1.0. General function
-  expression/control lowering and MATH1 remain outside this pass.
+  and live VICE checks pass for finite inputs 2.0 and 1.0. Its matcher now
+  captures the two initializer destinations, two call arguments, result
+  destination, stack-bound parameter slots, comparison operands, and both
+  return operands. Canonical and permuted declaration/parameter orders therefore
+  emit the same bounded layout with role-correct named relocations. General
+  function expression/control lowering and MATH1 remain outside this pass.
 - The bounded REAL value parser also recognizes `FSign(A)`, `FMin(A,B)`, and
   `FMax(A,B)` for named REAL operands in assignment, print, and condition
   positions. ACTC emits ordinary imports for the selected helper. The

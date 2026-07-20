@@ -2104,6 +2104,63 @@ class TestActcOverlay(unittest.TestCase):
         self.assertIn("u rt_f_cmp\nu rt_i_to_f\n", obj)
         self.assertNotIn("b S4S3L4U4L3U3u0p0lhL4U4rvL3U3r\n", obj)
 
+    def test_real_function_finite_min_tracks_permuted_named_storage(self) -> None:
+        source = (
+            self.root / "tests" / "parity" / "finite_real_min_permuted.act"
+        ).read_text(encoding="ascii").replace("\n", "\r")
+        obj = self.compile_overlay_object(
+            source,
+            "actc-real-function-finite-min-permuted",
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [20])
+        self.assertIn(
+            "x main 0 185\n"
+            "x min2 88 75\n"
+            "x __v0 163 4\n"
+            "x __v1 167 4\n"
+            "x __v2 171 4\n"
+            "x __v3 175 4\n"
+            "x __v4 179 4\n"
+            "x __idata 163 20\n"
+            "x __iptr 183 2\n",
+            obj,
+        )
+        self.assertIn(
+            "r 14 l x __v2\n"
+            "r 18 h x __v2\n"
+            "r 26 u1\n"
+            "r 29 l x __v1\n"
+            "r 33 h x __v1\n"
+            "r 41 u1\n"
+            "r 44 l x __v2\n"
+            "r 47 h x __v2\n"
+            "r 50 l x __v1\n"
+            "r 53 h x __v1\n"
+            "r 56 x min2\n"
+            "r 67 x __v0\n",
+            obj,
+        )
+        self.assertIn(
+            "r 104 x __v4\n"
+            "r 120 x __v3\n"
+            "r 131 l x __v3\n"
+            "r 135 h x __v3\n"
+            "r 139 l x __v4\n"
+            "r 143 h x __v4\n"
+            "r 147 u0\n"
+            "r 154 l x __v3\n"
+            "r 156 h x __v3\n"
+            "r 159 l x __v4\n"
+            "r 161 h x __v4\n",
+            obj,
+        )
+        self.assertIn("u rt_f_cmp\nu rt_i_to_f\n", obj)
+        self.assertIn(
+            "v result 0 4\nv right 0 4\nv left 0 4\nv b 0 4\nv a 0 4\n",
+            obj,
+        )
+
     def test_asmblock_emits_symbolic_immediate_byte_relocations(self) -> None:
         obj = self.compile_overlay_object(
             "MODULE MAIN\r"

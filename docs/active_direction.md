@@ -87,6 +87,9 @@ absolute-address routine declarations now have native object/link/live coverage.
 Native `REAL CONST` expressions now fold to binary32 with exact decimal
 conversion and nearest-even intermediate rounding. Pass K proves one finite
 two-REAL-parameter comparison/select function through generic OBJ1/ALINK/VICE.
+Its bounded matcher captures initializer, argument, result, parameter-bind,
+comparison, and return storage, so declaration and parameter names need not map
+to one fixed slot order.
 Bounded named-REAL `FSign`, `FMin`, `FMax`, and `FClamp` calls now have
 complete portable call semantics through independently link-selected helpers.
 The pass-K clamp root captures initializer, argument, destination, and print
@@ -118,10 +121,10 @@ Treat `vice-action-alink` as the default direct-native linker gate that emits
 `BIN/MAIN.PRG`.
 Treat `vice-action-actc-alink-launch` as the helper-free higher-level default.
 Treat `vice-action-actc-alink-launch-object-emission-matrix` as the all
-source-backed ACTC object-emission launch matrix; it currently enumerates 171
+source-backed ACTC object-emission launch matrix; it currently enumerates 172
 non-runtime, non-object-code source shapes.
 Treat `vice-action-alink-prg-matrix` as the broad direct-PRG object/link matrix;
-it currently enumerates 1332 shape probes.
+it currently enumerates 1333 shape probes.
 Treat `vice-action-alink-prg-object-code-matrices` as the focused direct
 object-code graph, behavior, and rejection gate.
 Treat `vice-action-actc-alink-launch-runtime-matrices` as the focused

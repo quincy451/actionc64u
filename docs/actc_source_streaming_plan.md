@@ -801,10 +801,13 @@ The first bounded REAL control-flow function runs in base-36 pass K,
 comparison/select body and a bounded four-REAL `FClamp` assignment/print root,
 emits ordinary machine OBJ records, and declines other forms before opening
 output. The clamp root captures each named storage use instead of assuming
-fixed declaration order. Its 4,359-byte image leaves 3,833 bytes in
+fixed declaration order. The finite function similarly captures caller,
+parameter-bind, comparison, and return roles while retaining its bounded body
+shape. Its 4,594-byte image leaves 3,598 bytes in
 `$A000-$BFFF`. The focused release
 probe links only integer conversion, comparison, and comparison's transitive
 special-value support; its direct PRG verifies 2.0/1.0 parameter copies and a
-1.0 result in VICE. A second direct PRG permutes all clamp storage roles and
-prints 5.0. General REAL expression/control lowering remains the next compiler
+1.0 result in VICE. Additional direct PRGs permute all clamp storage roles and
+the finite function's module/parameter naming; they produce 5.0 and 1.0,
+respectively. General REAL expression/control lowering remains the next compiler
 dependency.

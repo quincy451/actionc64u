@@ -1386,10 +1386,32 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
 - Added exact pointer-patch assertions and a source-backed direct VICE launch
   that initializes slots 1/3/2, clamps slots 3/2/1 into slot 0, prints slot 0,
   and produces 5.0.
-- Current inventories are 1,332 broad direct-PRG shapes, 171 non-runtime
+- At that checkpoint the inventories were 1,332 broad direct-PRG shapes, 171 non-runtime
   source-backed object-emission shapes, and 291 compiled-runtime
   relocation-oracle cases.
   Pass K is 4,359 bytes with 3,833 bytes free in its 8 KiB window.
 - This removes declaration-order assumptions only. General REAL expression
   trees, arbitrary call placement, locals, returns, and portable MATH1 bodies
   remain the next compiler dependency.
+
+## 2026-07-20 Native Finite REAL Function Storage Mapping
+
+- Replaced pass K's fixed module and parameter slot signatures for the bounded
+  finite comparison/select function with validated wildcard captures. The
+  matcher still requires exactly three module REALs, two REAL parameters, two
+  immediate conversions, one call, and `IF left<right THEN RETURN(left) FI
+  RETURN(right)`.
+- Relocation roles now independently follow both initializer destinations,
+  call arguments, the result, reverse stack parameter binds, comparison
+  operands, and return operands. The emitted root/function/data layout remains
+  185 bytes and ALINK continues to perform only generic OBJ1 closure.
+- Added a shared fixture that declares `RESULT/RIGHT/LEFT`, names parameters
+  `B/A`, and verifies role-correct relocations. Its direct VICE PRG checks all
+  five REAL cells and returns 1.0; Linux ACTC/ALINK in the Idun fork accepts and
+  executes the same source through its existing general compiler.
+- Current inventories are 1,333 broad direct-PRG shapes, 172 non-runtime
+  source-backed object-emission shapes, and 291 compiled-runtime relocation-
+  oracle cases. Pass K is 4,594 bytes with 3,598 bytes free in its 8 KiB window.
+- This removes one more declaration-order assumption, not the bounded grammar.
+  General native REAL expressions, locals, arbitrary calls/returns, recursive
+  frames, and dependency-sized portable MATH1 modules remain next.

@@ -1128,96 +1128,32 @@ emit_real_assignment_local_or_fail:
     bcs :+
     jmp emit_real_explicit_value_local_or_fail
 :
-    jsr emit_runtime_real_binary_value_local_or_fail
-    bcs :+
-    jmp emit_real_binary_assignment_local_ok
-:
-    jsr try_consume_fabs_open_local
-    bcs :+
-    lda #'a'
-    sta real_operator_local
-    jmp emit_real_fabs_assignment_local_or_fail
-:   jsr try_consume_fsqrt_open_local
-    bcs :+
-    lda #'q'
-    sta real_operator_local
-    jmp emit_real_fabs_assignment_local_or_fail
-:   jsr call_copy_symbol_from_scan_y_context
-    bcs emit_real_assignment_local_after_copy_check_fail
+    ; Recognize the one plain-word bridge before the shared REAL parser. This
+    ; keeps assignment lowering on one path without losing CARD/INT conversion.
+    sty symbol_start_y_local
+    lda #ACTC_OVERLAY_CTX_SAVE_SOURCE_MARK_FN_LO
+    jsr call_context_function
+    jsr call_copy_symbol_from_scan_y_context
+    bcs emit_real_assignment_local_try_runtime
     sty symbol_end_y_local
     jsr call_find_var_index_context
-    bcs emit_real_assignment_local_after_copy_check_fail
+    bcs emit_real_assignment_local_try_runtime
     stx real_lhs_index_local
-    ldy symbol_end_y_local
-    jsr call_require_line_end_context
-    bcs emit_real_assignment_local_after_copy_check_fail
-    ldx real_lhs_index_local
-    lda #ACTC_OVERLAY_CTX_REQUIRE_REAL_VAR_FN_LO
-    jsr call_indexed_context_function
-    bcc emit_real_assignment_local_copy
     ldx real_lhs_index_local
     lda #ACTC_OVERLAY_CTX_REQUIRE_REAL_BRIDGE_WORD_VAR_FN_LO
     jsr call_indexed_context_function
-    bcc emit_real_assignment_local_bridge
-    sec
-    rts
-emit_real_assignment_local_copy:
-    jmp emit_real_copy_assignment_local_ok
-emit_real_assignment_local_bridge:
-    jmp emit_real_bridge_assignment_local_ok
-emit_real_assignment_local_after_copy_check_fail:
-    sec
-    rts
-
-emit_real_fabs_assignment_local_or_fail:
-    jsr call_copy_symbol_from_scan_y_context
-    bcs emit_real_fabs_assignment_local_or_fail_fail
-    sty symbol_end_y_local
-    jsr call_find_var_index_context
-    bcs emit_real_fabs_assignment_local_or_fail_fail
-    stx real_lhs_index_local
-    lda #ACTC_OVERLAY_CTX_REQUIRE_REAL_VAR_FN_LO
-    jsr call_indexed_context_function
-    bcs emit_real_fabs_assignment_local_or_fail_fail
+    bcs emit_real_assignment_local_try_runtime
     ldy symbol_end_y_local
-    jsr call_skip_inline_spaces_context
-    lda #')'
-    jsr match_scan_char_local
-    bcs emit_real_fabs_assignment_local_or_fail_fail
-    lda #')'
-    jsr consume_scan_char_local
-    bcs emit_real_fabs_assignment_local_or_fail_fail
-    jsr call_skip_inline_spaces_context
     jsr call_require_line_end_context
-    bcs emit_real_fabs_assignment_local_or_fail_fail
-    jsr load_append_body_op_ptr
-    ldx real_lhs_index_local
-    lda #'L'
-    jsr call_loaded_target_with_a
-    ldx real_lhs_index_local
-    lda #'U'
-    jsr call_loaded_target_with_a
-    lda #ACTC_OVERLAY_CTX_FIND_OR_STORE_REAL_OPERATOR_EXTERNAL_FN_LO
-    jsr load_context_function_ptr
-    lda real_operator_local
-    jsr call_loaded_target_with_a
-    bcs emit_real_fabs_assignment_local_or_fail_fail
-    stx real_rhs_index_local
-    jsr load_append_body_op_ptr
-    ldx real_rhs_index_local
-    lda #'u'
-    jsr call_loaded_target_with_a
-    lda #ACTC_OVERLAY_CTX_ASSIGNMENT_TARGET_INDEX_PTR_LO
-    jsr load_x_from_context_byte_ptr
-    lda #'T'
-    jsr call_loaded_target_with_a
-    lda #ACTC_OVERLAY_CTX_ASSIGNMENT_TARGET_INDEX_PTR_LO
-    jsr load_x_from_context_byte_ptr
-    lda #'S'
-    jsr call_loaded_target_with_a
-    clc
-    rts
-emit_real_fabs_assignment_local_or_fail_fail:
+    bcs emit_real_assignment_local_after_value_fail
+    jmp emit_real_bridge_assignment_local_ok
+emit_real_assignment_local_try_runtime:
+    jsr call_restore_source_mark_context
+    ldy symbol_start_y_local
+    jsr emit_runtime_real_value_local_or_fail
+    bcs emit_real_assignment_local_after_value_fail
+    jmp emit_real_binary_assignment_local_ok
+emit_real_assignment_local_after_value_fail:
     sec
     rts
 
@@ -1237,25 +1173,6 @@ emit_real_binary_assignment_local_ok:
     rts
 emit_real_binary_assignment_local_fail:
     sec
-    rts
-
-emit_real_copy_assignment_local_ok:
-    jsr load_append_body_op_ptr
-    ldx real_lhs_index_local
-    lda #'L'
-    jsr call_loaded_target_with_a
-    ldx real_lhs_index_local
-    lda #'U'
-    jsr call_loaded_target_with_a
-    lda #ACTC_OVERLAY_CTX_ASSIGNMENT_TARGET_INDEX_PTR_LO
-    jsr load_x_from_context_byte_ptr
-    lda #'T'
-    jsr call_loaded_target_with_a
-    lda #ACTC_OVERLAY_CTX_ASSIGNMENT_TARGET_INDEX_PTR_LO
-    jsr load_x_from_context_byte_ptr
-    lda #'S'
-    jsr call_loaded_target_with_a
-    clc
     rts
 
 emit_real_bridge_assignment_local_ok:
@@ -1396,6 +1313,22 @@ try_consume_fsqrt_open_local:
     clc
     rts
 try_consume_fsqrt_open_local_fail_restore:
+    jsr call_restore_source_mark_context
+    ldy symbol_start_y_local
+    sec
+    rts
+
+try_consume_fsign_open_local:
+    sty symbol_start_y_local
+    lda #ACTC_OVERLAY_CTX_SAVE_SOURCE_MARK_FN_LO
+    jsr call_context_function
+    lda #<pattern_fsign
+    ldy #>pattern_fsign
+    jsr consume_keyword_open_local
+    bcs try_consume_fsign_open_local_fail_restore
+    clc
+    rts
+try_consume_fsign_open_local_fail_restore:
     jsr call_restore_source_mark_context
     ldy symbol_start_y_local
     sec
@@ -2093,8 +2026,14 @@ emit_runtime_real_value_local_try_fabs:
     jmp emit_runtime_real_unary_value_local_or_fail
 emit_runtime_real_value_local_try_fsqrt:
     jsr try_consume_fsqrt_open_local
-    bcs emit_runtime_real_value_local_try_binary
+    bcs emit_runtime_real_value_local_try_fsign
     lda #'q'
+    sta real_operator_local
+    jmp emit_runtime_real_unary_value_local_or_fail
+emit_runtime_real_value_local_try_fsign:
+    jsr try_consume_fsign_open_local
+    bcs emit_runtime_real_value_local_try_binary
+    lda #'g'
     sta real_operator_local
     jmp emit_runtime_real_unary_value_local_or_fail
 emit_runtime_real_value_local_try_binary:
@@ -2195,6 +2134,10 @@ condition_starts_with_local_real_value_or_fail:
     bcc condition_starts_with_local_real_value_or_fail_ok_restore
     lda #<pattern_fsqrt
     ldy #>pattern_fsqrt
+    jsr symbol_buffer_matches_local_const
+    bcc condition_starts_with_local_real_value_or_fail_ok_restore
+    lda #<pattern_fsign
+    ldy #>pattern_fsign
     jsr symbol_buffer_matches_local_const
     bcc condition_starts_with_local_real_value_or_fail_ok_restore
     lda #<pattern_fmin
@@ -2899,6 +2842,8 @@ pattern_fabs:
     .asciiz "FABS"
 pattern_fsqrt:
     .asciiz "FSQRT"
+pattern_fsign:
+    .asciiz "FSIGN"
 pattern_fmin:
     .asciiz "FMIN"
 pattern_fmax:

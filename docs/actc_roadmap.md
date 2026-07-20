@@ -10,7 +10,7 @@ Near-term work:
 - preserve object records needed by ALINK for dead-strip and helper selection
 - continue moving supported body lowering into ACTC-emitted native machine and
   relocation records instead of adding shape-specific linker compilers
-- generalize the proven pass-K function and bounded `FMin`/`FMax` selector paths
+- generalize the proven pass-K function and bounded `FSign`/`FMin`/`FMax` paths
   into reusable REAL expression, control-flow, call, and return lowering for
   dependency-sized MATH1 modules
 - avoid adding launch-time runtime responsibilities to ACTC

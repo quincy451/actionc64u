@@ -242,12 +242,14 @@ Current state:
   support while pruning unrelated REAL helpers. Exact OBJ, deterministic link,
   and live VICE checks pass for finite inputs 2.0 and 1.0. General function
   expression/control lowering and MATH1 remain outside this pass.
-- The bounded REAL value parser also recognizes `FMin(A,B)` and `FMax(A,B)` for
-  named REAL operands in assignment, print, and condition positions. ACTC emits
-  ordinary imports for the selected 77-byte helper; ALINK reaches comparison and
-  exceptional-value support transitively and prunes the sibling selector. Exact
-  NaN/signed-zero checks and focused live VICE launches pass. This completes the
-  two selector routines, not general MATH1 source lowering.
+- The bounded REAL value parser also recognizes `FSign(A)`, `FMin(A,B)`, and
+  `FMax(A,B)` for named REAL operands in assignment, print, and condition
+  positions. ACTC emits ordinary imports for the selected helper. The
+  dependency-free 123-byte sign helper canonicalizes NaN, preserves signed
+  zero, and returns signed one; the 77-byte selectors reach comparison and
+  exceptional-value support transitively. Exact checks and focused live VICE
+  launches prove that unrelated helpers are pruned. This completes three
+  utility routines, not general MATH1 source lowering.
 - REAL `DO ... UNTIL` now uses the same compiler-owned pass for all six
   comparisons and for eight `A=A+C` / `A=A-C` ordered update loops. Simple
   loops emit a 146-byte relocatable root; binary-update loops emit a 194-byte

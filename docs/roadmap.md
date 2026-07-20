@@ -1327,3 +1327,24 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
 - The next dependency remains general native REAL expression/call/return
   lowering sufficient to split the rest of portable MATH1 into reachable-only
   OBJ modules. ALINK remains generic and no runtime launcher was introduced.
+
+## 2026-07-20 Native MATH1 Sign Slice
+
+- Added dependency-free `RT_F_SIGN.OBJ` generation and synchronized native and
+  UDOS runtime copies. It maps every NaN to canonical quiet NaN, preserves both
+  signed zero representations, and returns signed one for every other finite
+  or infinite input.
+- Refactored REAL assignment collection to reuse the shared REAL-value emitter,
+  removing duplicated copy and unary lowering. `ACTC_OVL6.BIN` now uses 7,962
+  bytes and leaves 230 bytes in its 8 KiB window, exceeding the enforced
+  96-byte reserve while adding `FSign` syntax.
+- Extended preallocation and body collection for named-REAL `FSign(A)` in
+  assignments, REAL prints, and conditions. The compiler emits only
+  `RT_F_SIGN.OBJ`; no sibling MATH1 helper becomes reachable.
+- Passed 2,304 exact edge/random runtime cases, focused compiler object checks,
+  and the direct-link matrix case that prints `-1`. The broad direct-PRG matrix
+  now contains 1,330 shapes, its compiled-runtime relocation oracle covers 289
+  cases, and the source-backed object-emission matrix remains at 171 shapes.
+- Native MATH1 now exposes seven low-level calls. General REAL expression,
+  function, and frame lowering remains the dependency for the other 36 public
+  MATH1 routines and eight constants.

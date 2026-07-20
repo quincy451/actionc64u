@@ -8058,6 +8058,15 @@ class TestActcOverlay(unittest.TestCase):
                 "01",
                 "p1u0T0S0L0U0u1T1S1L1U1p2u2r",
             ),
+            (
+                "fsign",
+                "A=REAL(0-7)\rX=FSign(A)\r",
+                "rt_s_to_f",
+                "rt_f_sign",
+                "F9",
+                "FF",
+                "p0u0T0S0L0U0u1T1S1L1U1p1u2r",
+            ),
         )
         for name, statements, convert_module, unary_module, value_lo, value_hi, compact_body in cases:
             with self.subTest(name=name):
@@ -8107,6 +8116,32 @@ class TestActcOverlay(unittest.TestCase):
                 self.assertIn(f"u {unary_module}\n", obj)
                 self.assertIn("u rt_print_f\n", obj)
                 self.assertNotIn(f"b {compact_body}\n", obj)
+
+        position_cases = (
+            (
+                "print-position",
+                "MODULE MAIN\rREAL A\rPROC MAIN()\r"
+                "A=REAL(7)\rPrintRE(FSign(A))\rRETURN\r",
+                ("rt_f_sign", "rt_print_f"),
+            ),
+            (
+                "condition-position",
+                "MODULE MAIN\rREAL A\rREAL B\rPROC MAIN()\r"
+                "A=REAL(0-7)\rB=REAL(0)\r"
+                "IF FSign(A)<B THEN\rPrintE(\"OK\")\rFI\rRETURN\r",
+                ("rt_f_sign", "rt_f_cmp"),
+            ),
+        )
+        for name, source, expected_modules in position_cases:
+            with self.subTest(name=name):
+                obj = self.compile_overlay_object(
+                    source,
+                    f"actc-overlay-native-real-fsign-{name}",
+                )
+                for runtime_module in expected_modules:
+                    self.assertIn(f"u {runtime_module}\n", obj)
+                for unrelated_module in ("rt_f_abs", "rt_f_sqrt", "rt_f_min", "rt_f_max"):
+                    self.assertNotIn(f"u {unrelated_module}\n", obj)
 
     def test_native_real_emitter_owns_math1_minmax_calls(self) -> None:
         for function_name, runtime_module in (

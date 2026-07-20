@@ -3037,10 +3037,6 @@ class TestActcReuSourceCache(unittest.TestCase):
         overlay_path = self.root / "src" / "tools_udos" / "actc" / "actc_overlay_body_collect.asm"
         overlay_text = overlay_path.read_text(encoding="ascii")
         delimiter_ranges = {
-            "emit_real_fabs_assignment_local_or_fail": (
-                "emit_real_fabs_assignment_local_or_fail_fail:",
-                ("lda #')'",),
-            ),
             "emit_runtime_int_explicit_value_after_open_local_or_fail": (
                 "emit_runtime_int_explicit_value_after_open_local_or_fail_fail:",
                 ("lda #')'",),
@@ -3095,7 +3091,6 @@ class TestActcReuSourceCache(unittest.TestCase):
             ),
         }
         matched_probe_labels = {
-            "emit_real_fabs_assignment_local_or_fail",
             "emit_runtime_int_explicit_value_after_open_local_or_fail",
             "emit_real_explicit_bridge_assignment_local_or_fail",
             "emit_real_explicit_value_local_or_fail",
@@ -3320,7 +3315,7 @@ class TestActcReuSourceCache(unittest.TestCase):
         overlay_text = overlay_path.read_text(encoding="ascii")
         match = re.search(
             r"^emit_real_assignment_local_or_fail:\n(?P<body>.*?)\n"
-            r"^emit_real_fabs_assignment_local_or_fail:",
+            r"^emit_real_binary_assignment_local_ok:",
             overlay_text,
             re.DOTALL | re.MULTILINE,
         )
@@ -3331,7 +3326,7 @@ class TestActcReuSourceCache(unittest.TestCase):
         self.assertIn("jsr match_scan_char_local", body)
         self.assertIn("jsr peek_decimal_digit_value_local", body)
         self.assertIn("jmp emit_real_small_int_assignment_local_or_fail", body)
-        self.assertIn("jsr emit_runtime_real_binary_value_local_or_fail", body)
+        self.assertIn("jsr emit_runtime_real_value_local_or_fail", body)
         self.assertNotIn("cmp #'('", body)
         self.assertNotIn("cmp #'0'", body)
         self.assertNotIn("cmp #'9'+1", body)

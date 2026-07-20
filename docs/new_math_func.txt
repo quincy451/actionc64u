@@ -6,10 +6,12 @@ Native binding reference: lib/math1.act
 Target: C64 6502 generated program; no UDOS calls or resident service required.
 Numeric base: IEEE-754 binary32 REAL, round-to-nearest/ties-to-even core runtime.
 
-Native UDOS status: six low-level declarations are available: FAbs, FSqrt,
-FMin, FMax, PrintR, and PrintRE. FMin/FMax use independently selected OBJ
-helpers with the complete portable NaN and signed-zero policy, but their native
-source lowering is intentionally bounded to named REAL operands. The
+Native UDOS status: seven low-level declarations are available: FAbs, FSqrt,
+FSign, FMin, FMax, PrintR, and PrintRE. FSign is a dependency-free selected
+OBJ helper with canonical-NaN and signed-zero behavior. FMin/FMax use
+independently selected OBJ helpers with the complete portable NaN and
+signed-zero policy, but native source lowering remains intentionally bounded
+to named REAL operands. The
 Idun/Alpine fork implements the complete source library: 8 public constants,
 43 public routines, and 1 private helper, producing 51 public help features.
 Native delivery still requires general REAL function parameters, locals,
@@ -117,8 +119,8 @@ Porting checklist for the native C64U tree
 
 1. Port lib/math1.act as source, retaining the public signatures above.
 2. Supply the same link-selected binary32 primitives for PrintR, PrintRE,
-   FAbs, FSqrt, add, subtract, multiply, divide, compare, INT conversion, and
-   REAL conversion.
+   FAbs, FSqrt, FSign, add, subtract, multiply, divide, compare, INT
+   conversion, and REAL conversion.
 3. Keep _MathWrapPi private; help/catalog builders intentionally ignore names
    beginning with an underscore.
 4. Add the constants and all public signatures to ACTEDIT/ACTHELP library help.

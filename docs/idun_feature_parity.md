@@ -50,11 +50,11 @@ not parity artifacts.
 | Program-owned overlay sections | `OVERLAY`/`ENDOVERLAY` and relocated `OverlayCall` | No native source lowering | Native compiler gap; ACTC tool overlays are not equivalent |
 | Program argument entry | `MAIN(argc,argv)` through the Idun target service | `MAIN()` and UDOS command-tail workflow | OS-specific contracts; expose equivalent user arguments without copying the Idun upload ABI |
 | IEEE-754 binary32 arithmetic and exceptional values | Standalone modules | Standalone modules plus native support modules | Parity at runtime |
-| General REAL source expressions, calls, and returns | Full binary32 compiler path | Core operations, direct `FMin`/`FMax` on named REAL values, and constrained zero-, one-, and two-parameter native function shapes | Native compiler gap; selector semantics are complete, but arbitrary expression trees, calls, and returns are not |
+| General REAL source expressions, calls, and returns | Full binary32 compiler path | Core operations, direct `FSign`/`FMin`/`FMax` on named REAL values, and constrained zero-, one-, and two-parameter native function shapes | Native compiler gap; these builtin semantics are complete, but arbitrary expression trees, calls, and returns are not |
 | INPUT1 joystick/two-button mouse API | 19 declarations | 19 declarations | Parity; physical checks remain |
 | DBF1 API | 20 declarations | 20 declarations | Parity; physical REU/disk checks remain |
 | SIDSPR1 API | 37 declarations | 37 declarations | Parity; physical SID/display checks remain |
-| Full MATH1 source library | 43 public routines plus 8 constants, 51 catalog features; one private helper | Six callable declarations: `PrintR`, `PrintRE`, `FAbs`, `FSqrt`, `FMin`, and `FMax` | Native implementation gap |
+| Full MATH1 source library | 43 public routines plus 8 constants, 51 catalog features; one private helper | Seven callable declarations: `PrintR`, `PrintRE`, `FAbs`, `FSqrt`, `FSign`, `FMin`, and `FMax` | Native implementation gap |
 | Full GFX1 source library | 67 public source routines plus 16 constants; 60 routines plus the constants form the 76-feature GFX1 catalog, while seven low-level sprite aliases are cataloged under SIDSPR1 | Fifteen low-level callable declarations | Native implementation gap |
 | ASP1/ABM1 resources and compiler embedding | Linux editors and ACTC loader | Contract documented only | Native implementation gap |
 | Source formatting | `actspc` and ACTEDIT F6 | No complete UDOS formatter | Native workflow gap |
@@ -77,7 +77,7 @@ constant-only arithmetic does not select target conversion or arithmetic
 helpers. The evaluator is resident, while pass I retains its full 512-byte code
 reserve.
 
-The first item now has three tested checkpoints. Native pass A accepts two named
+The first item now has four tested checkpoints. Native pass A accepts two named
 REAL arguments after their immediate `REAL(integer)` initializers, copies both
 values into distinct parameter storage, and returns the first parameter by
 pointer. Dedicated pass K then lowers the exact finite comparison/select form
@@ -86,8 +86,11 @@ pointer. Dedicated pass K then lowers the exact finite comparison/select form
 unrelated REAL helpers remain absent. Native ACTC now also lowers `FMin(A,B)`
 and `FMax(A,B)` for named REAL operands in assignment, print, and REAL-condition
 positions. Their 77-byte modules implement the complete MATH1 NaN and signed-
-zero selection policy through ordinary `RT_F_CMP.OBJ` closure. General REAL
-expression trees, nested calls, and the rest of MATH1 remain incomplete.
+zero selection policy through ordinary `RT_F_CMP.OBJ` closure. Native ACTC also
+lowers `FSign(A)` in those positions through a dependency-free 123-byte helper
+that canonicalizes NaN, preserves signed zero, and returns signed one for every
+other input. General REAL expression trees, nested calls, and the rest of MATH1
+remain incomplete.
 
 Remaining work is dependency ordered:
 
@@ -318,14 +321,27 @@ edge/random input pairs per operation, including one-NaN, two-NaN, signed-zero,
 and equal-value bit preservation. Native ACTC focused OBJ checks and live VICE
 launches print `1` for minimum and `2` for maximum while proving that the
 unselected sibling helper is absent. The broad direct-PRG inventory is now
-1,329 shapes, the source-backed object-emission inventory remains 171 shapes,
-and the compiled-runtime relocation oracle covers 288 cases. Idun carries the
+1,330 shapes, the source-backed object-emission inventory remains 171 shapes,
+and the compiled-runtime relocation oracle covers 289 cases. Idun carries the
 same generated target modules and manifest; its portable MATH1 source remains
 the general implementation. Current hardware-independent Idun release gates
 also pass: 151 active Linux tests, 136 sanitizer tests, 21 direct-PRG tests with
 the documented VICE 3.7 DBF/REU skip, and verified host plus static AArch64
 exports containing 31 commands and 260 help topics. This selector refresh has
 not yet been redeployed to the Pi or accepted on an attached cartridge/C64.
+
+The subsequent native `FSign` slice adds byte-identical `RT_F_SIGN.OBJ` to the
+shared runtime snapshot. The helper is 123 bytes with no imports, so ALINK adds
+it only when reachable and does not pull comparison or exceptional-value
+support into an otherwise unary program. Native ACTC recognizes `FSign(A)` for
+a named REAL in assignment, print, and REAL-condition positions. The exact
+host oracle checks 2,304 edge/random inputs, including all NaN classes,
+infinities, subnormals, and both signed zeroes. The focused direct PRG prints
+`-1` and proves that `RT_F_ABS`, `RT_F_SQRT`, `RT_F_MIN`, and `RT_F_MAX` remain
+unselected. The collector refactor reuses the shared REAL-value emitter and
+increases its 8 KiB overlay reserve from 96 to 230 bytes despite adding this
+syntax. This closes only the seventh native MATH1 declaration; portable
+multi-function MATH1 still depends on work items 1 and 2.
 
 Pass 1 now contains only the streamed module-header validator. Moving the
 transform into `ACTC_OVLI.BIN` reduced pass 1 to 788 bytes. Integer folding,

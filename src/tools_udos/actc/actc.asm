@@ -12706,6 +12706,14 @@ find_or_store_rt_f_sqrt_external:
     jsr copy_const_ptr_to_declared_module_name
     jmp find_or_store_external_from_declared
 
+find_or_store_rt_f_sign_external:
+    lda #<runtime_symbol_rt_f_sign
+    sta const_ptr
+    lda #>runtime_symbol_rt_f_sign
+    sta const_ptr+1
+    jsr copy_const_ptr_to_declared_module_name
+    jmp find_or_store_external_from_declared
+
 find_or_store_rt_f_min_external:
     lda #<runtime_symbol_rt_f_min
     sta const_ptr
@@ -12768,6 +12776,9 @@ find_or_store_real_operator_external_from_a:
 :   cmp #'q'
     bne :+
     jmp find_or_store_rt_f_sqrt_external
+:   cmp #'g'
+    bne :+
+    jmp find_or_store_rt_f_sign_external
 :   cmp #'<'
     bne :+
     jmp find_or_store_rt_f_min_external
@@ -16149,6 +16160,8 @@ runtime_symbol_rt_f_abs:
     .asciiz "RT_F_ABS"
 runtime_symbol_rt_f_sqrt:
     .asciiz "RT_F_SQRT"
+runtime_symbol_rt_f_sign:
+    .asciiz "RT_F_SIGN"
 runtime_symbol_rt_f_min:
     .asciiz "RT_F_MIN"
 runtime_symbol_rt_f_max:

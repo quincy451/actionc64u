@@ -68,6 +68,10 @@ Current status:
   modules so ALINK includes only the function referenced by source.
 - `rt_f_abs.obj` copies a REAL32 value read through zero page `$02/$03` to the
   destination pointer in `$06/$07`, clearing the sign bit in the copied value.
+- `rt_f_sign.obj` reads a REAL32 value through `$02/$03` and writes through
+  `$06/$07`. It returns `-1.0` or `1.0` for nonzero values, maps any NaN to
+  canonical quiet NaN, and preserves positive or negative zero bit-for-bit.
+  It has no imports, so it remains independently link-selected.
 - `rt_f_sqrt.obj` reads a REAL32 value through zero page `$02/$03`, writes the
   result through `$06/$07`, and handles every non-negative normal,
   subnormal, and signed-zero value using an exact 48-bit scaled radicand and

@@ -18,6 +18,7 @@ from generate_math_runtime import (
     link_runtime_builders,
     minmax_module,
     multiply_module,
+    sign_module,
     special_value_module,
 )
 
@@ -263,6 +264,14 @@ def expected_minmax(left: int, right: int, *, maximum: bool) -> int:
     return left
 
 
+def expected_sign(value: int) -> int:
+    if is_nan(value):
+        return CANONICAL_QNAN
+    if value & 0x7FFFFFFF == 0:
+        return value
+    return 0xBF800000 if value >> 31 else 0x3F800000
+
+
 def runtime_builders(operation: str):
     special = special_value_module()
     if operation == "add":
@@ -281,6 +290,8 @@ def runtime_builders(operation: str):
         return [multiply_module(), special]
     if operation == "cmp":
         return [compare_module(), special]
+    if operation == "sign":
+        return [sign_module()]
     if operation in ("min", "max"):
         return [
             minmax_module(f"rt_f_{operation}", maximum=operation == "max"),
@@ -321,7 +332,7 @@ def verification_cases(random_count: int, seed: int) -> list[tuple[int, int]]:
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/min/max code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/min/max code against exact IEEE "
             "binary32"
         )
     )
@@ -363,7 +374,7 @@ def main() -> int:
             check=True,
         )
 
-        for operation in ("add", "sub", "mul", "cmp", "min", "max"):
+        for operation in ("add", "sub", "mul", "cmp", "sign", "min", "max"):
             runtime_path = work / f"rt_f_{operation}.bin"
             image = link_runtime_builders(runtime_builders(operation), LOAD_ADDR)
             runtime_path.write_bytes(image)
@@ -392,6 +403,8 @@ def main() -> int:
                     expected = expected_multiply(left, right)
                 elif operation == "cmp":
                     expected = expected_compare(left, right) & 0xFFFF
+                elif operation == "sign":
+                    expected = expected_sign(left)
                 else:
                     expected = expected_minmax(
                         left, right, maximum=operation == "max"

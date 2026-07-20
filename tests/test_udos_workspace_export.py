@@ -294,6 +294,7 @@ class TestUdosWorkspaceExport(unittest.TestCase):
             self.assertIn("PROC PrintRE(REAL value)", math1_contents)
             self.assertIn("REAL FUNC FAbs(REAL value)", math1_contents)
             self.assertIn("REAL FUNC FSqrt(REAL value)", math1_contents)
+            self.assertIn("REAL FUNC FSign(REAL value)", math1_contents)
             self.assertIn("REAL FUNC FMin(REAL left,right)", math1_contents)
             self.assertIn("REAL FUNC FMax(REAL left,right)", math1_contents)
             self.assertIn("REAL arithmetic/comparison operators", math1_contents)

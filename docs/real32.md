@@ -57,6 +57,7 @@ The linker-level REAL runtime surface uses stable helper symbols:
 - `rt_f_mul`
 - `rt_f_div`
 - `rt_f_cmp`
+- `rt_f_sign`
 - `rt_f_min`
 - `rt_f_max`
 - `rt_f_abs`
@@ -112,6 +113,10 @@ The first implemented target-side helper ABI is intentionally narrow:
   signed byte comparison in `A`/`X`: `-1` for less, `0` for equal, and `1` for
   greater, orders all signed finite and infinite binary32 values, and treats
   positive and negative zero as equal; it returns `2` for unordered NaN input
+- `rt_f_sign` reads through `$02/$03`, writes through `$06/$07`, maps NaN to
+  canonical quiet NaN, preserves either signed zero exactly, and writes
+  `-1.0` or `1.0` for every other negative or positive input; it imports no
+  other helper
 - `rt_f_min` and `rt_f_max` read source REAL32 pointers from `$02/$03` and
   `$04/$05`, write through `$06/$07`, and preserve the selected operand's exact
   representation. One NaN is ignored, two NaNs select the right operand, and
@@ -159,6 +164,7 @@ Examples:
 - `INT(r)` imports `rt_f_to_i`
 - `FAbs(r)` imports `rt_f_abs`
 - `FSqrt(r)` imports `rt_f_sqrt`
+- `FSign(r)` imports only `rt_f_sign`
 - `FMin(a,b)` imports `rt_f_min` and its comparison closure
 - `FMax(a,b)` imports `rt_f_max` and its comparison closure
 - `PrintR` / `PrintRE` imports `rt_print_f` plus required text output support
@@ -185,7 +191,7 @@ work; they are not REAL32 range limitations.
 `LIB/MATH1.ACT` is the shipped Action-facing reference for the currently
 implemented REAL32 helper surface. It documents the core source forms that ACTC
 already recognizes directly: `REAL(x)`, `INT(x)`, REAL arithmetic/comparison
-operators, `FAbs`, `FSqrt`, `FMin`, `FMax`, and `PrintR` / `PrintRE`.
+operators, `FAbs`, `FSqrt`, `FSign`, `FMin`, `FMax`, and `PrintR` / `PrintRE`.
 
 `SRC/MATH1_DEMO.ACT` validates the exported-library path by compiling a small
 REAL absolute-value program through ACTC, linking it with ALINK, and running

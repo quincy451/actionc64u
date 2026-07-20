@@ -460,6 +460,97 @@ def minmax_module(module: str, *, maximum: bool) -> ObjectBuilder:
     return b
 
 
+def sign_module() -> ObjectBuilder:
+    """Build FSign with canonical NaN and signed-zero preservation."""
+    b = ObjectBuilder("rt_f_sign")
+
+    sign_byte = 0x08
+    scratch = 0x09
+
+    # Detect NaN directly so the helper has no transitive dependencies.
+    b.immediate(0xA0, 0x03)
+    b.emit(0xB1, 0x02)  # LDA ($02),Y
+    b.zero_page(0x85, sign_byte)
+    b.immediate(0x29, 0x7F)
+    b.immediate(0xC9, 0x7F)
+    b.branch(0xD0, "classify")
+    b.emit(0x88)  # DEY
+    b.emit(0xB1, 0x02)
+    b.immediate(0x29, 0x80)
+    b.branch(0xF0, "classify")
+    b.emit(0xB1, 0x02)
+    b.immediate(0x29, 0x7F)
+    b.zero_page(0x85, scratch)
+    b.emit(0x88)
+    b.emit(0xB1, 0x02)
+    b.zero_page(0x05, scratch)
+    b.zero_page(0x85, scratch)
+    b.emit(0x88)
+    b.emit(0xB1, 0x02)
+    b.zero_page(0x05, scratch)
+    b.branch(0xF0, "classify")  # Infinity maps to signed one.
+
+    # MATH1 returns its NAN constant rather than preserving an input payload.
+    b.immediate(0xA0, 0x00)
+    b.immediate(0xA9, 0x00)
+    b.emit(0x91, 0x06)
+    b.emit(0xC8)
+    b.emit(0x91, 0x06)
+    b.emit(0xC8)
+    b.immediate(0xA9, 0xC0)
+    b.emit(0x91, 0x06)
+    b.emit(0xC8)
+    b.immediate(0xA9, 0x7F)
+    b.emit(0x91, 0x06)
+    b.emit(0x60)
+
+    b.label("classify")
+    b.immediate(0xA0, 0x00)
+    b.emit(0xB1, 0x02)
+    b.emit(0xC8)
+    b.emit(0x11, 0x02)  # ORA ($02),Y
+    b.emit(0xC8)
+    b.emit(0x11, 0x02)
+    b.zero_page(0x85, scratch)
+    b.zero_page(0xA5, sign_byte)
+    b.immediate(0x29, 0x7F)
+    b.zero_page(0x05, scratch)
+    b.branch(0xF0, "copy_zero")
+    b.zero_page(0xA5, sign_byte)
+    b.branch(0x30, "negative")
+    b.immediate(0xA9, 0x3F)
+    b.branch(0xD0, "write_one")
+    b.label("negative")
+    b.immediate(0xA9, 0xBF)
+    b.label("write_one")
+    b.zero_page(0x85, sign_byte)
+    b.immediate(0xA0, 0x00)
+    b.immediate(0xA9, 0x00)
+    b.emit(0x91, 0x06)
+    b.emit(0xC8)
+    b.emit(0x91, 0x06)
+    b.emit(0xC8)
+    b.immediate(0xA9, 0x80)
+    b.emit(0x91, 0x06)
+    b.emit(0xC8)
+    b.zero_page(0xA5, sign_byte)
+    b.emit(0x91, 0x06)
+    b.emit(0x60)
+
+    b.label("copy_zero")
+    b.immediate(0xA0, 0x00)
+    b.label("copy_zero_loop")
+    b.emit(0xB1, 0x02)
+    b.emit(0x91, 0x06)
+    b.emit(0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "copy_zero_loop")
+    b.emit(0x60)
+
+    b.export("rt_f_sign")
+    return b
+
+
 def float_to_int_module() -> ObjectBuilder:
     """Build finite binary32 to signed 16-bit truncation toward zero."""
     b = ObjectBuilder("rt_f_to_i")
@@ -2449,6 +2540,7 @@ def main() -> int:
         for builder in (
             special_value_module(),
             compare_module(),
+            sign_module(),
             minmax_module("rt_f_min", maximum=False),
             minmax_module("rt_f_max", maximum=True),
             float_to_int_module(),

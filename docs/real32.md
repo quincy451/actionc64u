@@ -207,11 +207,12 @@ work; they are not REAL32 range limitations.
 
 ## Action-Facing Reference
 
-`LIB/MATH1.ACT` is the shipped Action-facing reference for the currently
-implemented REAL32 helper surface. It documents the core source forms that ACTC
-already recognizes directly: `REAL(x)`, `INT(x)`, REAL arithmetic/comparison
-operators, `FAbs`, `FSqrt`, `FSign`, `FMin`, `FMax`, `FClamp`, and
-`PrintR` / `PrintRE`.
+`LIB/MATH1.ACT` is the shipped Action-facing include header for the currently
+implemented REAL32 helper surface. It defines all eight portable MATH1
+constants, which ACTC folds without target storage or runtime imports, and
+documents the core source forms that ACTC already recognizes directly:
+`REAL(x)`, `INT(x)`, REAL arithmetic/comparison operators, `FAbs`, `FSqrt`,
+`FSign`, `FMin`, `FMax`, `FClamp`, and `PrintR` / `PrintRE`.
 
 `SRC/MATH1_DEMO.ACT` validates the exported-library path by compiling a small
 REAL absolute-value program through ACTC, linking it with ALINK, and running

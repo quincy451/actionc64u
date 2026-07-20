@@ -1,19 +1,29 @@
-; MATH1 REAL32 binding reference.
-; ACTC recognizes these builtin REAL forms directly. ALINK includes only the
-; referenced RT_*.OBJ modules in the final PRG.
+; MATH1 REAL32 native include header.
+; Include this file before or after the application MODULE declaration. The
+; constants are folded by ACTC and allocate no target storage or runtime code.
+; ACTC recognizes the documented builtin calls directly, and ALINK includes
+; only the referenced RT_*.OBJ modules in the final PRG.
 ;
-; Current shipped coverage is the core REAL32 proof surface: REAL(x), INT(x),
+; Current callable coverage is the core REAL32 proof surface: REAL(x), INT(x),
 ; REAL arithmetic/comparison operators, FAbs, FSqrt, FSign, FMin, FMax,
-; FClamp, and PrintR/PrintRE. Wider functions such as trig remain deferred until matching
-; RT_*.OBJ modules exist.
+; FClamp, and PrintR/PrintRE. Wider functions such as trig remain deferred until
+; matching dependency-sized OBJ modules exist.
 
-MODULE MATH1
+REAL CONST MATH_PI=3.14159265358979323846
+REAL CONST MATH_TWO_PI=6.28318530717958647692
+REAL CONST MATH_HALF_PI=1.57079632679489661923
+REAL CONST MATH_QUARTER_PI=0.78539816339744830962
+REAL CONST MATH_E=2.71828182845904523536
+REAL CONST MATH_LN2=0.69314718055994530942
+REAL CONST MATH_LN10=2.30258509299404568402
+REAL CONST MATH_SQRT2=1.41421356237309504880
 
-PROC PrintR(REAL value)
-PROC PrintRE(REAL value)
-REAL FUNC FAbs(REAL value)
-REAL FUNC FSqrt(REAL value)
-REAL FUNC FSign(REAL value)
-REAL FUNC FMin(REAL left,right)
-REAL FUNC FMax(REAL left,right)
-REAL FUNC FClamp(REAL value,lower,upper)
+; Builtin call signatures (documentation, not duplicate source declarations):
+; PROC PrintR(REAL value)
+; PROC PrintRE(REAL value)
+; REAL FUNC FAbs(REAL value)
+; REAL FUNC FSqrt(REAL value)
+; REAL FUNC FSign(REAL value)
+; REAL FUNC FMin(REAL left,right)
+; REAL FUNC FMax(REAL left,right)
+; REAL FUNC FClamp(REAL value,lower,upper)

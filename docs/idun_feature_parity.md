@@ -4,7 +4,8 @@ This document compares user-visible capabilities, not executable
 implementations. The Idun fork runs development tools as Alpine Linux
 processes. The native product runs its tools as 6502 programs under UDOS.
 Generated applications in both products remain self-contained C64 PRGs built
-from OBJ1 modules, and ALINK selects only reachable 6502 code and data.
+from OBJ1 modules. ALINK selects only reachable OBJ1 modules; code already
+placed in a selected application object is not presently discarded.
 
 ## Parity Rules
 
@@ -54,7 +55,8 @@ not parity artifacts.
 | INPUT1 joystick/two-button mouse API | 19 declarations | 19 declarations | Parity; physical checks remain |
 | DBF1 API | 20 declarations | 20 declarations | Parity; physical REU/disk checks remain |
 | SIDSPR1 API | 37 declarations | 37 declarations | Parity; physical SID/display checks remain |
-| Full MATH1 source library | 43 public routines plus 8 constants, 51 catalog features; one private helper | Eight callable declarations: `PrintR`, `PrintRE`, `FAbs`, `FSqrt`, `FSign`, `FMin`, `FMax`, and `FClamp` | Native implementation gap; 35 public routines and 8 constants remain to be compiled from portable source |
+| Full MATH1 source library | 43 public routines plus 8 constants, 51 catalog features; one private helper | Eight compile-time constants plus eight link-selected callable builtins: `PrintR`, `PrintRE`, `FAbs`, `FSqrt`, `FSign`, `FMin`, `FMax`, and `FClamp` | Constant parity; native implementation gap remains for 35 public routines |
+| MATH1 reachable-only packaging | Full-source `INCLUDE` currently emits every MATH1 body into the application OBJ | Constants emit no code; eight callable builtins import independent OBJ modules | Cross-product packaging gap; Idun needs call-graph pruning or dependency-sized library objects before full parity |
 | Full GFX1 source library | 67 public source routines plus 16 constants; 60 routines plus the constants form the 76-feature GFX1 catalog, while seven low-level sprite aliases are cataloged under SIDSPR1 | Fifteen low-level callable declarations | Native implementation gap |
 | ASP1/ABM1 resources and compiler embedding | Linux editors and ACTC loader | Contract documented only | Native implementation gap |
 | Source formatting | `actspc` and ACTEDIT F6 | No complete UDOS formatter | Native workflow gap |
@@ -76,6 +78,15 @@ round-to-nearest, ties-to-even. The result is emitted as four literal bytes, so
 constant-only arithmetic does not select target conversion or arithmetic
 helpers. The evaluator is resident, while pass I retains its full 512-byte code
 reserve.
+
+The shipped native `LIB/MATH1.ACT` is now an actual include header rather than
+a second application module. `INCLUDE "MATH1"` exposes all eight portable
+constants before or after the caller's `MODULE` declaration. The constants
+fold to literal binary32 words, allocate no target storage, and select no
+runtime object. The eight currently supported calls remain compiler-recognized
+builtins documented in the header; each helper is still an independent OBJ1
+module selected only when reachable. Idun keeps the complete portable source
+implementation because its host compiler can lower those bodies directly.
 
 The first item now has eight tested checkpoints. Native pass A accepts two named
 REAL arguments after their immediate `REAL(integer)` initializers, copies both
@@ -105,8 +116,11 @@ Remaining work is dependency ordered:
 
 1. Generalize native REAL declarations, parameters, locals, expressions, calls,
    and returns enough to compile portable multi-function MATH1 modules.
-2. Port MATH1 in dependency-sized OBJ modules and prove representative values
-   in direct linked PRGs without making unused functions reachable.
+2. Port the remaining 35 MATH1 routines in dependency-sized OBJ modules and
+   prove representative values in direct linked PRGs without making unused
+   functions reachable. Give Idun equivalent call-graph pruning or generated
+   dependency-sized modules so its full-source include no longer embeds every
+   unused MATH1 body in the application object.
 3. Widen native arrays, pointers, length-prefixed strings, records, typed
    function calls, and stack-bounded recursive frames where shared libraries or
    portable programs require them. Keep fixed C64/REU limits explicit rather
@@ -226,16 +240,16 @@ make sync-native-check NATIVE_ACTION_ROOT=/path/to/actionc64u
 
 The 2026-07-20 current cross-product baseline passed:
 
-- 798 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
+- 799 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
   ALINK closure, IEEE-754, ACTEDIT, ACTDBG, Linux compatibility, export, and
   release-image checks;
 - 133 UDOS integration tests, with one intentional embedded-AUTOEXEC capacity
   skip, plus rebuilt release artifacts and direct VICE launches for both
   side-effect and stored-result runtime calls through the native REAL bridge;
-- 151 Idun/Alpine unittests covering the Linux compiler/linker, libraries,
+- 152 Idun/Alpine unittests covering the Linux compiler/linker, libraries,
   resource editors, help, semantic map, debugger/profiler transport, export,
   and packaging contracts;
-- 136 Idun ASan/UBSan tests covering the Linux tools under instrumented builds;
+- 137 Idun ASan/UBSan tests covering the Linux tools under instrumented builds;
   and
 - 21 Idun direct-PRG tests on VICE, with the known VICE 3.7 long-DBF case
   version-skipped on the local host.
@@ -334,7 +348,7 @@ unselected sibling helper is absent. The broad direct-PRG inventory is now
 and the compiled-runtime relocation oracle covers 290 cases. Idun carries the
 same generated target modules and manifest; its portable MATH1 source remains
 the general implementation. Current hardware-independent Idun release gates
-also pass: 151 active Linux tests, 136 sanitizer tests, 21 direct-PRG tests with
+also pass: 152 active Linux tests, 137 sanitizer tests, 21 direct-PRG tests with
 the documented VICE 3.7 DBF/REU skip, and verified host plus static AArch64
 exports containing 31 commands and 260 help topics. This selector refresh has
 not yet been redeployed to the Pi or accepted on an attached cartridge/C64.
@@ -365,8 +379,9 @@ roles without widening the statement grammar. Pass A remains 7,406 bytes with
 786 bytes free; pass K is 4,359 bytes with 3,833 bytes free. At that checkpoint,
 the direct-PRG inventory was 1,332 shapes, the non-runtime source-backed
 object-emission inventory remains 171 shapes, and the compiled-runtime
-relocation oracle covers 291 cases. This closes the eighth native declaration;
-the other 35 public MATH1 routines and all 8 constants still depend on general
+relocation oracle covers 291 cases. This closed the eighth native call at that
+checkpoint; the later constants-header slice completed all eight compile-time
+constants, while the other 35 public MATH1 routines still depend on general
 REAL source lowering.
 
 The next finite-function storage slice replaces pass K's fixed root and callee
@@ -402,7 +417,7 @@ label index, and emitter state occupy the reserved `$9E00-$9F1E` range. Pass J
 is 7,901 bytes with 291 bytes free under its 256-byte reserve; pass A is 7,418
 bytes with 774 bytes free under its 768-byte reserve; pass K is 4,594 bytes with
 3,598 bytes free. The complete
-209-test overlay suite and 198-test source-cache suite pass with this layout.
+210-test overlay suite and 198-test source-cache suite pass with this layout.
 
 Shipped and ordinary harness builds default to
 `ACTC_ENABLE_REAL_CONST_EVALUATOR=1`. The legacy all-resident body, layout, and

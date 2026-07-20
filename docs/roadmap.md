@@ -1371,8 +1371,8 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   covers 290 cases, and the source-backed object-emission matrix remains at
   171 shapes.
 - Native MATH1 now exposes eight low-level calls. General REAL expression,
-  function, and frame lowering remains the dependency for the other 35 public
-  MATH1 routines and eight constants.
+  function, and frame lowering remained the dependency for the other 35 public
+  MATH1 routines and eight constants at that checkpoint.
 
 ## 2026-07-20 Native MATH1 Clamp Storage Mapping
 
@@ -1436,3 +1436,21 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
 - This advances named return selection only. Arbitrary REAL expression returns,
   local REAL frames, nested/recursive calls, and dependency-sized portable
   MATH1 compilation remain next.
+
+## 2026-07-20 Native MATH1 Include Constants
+
+- Replaced the non-includable `MODULE MATH1` binding reference with a native
+  include header that defines all eight portable IEEE-754 constants and
+  documents the eight compiler-recognized calls as builtin signatures.
+- `INCLUDE "MATH1"` now works before or after the application `MODULE` line.
+  The focused compiler check folds `MATH_PI` to literal words 4059/16457,
+  allocates only the caller's `RESULT` cell, and emits no OBJ import.
+- Export and UDOS release tests verify the include-safe header and constants.
+  A shared source fixture also compiles and links through Idun's Linux tools.
+- The complete native suite passes 799 tests, including 210 overlay tests; the
+  Idun active host suite passes 152 tests and its ASan/UBSan suite passes 137
+  tests with the new shared fixture.
+- The cross-product review exposed a separate Idun packaging gap: including
+  its complete MATH1 source currently places every function body in the root
+  object. Reachable-only Idun pruning and the remaining 35 native routines are
+  now explicit work item 2 in the parity matrix.

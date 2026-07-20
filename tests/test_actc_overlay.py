@@ -4790,6 +4790,23 @@ class TestActcOverlay(unittest.TestCase):
         self.assertNotIn("v gfx_black ", obj)
         self.assertNotIn("v math_pi ", obj)
 
+    def test_actc_compile_path_includes_native_math1_constants_without_runtime_imports(self) -> None:
+        source = (
+            self.root / "tests" / "parity" / "math1_constants_include.act"
+        ).read_text(encoding="ascii")
+        math1 = (self.root / "lib" / "math1.act").read_text(encoding="ascii")
+        obj = self.compile_overlay_object(
+            source.replace("\n", "\r"),
+            "actc-overlay-math1-constants-include",
+            additional_library_sources={"math1.act": math1.replace("\n", "\r")},
+        )
+
+        self.assertNotIn("MODULE MATH1", math1)
+        self.assertIn("i 4059\n", obj)
+        self.assertIn("i 16457\n", obj)
+        self.assertIn("v result 0 4\n", obj)
+        self.assertNotRegex(obj, r"(?m)^u ")
+
     def test_actc_compile_path_updates_packed_definition_values(self) -> None:
         obj = self.compile_overlay_object(
             "DEFINE VALUE=1\r"

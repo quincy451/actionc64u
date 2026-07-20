@@ -101,7 +101,8 @@ three-initializer/one-call/one-print skeleton rather than a general expression
 parser.
 Remaining source parity includes general arrays/pointers/records, nested and
 recursive typed functions, and complete REAL expression/call/return behavior.
-Complete portable MATH1 follows, then
+The eight MATH1 constants are now available through a zero-code native include
+header. Complete dependency-sized portable MATH1 routines follow, then
 graphics-resource declarations, expanded GFX1, native resource editors, and
 UDOS equivalents for formatting/help conveniences. The detailed matrix and
 ordered implementation plan are in `docs/idun_feature_parity.md`.

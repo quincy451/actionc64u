@@ -9,7 +9,7 @@ Current state:
   verified by `make -C ../udos vice-action-actc-alink-launch`.
 - Broad direct-PRG object/link coverage is verified by
   `make -C ../udos vice-action-alink-prg-matrix`.
-- The broad direct-PRG matrix currently enumerates 1333 probe shapes from
+- The broad direct-PRG matrix currently enumerates 1334 probe shapes from
   `udos/tools/run_action_alink_prg_probe.py`.
 - The source-backed `actc_fixed_register_machine_abi_linked` case proves that
   ALINK treats native `=*(...)` routines as ordinary machine exports and JSR
@@ -52,6 +52,10 @@ Current state:
   three module REAL declarations and the two parameter names. Its ordinary
   relocations bind the same 185-byte object to the captured storage exports,
   and live VICE checks all five binary32 slots while ALINK remains unchanged.
+- `actc_real_function_two_real_params_second_return_linked` proves the simpler
+  pass-A form can bind reordered caller values to two parameters and return the
+  second parameter through an ordinary named relocation. The direct PRG writes
+  2.0 and selects only `RT_I_TO_F.OBJ`; ALINK has no function-specific path.
 - Direct object-code launch and rejection coverage is verified by
   `make -C ../udos vice-action-alink-prg-object-code-matrices`.
 - The linker-owned direct PRG include is `src/tools_udos/alink/direct_prg.inc`.

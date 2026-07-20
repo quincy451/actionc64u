@@ -592,6 +592,10 @@ native_real_detect_function_two_real_param_patterns:
     bcs :+
     jmp native_real_detect_function_no_near
 :
+    lda native_real_function_param_selector
+    sta native_real_function_param_offset
+    lda native_real_function_source_selector
+    sta native_real_function_arg_selector
     ldx #$01
     lda #<native_real_two_param_function_main_body_pattern
     ldy #>native_real_two_param_function_main_body_pattern
@@ -599,10 +603,10 @@ native_real_detect_function_two_real_param_patterns:
     bcs :+
     jmp native_real_detect_function_no
 :
+    ldx native_real_function_arg_selector
     lda native_real_function_source_selector
     sta native_real_function_arg_selector
-    lda native_real_function_param_selector
-    sta native_real_function_source_selector
+    stx native_real_function_source_selector
     lda #$03
     sta native_real_function_param_count
     lda native_real_function_second_param_selector
@@ -1885,7 +1889,7 @@ native_real_emit_two_param_function_machine_code:
     jsr native_real_set_function_var_name
     lda #104
     jsr native_real_emit_named_reloc
-    lda native_real_function_source_selector
+    lda native_real_function_param_offset
     jsr native_real_set_function_var_name
     lda #120
     jsr native_real_emit_named_reloc
@@ -2507,7 +2511,7 @@ native_real_real_param_function_main_body_pattern:
 native_real_two_param_function_return_body_pattern:
     .byte 'S',NATIVE_REAL_PATTERN_CAPTURE_SECOND_PARAM
     .byte 'S',NATIVE_REAL_PATTERN_CAPTURE_PARAM
-    .byte 'L',NATIVE_REAL_PATTERN_MATCH_PARAM,'U',NATIVE_REAL_PATTERN_MATCH_PARAM,'r',$00
+    .byte 'L',NATIVE_REAL_PATTERN_CAPTURE_SOURCE,'U',NATIVE_REAL_PATTERN_MATCH_SOURCE,'r',$00
 native_real_two_param_function_main_body_pattern:
     .byte 'p','1','u','0','T',NATIVE_REAL_PATTERN_CAPTURE_SOURCE
     .byte 'S',NATIVE_REAL_PATTERN_MATCH_SOURCE

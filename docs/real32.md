@@ -195,11 +195,12 @@ form accepts one typed two-byte scalar supplied by a direct integer literal or
 by a named module word scalar initialized by the immediately preceding literal
 assignment. It binds the value through the scalar stack ABI, evaluates
 `REAL(parameter)` into named module REAL storage, and returns that storage. The
-conversion helper remains an ordinary link-selected OBJ import. A separate
-bounded form accepts two named REAL arguments after immediate conversions and
-implements one finite comparison/select body. Its caller, parameter-bind,
-comparison, and return relocations follow captured named storage rather than
-fixed declaration slots. General
+conversion helper remains an ordinary link-selected OBJ import. A bounded
+two-REAL-parameter identity form accepts two named arguments after immediate
+conversions and returns any captured named REAL storage, including either
+parameter. A separate bounded form implements one finite comparison/select
+body. Their caller, parameter-bind, comparison, and return relocations follow
+captured named storage rather than fixed declaration slots. General
 variable or expression arguments, arbitrary REAL return expressions,
 nested/recursive calls, and external REAL functions remain separate compiler
 work; they are not REAL32 range limitations.

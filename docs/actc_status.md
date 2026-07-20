@@ -104,7 +104,7 @@ Current state:
   converts it with `REAL(parameter)` into named module REAL storage, and returns
   that storage. A second bounded form accepts two REAL parameters by value,
   preserves left-to-right argument order while copying each named module REAL
-  into separate callee storage, and returns the first parameter by pointer.
+  into separate callee storage, and returns either named parameter by pointer.
   Its current caller requires two immediately preceding `REAL(integer)`
   assignments. Other statement sequences, general variable/expression
   arguments, arbitrary REAL return expressions, nested/recursive calls, and
@@ -160,7 +160,7 @@ Current state:
   128-byte gate. Fixed-address and register-machine pass J is 7,901 bytes with
   291 bytes free under a 256-byte gate. REAL function/ternary pass K is 4,594
   bytes with 3,598 bytes free in its 8 KiB window. Native REAL emitter pass A
-  is 7,406 bytes with 786 bytes free under its 768-byte growth reserve.
+  is 7,418 bytes with 774 bytes free under its 768-byte growth reserve.
   Passes H and J share pass 9's typed-parameter bind prologue, so runtime helper calls
   inside supported functions retain the word-return ABI. Pass F is 6,709 bytes
   with 1,483 bytes free under a 1,264-byte gate.
@@ -227,6 +227,12 @@ Current state:
   argument setup from the referenced helper ABI and emits ordinary helper,
   data, result, and pointer relocations. ALINK's two fixed-address input/REAL
   strategies and compact signatures are removed.
+- Pass A's bounded two-REAL-parameter identity form now captures the return
+  storage independently from its caller arguments and reverse-order parameter
+  binds. It can return either named parameter while preserving the existing
+  157-byte OBJ layout and generic A/X storage-pointer ABI. A reordered shared
+  fixture returns its second parameter as binary32 2.0 and verifies all five
+  REAL cells in VICE. Arbitrary return expressions remain outside this form.
 - Plain, ELSE, and two-level nested REAL comparisons now use compiler-owned
   pass B. It emits 126-, 140-, and 160-byte relocatable roots with A/B/Y data,
   a pointer table, exact native line/variable records, and ordinary conversion

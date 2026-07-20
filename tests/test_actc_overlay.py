@@ -2058,6 +2058,60 @@ class TestActcOverlay(unittest.TestCase):
             obj,
         )
 
+    def test_real_function_returns_second_named_real_parameter(self) -> None:
+        source = (
+            self.root
+            / "tests"
+            / "parity"
+            / "two_real_second_return_permuted.act"
+        ).read_text(encoding="ascii").replace("\n", "\r")
+        obj = self.compile_overlay_object(
+            source,
+            "actc-real-function-two-real-params-second-return",
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [10])
+        self.assertIn(
+            "x main 0 157\n"
+            "x second 88 47\n"
+            "x __v0 135 4\n"
+            "x __v1 139 4\n"
+            "x __v2 143 4\n"
+            "x __v3 147 4\n"
+            "x __v4 151 4\n"
+            "x __idata 135 20\n"
+            "x __iptr 155 2\n",
+            obj,
+        )
+        self.assertIn(
+            "r 14 l x __v2\n"
+            "r 18 h x __v2\n"
+            "r 26 u0\n"
+            "r 29 l x __v1\n"
+            "r 33 h x __v1\n"
+            "r 41 u0\n"
+            "r 44 l x __v2\n"
+            "r 47 h x __v2\n"
+            "r 50 l x __v1\n"
+            "r 53 h x __v1\n"
+            "r 56 x second\n"
+            "r 67 x __v0\n",
+            obj,
+        )
+        self.assertIn(
+            "r 104 x __v4\n"
+            "r 120 x __v3\n"
+            "r 131 l x __v4\n"
+            "r 133 h x __v4\n"
+            "r 155 x __idata\n",
+            obj,
+        )
+        self.assertIn("u rt_i_to_f\ni 0\ni 1\ni 0\ni 2\n", obj)
+        self.assertIn(
+            "v result 0 4\nv right 0 4\nv left 0 4\nv b 0 4\nv a 0 4\n",
+            obj,
+        )
+
     def test_real_function_selects_smaller_finite_parameter_natively(self) -> None:
         source = (
             self.root / "tests" / "parity" / "finite_real_min.act"

@@ -178,8 +178,11 @@ The overlay artifacts share one stable execution ABI:
   pass filenames as one-character base-36 values, and this overlay owns native
   REAL bridge, REAL-to-INT, straight-line binary REAL print, unary
   `FAbs`/`FSqrt` print, and one-argument helper plus REAL print detection,
-  machine records, relocations, and debug offsets. It runs after integer passes
-  9 and 8 and before generic pass 5.
+  machine records, relocations, and debug offsets. Its bounded two-REAL-
+  parameter identity form captures caller, bind, destination, and named return
+  storage independently, so either parameter can be returned. Its 7,418-byte
+  image leaves 774 bytes free under the 768-byte reserve. It runs after integer
+  passes 9 and 8 and before generic pass 5.
 - `tools/build_actc_overlay_emit_native_real_control_object.sh` builds
   `build/udos_tools/ACTC_OVLB.BIN`, pass id `11`. It owns plain, ELSE, and
   two-level nested REAL comparisons plus simple and binary-update REAL

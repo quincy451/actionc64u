@@ -1409,9 +1409,30 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   `B/A`, and verifies role-correct relocations. Its direct VICE PRG checks all
   five REAL cells and returns 1.0; Linux ACTC/ALINK in the Idun fork accepts and
   executes the same source through its existing general compiler.
-- Current inventories are 1,333 broad direct-PRG shapes, 172 non-runtime
+- At that checkpoint the inventories were 1,333 broad direct-PRG shapes, 172 non-runtime
   source-backed object-emission shapes, and 291 compiled-runtime relocation-
   oracle cases. Pass K is 4,594 bytes with 3,598 bytes free in its 8 KiB window.
 - This removes one more declaration-order assumption, not the bounded grammar.
   General native REAL expressions, locals, arbitrary calls/returns, recursive
   frames, and dependency-sized portable MATH1 modules remain next.
+
+## 2026-07-20 Native Two-REAL-Parameter Return Mapping
+
+- Separated pass A's bounded two-parameter return selector from its first caller
+  argument and preserved the first parameter selector outside relocation
+  scratch. The existing 157-byte root/function/data layout and reverse stack
+  bind ABI are unchanged.
+- The form can now return any captured named REAL storage rather than only its
+  first parameter. A shared `RESULT/RIGHT/LEFT` fixture binds parameters `B/A`,
+  returns second parameter `A`, and writes binary32 2.0.
+- Native exact OBJ assertions and a direct UDOS/VICE launch verify both caller
+  values, both callee copies, and the result. Idun's existing general Linux
+  compiler/linker compiles and executes the same fixture without implementation
+  changes.
+- Current inventories are 1,334 broad direct-PRG shapes, 173 non-runtime
+  source-backed object-emission shapes, and 291 compiled-runtime relocation-
+  oracle cases. Pass A is 7,418 bytes with 774 bytes free under its enforced
+  768-byte reserve.
+- This advances named return selection only. Arbitrary REAL expression returns,
+  local REAL frames, nested/recursive calls, and dependency-sized portable
+  MATH1 compilation remain next.

@@ -796,6 +796,14 @@ under its 256-byte reserve. A direct ACTC/ALINK/VICE probe returns 42 through th
 ABI, stores trace value 41, and observes SID volume 8. A second probe calls
 KERNAL CHROUT at numeric address `$FFD2` without selecting a library object.
 
+Pass A's bounded two-REAL-parameter identity function now keeps the captured
+return storage separate from caller argument storage. Its generic 157-byte OBJ
+can therefore bind two reordered arguments by value and return either named
+parameter through A/X without changing ALINK. The second-return direct PRG
+stores 2.0 after checking both caller values and both reverse-bound parameter
+copies. `ACTC_OVLA.BIN` is 7,418 bytes with 774 bytes free under its enforced
+768-byte reserve.
+
 The first bounded REAL control-flow function runs in base-36 pass K,
 `ACTC_OVLK.BIN`. It recognizes the exact two-REAL-parameter finite
 comparison/select body and a bounded four-REAL `FClamp` assignment/print root,

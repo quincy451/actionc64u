@@ -640,6 +640,93 @@ def sign_module() -> ObjectBuilder:
     return b
 
 
+def trunc_module() -> ObjectBuilder:
+    """Build binary32 truncation toward zero without arithmetic helpers."""
+    b = ObjectBuilder("rt_f_trunc")
+
+    sign_byte = 0x08
+    count = 0x09
+
+    # Reconstruct the biased exponent while retaining the source sign.
+    b.immediate(0xA0, 0x03)  # LDY #3
+    b.emit(0xB1, 0x02)  # LDA ($02),Y
+    b.zero_page(0x85, sign_byte)
+    b.immediate(0x29, 0x7F)
+    b.emit(0x0A)  # ASL
+    b.zero_page(0x85, count)
+    b.emit(0x88)  # DEY
+    b.emit(0xB1, 0x02)
+    b.immediate(0x29, 0x80)
+    b.branch(0xF0, "exponent_ready")
+    b.zero_page(0xE6, count)
+
+    b.label("exponent_ready")
+    b.zero_page(0xA5, count)
+    b.immediate(0xC9, 0x96)  # Bias 127 + 23 fraction bits.
+    b.branch(0x90, "maybe_fractional")
+    # This also preserves infinities and every NaN payload bit-for-bit.
+    b.immediate(0xA9, 0x00)
+    b.zero_page(0x85, count)
+    b.branch(0xF0, "copy_value")
+
+    b.label("maybe_fractional")
+    b.immediate(0xC9, 0x7F)
+    b.branch(0x90, "write_zero")
+    b.immediate(0xA9, 0x96)
+    b.emit(0x38)  # SEC
+    b.zero_page(0xE5, count)
+    b.zero_page(0x85, count)
+
+    b.label("copy_value")
+    b.immediate(0xA0, 0x00)
+    b.label("copy_loop")
+    b.emit(0xB1, 0x02)
+    b.emit(0x91, 0x06)
+    b.emit(0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "copy_loop")
+    b.zero_page(0xA5, count)
+    b.branch(0xF0, "done")
+
+    # Clear 150-exponent low significand bits in the copied destination.
+    b.immediate(0xA0, 0x00)
+    b.immediate(0xA9, 0x01)
+    b.zero_page(0x85, sign_byte)
+    b.label("clear_loop")
+    b.zero_page(0xA5, sign_byte)
+    b.immediate(0x49, 0xFF)
+    b.emit(0x31, 0x06)  # AND ($06),Y
+    b.emit(0x91, 0x06)
+    b.zero_page(0xA5, sign_byte)
+    b.emit(0x0A)  # ASL
+    b.zero_page(0x85, sign_byte)
+    b.branch(0xD0, "mask_ready")
+    b.emit(0xC8)
+    b.immediate(0xA9, 0x01)
+    b.zero_page(0x85, sign_byte)
+    b.label("mask_ready")
+    b.zero_page(0xC6, count)
+    b.branch(0xD0, "clear_loop")
+    b.label("done")
+    b.emit(0x60)
+
+    b.label("write_zero")
+    b.immediate(0xA0, 0x02)
+    b.immediate(0xA9, 0x00)
+    b.label("zero_loop")
+    b.emit(0x91, 0x06)
+    b.emit(0x88)
+    b.branch(0x10, "zero_loop")
+    b.immediate(0xA0, 0x03)
+    b.zero_page(0xA5, sign_byte)
+    b.immediate(0x29, 0x80)
+    b.emit(0x91, 0x06)
+    b.emit(0x60)
+
+    b.export("rt_f_trunc")
+    return b
+
+
 def float_to_int_module() -> ObjectBuilder:
     """Build finite binary32 to signed 16-bit truncation toward zero."""
     b = ObjectBuilder("rt_f_to_i")
@@ -2630,6 +2717,7 @@ def main() -> int:
             special_value_module(),
             compare_module(),
             sign_module(),
+            trunc_module(),
             minmax_module("rt_f_min", maximum=False),
             minmax_module("rt_f_max", maximum=True),
             clamp_module(),

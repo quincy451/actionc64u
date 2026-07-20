@@ -1287,48 +1287,36 @@ try_consume_real_open_local_fail_restore:
     rts
 
 try_consume_fabs_open_local:
-    sty symbol_start_y_local
-    lda #ACTC_OVERLAY_CTX_SAVE_SOURCE_MARK_FN_LO
-    jsr call_context_function
     lda #<pattern_fabs
-    ldy #>pattern_fabs
-    jsr consume_keyword_open_local
-    bcs try_consume_fabs_open_local_fail_restore
-    clc
-    rts
-try_consume_fabs_open_local_fail_restore:
-    jsr call_restore_source_mark_context
-    ldy symbol_start_y_local
-    sec
-    rts
+    ldx #>pattern_fabs
+    bne try_consume_real_unary_open_local
 
 try_consume_fsqrt_open_local:
-    sty symbol_start_y_local
-    lda #ACTC_OVERLAY_CTX_SAVE_SOURCE_MARK_FN_LO
-    jsr call_context_function
     lda #<pattern_fsqrt
-    ldy #>pattern_fsqrt
-    jsr consume_keyword_open_local
-    bcs try_consume_fsqrt_open_local_fail_restore
-    clc
-    rts
-try_consume_fsqrt_open_local_fail_restore:
-    jsr call_restore_source_mark_context
-    ldy symbol_start_y_local
-    sec
-    rts
+    ldx #>pattern_fsqrt
+    bne try_consume_real_unary_open_local
 
 try_consume_fsign_open_local:
+    lda #<pattern_fsign
+    ldx #>pattern_fsign
+    bne try_consume_real_unary_open_local
+
+try_consume_ftrunc_open_local:
+    lda #<pattern_ftrunc
+    ldx #>pattern_ftrunc
+try_consume_real_unary_open_local:
     sty symbol_start_y_local
+    sta pattern_ptr_local
+    stx pattern_ptr_local+1
     lda #ACTC_OVERLAY_CTX_SAVE_SOURCE_MARK_FN_LO
     jsr call_context_function
-    lda #<pattern_fsign
-    ldy #>pattern_fsign
+    lda pattern_ptr_local
+    ldy pattern_ptr_local+1
     jsr consume_keyword_open_local
-    bcs try_consume_fsign_open_local_fail_restore
+    bcs try_consume_real_unary_open_local_fail_restore
     clc
     rts
-try_consume_fsign_open_local_fail_restore:
+try_consume_real_unary_open_local_fail_restore:
     jsr call_restore_source_mark_context
     ldy symbol_start_y_local
     sec
@@ -2075,8 +2063,14 @@ emit_runtime_real_value_local_try_fsqrt:
     jmp emit_runtime_real_unary_value_local_or_fail
 emit_runtime_real_value_local_try_fsign:
     jsr try_consume_fsign_open_local
-    bcs emit_runtime_real_value_local_try_binary
+    bcs emit_runtime_real_value_local_try_ftrunc
     lda #'g'
+    sta real_operator_local
+    jmp emit_runtime_real_unary_value_local_or_fail
+emit_runtime_real_value_local_try_ftrunc:
+    jsr try_consume_ftrunc_open_local
+    bcs emit_runtime_real_value_local_try_binary
+    lda #'c'
     sta real_operator_local
     jmp emit_runtime_real_unary_value_local_or_fail
 emit_runtime_real_value_local_try_binary:
@@ -2181,6 +2175,10 @@ condition_starts_with_local_real_value_or_fail:
     bcc condition_starts_with_local_real_value_or_fail_ok_restore
     lda #<pattern_fsign
     ldy #>pattern_fsign
+    jsr symbol_buffer_matches_local_const
+    bcc condition_starts_with_local_real_value_or_fail_ok_restore
+    lda #<pattern_ftrunc
+    ldy #>pattern_ftrunc
     jsr symbol_buffer_matches_local_const
     bcc condition_starts_with_local_real_value_or_fail_ok_restore
     lda #<pattern_fmin
@@ -2887,6 +2885,8 @@ pattern_fsqrt:
     .asciiz "FSQRT"
 pattern_fsign:
     .asciiz "FSIGN"
+pattern_ftrunc:
+    .asciiz "FTRUNC"
 pattern_fmin:
     .asciiz "FMIN"
 pattern_fmax:

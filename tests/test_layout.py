@@ -137,9 +137,9 @@ class TestRepoLayout(unittest.TestCase):
         self.assertIn("The constant foundation is complete", parity)
         self.assertIn("round-to-nearest, ties-to-even", parity)
         self.assertIn("Dedicated pass K", parity)
-        self.assertIn("1,334 broad", parity)
+        self.assertIn("1,335 broad", parity)
         self.assertIn("173 non-runtime source-backed object-emission shapes", parity)
-        self.assertIn("relocation oracle covers 291 cases", parity)
+        self.assertIn("292 compiled-runtime", parity)
         self.assertIn("799 native ActionC64U unittests", parity)
         self.assertIn("152 Idun/Alpine unittests", parity)
         self.assertIn("137 Idun ASan/UBSan tests", parity)
@@ -265,6 +265,7 @@ class TestRepoLayout(unittest.TestCase):
             "rt_f_div",
             "rt_f_cmp",
             "rt_f_sign",
+            "rt_f_trunc",
             "rt_f_min",
             "rt_f_max",
             "rt_f_clamp",

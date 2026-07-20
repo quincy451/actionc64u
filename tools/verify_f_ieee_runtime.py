@@ -21,6 +21,7 @@ from generate_math_runtime import (
     multiply_module,
     sign_module,
     special_value_module,
+    trunc_module,
 )
 
 
@@ -287,6 +288,15 @@ def expected_sign(value: int) -> int:
     return 0xBF800000 if value >> 31 else 0x3F800000
 
 
+def expected_trunc(value: int) -> int:
+    exponent = (value >> 23) & 0xFF
+    if exponent >= 150:
+        return value
+    if exponent < 127:
+        return value & 0x80000000
+    return value & ~((1 << (150 - exponent)) - 1)
+
+
 def expected_clamp(value: int, lower: int, upper: int) -> int:
     if is_nan(value) or is_nan(lower) or is_nan(upper):
         return CANONICAL_QNAN
@@ -316,6 +326,8 @@ def runtime_builders(operation: str):
         return [compare_module(), special]
     if operation == "sign":
         return [sign_module()]
+    if operation == "trunc":
+        return [trunc_module()]
     if operation in ("min", "max"):
         return [
             minmax_module(f"rt_f_{operation}", maximum=operation == "max"),
@@ -403,7 +415,7 @@ def verification_clamp_cases(
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/sign/min/max/clamp code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/trunc/min/max/clamp code against exact IEEE "
             "binary32"
         )
     )
@@ -452,6 +464,7 @@ def main() -> int:
             "mul",
             "cmp",
             "sign",
+            "trunc",
             "min",
             "max",
             "clamp",
@@ -496,6 +509,8 @@ def main() -> int:
                     expected = expected_compare(left, right) & 0xFFFF
                 elif operation == "sign":
                     expected = expected_sign(left)
+                elif operation == "trunc":
+                    expected = expected_trunc(left)
                 elif operation == "clamp":
                     expected = expected_clamp(left, right, case[2])
                 else:

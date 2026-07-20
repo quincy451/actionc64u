@@ -1429,7 +1429,7 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   values, both callee copies, and the result. Idun's existing general Linux
   compiler/linker compiles and executes the same fixture without implementation
   changes.
-- Current inventories are 1,334 broad direct-PRG shapes, 173 non-runtime
+- At that checkpoint inventories were 1,334 broad direct-PRG shapes, 173 non-runtime
   source-backed object-emission shapes, and 291 compiled-runtime relocation-
   oracle cases. Pass A is 7,418 bytes with 774 bytes free under its enforced
   768-byte reserve.
@@ -1441,7 +1441,7 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
 
 - Replaced the non-includable `MODULE MATH1` binding reference with a native
   include header that defines all eight portable IEEE-754 constants and
-  documents the eight compiler-recognized calls as builtin signatures.
+  documented the eight compiler-recognized calls available at that checkpoint.
 - `INCLUDE "MATH1"` now works before or after the application `MODULE` line.
   The focused compiler check folds `MATH_PI` to literal words 4059/16457,
   allocates only the caller's `RESULT` cell, and emits no OBJ import.
@@ -1452,5 +1452,25 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   tests with the new shared fixture.
 - The cross-product review exposed a separate Idun packaging gap: including
   its complete MATH1 source currently places every function body in the root
-  object. Reachable-only Idun pruning and the remaining 35 native routines are
-  now explicit work item 2 in the parity matrix.
+  object. Reachable-only Idun pruning and the remaining 35 native routines at
+  that checkpoint became explicit work item 2 in the parity matrix.
+
+## 2026-07-20 Native MATH1 Truncation
+
+- Added dependency-free `RT_F_TRUNC.OBJ`, a 107-byte binary32 helper that
+  truncates toward zero by clearing fractional significand bits. Signed zero,
+  infinities, NaN payloads, and already integral values are preserved exactly.
+- Native ACTC recognizes `FTrunc(A)` for named REAL values in assignment, print,
+  and condition positions through the existing pass-A unary emitter. ALINK
+  selects only truncation plus the conversion/printing helpers actually used by
+  the root program.
+- Refactored pass 6's duplicated unary keyword consumers into one parameterized
+  matcher. Pass 6 is 8,071 bytes and retains 121 bytes under its enforced
+  96-byte growth reserve; pass A remains 7,418 bytes.
+- Exact host execution covers exponent boundaries, exceptional values, signed
+  zero, subnormals, and random bit patterns. The focused direct-PRG case raises
+  current inventories to 1,335 broad shapes and 292 compiled-runtime relocation
+  oracles; the non-runtime source-backed inventory remains 173.
+- Native MATH1 now exposes nine link-selected calls and all eight constants. The
+  remaining native library gap is 34 public routines, plus the general REAL
+  expression/call/frame support needed by their portable bodies.

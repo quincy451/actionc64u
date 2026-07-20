@@ -8195,6 +8195,15 @@ class TestActcOverlay(unittest.TestCase):
                 "FF",
                 "p0u0T0S0L0U0u1T1S1L1U1p1u2r",
             ),
+            (
+                "ftrunc",
+                "A=REAL(7)\rX=FTrunc(A)\r",
+                "rt_i_to_f",
+                "rt_f_trunc",
+                "07",
+                "00",
+                "p1u0T0S0L0U0u1T1S1L1U1p2u2r",
+            ),
         )
         for name, statements, convert_module, unary_module, value_lo, value_hi, compact_body in cases:
             with self.subTest(name=name):
@@ -8259,6 +8268,19 @@ class TestActcOverlay(unittest.TestCase):
                 "IF FSign(A)<B THEN\rPrintE(\"OK\")\rFI\rRETURN\r",
                 ("rt_f_sign", "rt_f_cmp"),
             ),
+            (
+                "trunc-print-position",
+                "MODULE MAIN\rREAL A\rPROC MAIN()\r"
+                "A=REAL(7)\rPrintRE(FTrunc(A))\rRETURN\r",
+                ("rt_f_trunc", "rt_print_f"),
+            ),
+            (
+                "trunc-condition-position",
+                "MODULE MAIN\rREAL A\rREAL B\rPROC MAIN()\r"
+                "A=REAL(7)\rB=REAL(8)\r"
+                "IF FTrunc(A)<B THEN\rPrintE(\"OK\")\rFI\rRETURN\r",
+                ("rt_f_trunc", "rt_f_cmp"),
+            ),
         )
         for name, source, expected_modules in position_cases:
             with self.subTest(name=name):
@@ -8268,8 +8290,16 @@ class TestActcOverlay(unittest.TestCase):
                 )
                 for runtime_module in expected_modules:
                     self.assertIn(f"u {runtime_module}\n", obj)
-                for unrelated_module in ("rt_f_abs", "rt_f_sqrt", "rt_f_min", "rt_f_max"):
-                    self.assertNotIn(f"u {unrelated_module}\n", obj)
+                for unrelated_module in (
+                    "rt_f_abs",
+                    "rt_f_sqrt",
+                    "rt_f_sign",
+                    "rt_f_trunc",
+                    "rt_f_min",
+                    "rt_f_max",
+                ):
+                    if unrelated_module not in expected_modules:
+                        self.assertNotIn(f"u {unrelated_module}\n", obj)
 
     def test_native_real_emitter_owns_math1_minmax_calls(self) -> None:
         for function_name, runtime_module in (

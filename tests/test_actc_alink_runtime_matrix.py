@@ -359,7 +359,17 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
 
         self.assertEqual(
             self._library_call_names(action_root / "lib" / "math1.act"),
-            {"PRINTR", "PRINTRE", "FABS", "FSQRT", "FSIGN", "FMIN", "FMAX", "FCLAMP"},
+            {
+                "PRINTR",
+                "PRINTRE",
+                "FABS",
+                "FSQRT",
+                "FSIGN",
+                "FTRUNC",
+                "FMIN",
+                "FMAX",
+                "FCLAMP",
+            },
         )
         math_shapes = self._makefile_runtime_matrix_shape_groups(self.make_text).get(
             "ACTION_ACTC_ALINK_MATH_RUNTIME_SHAPES",
@@ -371,6 +381,7 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
             "actc_runtime_math1_fabs_split_linked",
             "actc_runtime_math1_fsqrt_split_linked",
             "actc_runtime_math1_fsign_split_linked",
+            "actc_runtime_math1_ftrunc_split_linked",
             "actc_runtime_math1_fmin_split_linked",
             "actc_runtime_math1_fmax_split_linked",
             "actc_runtime_math1_fclamp_split_linked",
@@ -385,6 +396,7 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
             "rt_f_div",
             "rt_f_mul",
             "rt_f_sign",
+            "rt_f_trunc",
             "rt_f_min",
             "rt_f_max",
             "rt_f_clamp",
@@ -1810,6 +1822,8 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
             "actc_runtime_math1_export_sample_linked",
             "actc_runtime_math1_fabs_split_linked",
             "actc_runtime_math1_fsqrt_split_linked",
+            "actc_runtime_math1_fsign_split_linked",
+            "actc_runtime_math1_ftrunc_split_linked",
             "actc_runtime_math1_fmin_split_linked",
             "actc_runtime_math1_fmax_split_linked",
             "actc_runtime_math1_fclamp_split_linked",
@@ -2630,8 +2644,8 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
         import run_action_alink_prg_probe as probe
 
         shapes = probe.COMPILED_RUNTIME_LINK_ORACLE_SHAPES
-        self.assertEqual(len(shapes), 291)
-        self.assertEqual(len(set(shapes)), 291)
+        self.assertEqual(len(shapes), 292)
+        self.assertEqual(len(set(shapes)), 292)
         for shape in shapes:
             with self.subTest(shape=shape):
                 case = probe.DIRECT_PRG_CASES[shape]

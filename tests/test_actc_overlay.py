@@ -8234,6 +8234,43 @@ class TestActcOverlay(unittest.TestCase):
         self.assertNotIn("u rt_f_cmp\n", obj)
         self.assertNotIn("u fclamp\n", obj)
 
+    def test_native_real_clamp_tracks_permuted_named_storage(self) -> None:
+        obj = self.compile_overlay_object(
+            "MODULE MAIN\r"
+            "REAL VALUE\r"
+            "REAL HIGH\r"
+            "REAL LOW\r"
+            "REAL RESULT\r"
+            "PROC MAIN()\r"
+            "HIGH=REAL(9)\r"
+            "RESULT=REAL(3)\r"
+            "LOW=REAL(5)\r"
+            "VALUE=FClamp(RESULT,LOW,HIGH)\r"
+            "PrintRE(VALUE)\r"
+            "RETURN\r",
+            "actc-overlay-native-real-fclamp-permuted",
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [20])
+        machine_hex = "".join(
+            "".join(line.split()[1:])
+            for line in obj.splitlines()
+            if line.startswith("m ")
+        )
+        machine = bytes.fromhex(machine_hex)
+        self.assertEqual(len(machine), 171)
+        self.assertEqual(
+            [machine[offset] for offset in (1, 21, 41, 61, 74, 87, 100, 116)],
+            [2, 6, 4, 6, 4, 2, 0, 0],
+        )
+        self.assertEqual(
+            [machine[offset] for offset in (14, 16, 34, 36, 54, 56)],
+            [9, 0, 3, 0, 5, 0],
+        )
+        self.assertIn("u rt_f_clamp\n", obj)
+        self.assertIn("u rt_i_to_f\n", obj)
+        self.assertIn("u rt_print_f\n", obj)
+
     def test_native_real_emitter_owns_input_print_sequences(self) -> None:
         cases = (
             (

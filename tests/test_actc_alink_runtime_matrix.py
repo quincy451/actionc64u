@@ -374,6 +374,7 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
             "actc_runtime_math1_fmin_split_linked",
             "actc_runtime_math1_fmax_split_linked",
             "actc_runtime_math1_fclamp_split_linked",
+            "actc_runtime_math1_fclamp_permuted_split_linked",
         }:
             self.assertIn(shape, math_shapes)
 
@@ -1812,6 +1813,7 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
             "actc_runtime_math1_fmin_split_linked",
             "actc_runtime_math1_fmax_split_linked",
             "actc_runtime_math1_fclamp_split_linked",
+            "actc_runtime_math1_fclamp_permuted_split_linked",
             "actc_runtime_math1_printre_split_linked",
             "actc_runtime_math1_printr_split_linked",
             "actc_runtime_math1_real_int_split_linked",
@@ -2628,8 +2630,8 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
         import run_action_alink_prg_probe as probe
 
         shapes = probe.COMPILED_RUNTIME_LINK_ORACLE_SHAPES
-        self.assertEqual(len(shapes), 290)
-        self.assertEqual(len(set(shapes)), 290)
+        self.assertEqual(len(shapes), 291)
+        self.assertEqual(len(set(shapes)), 291)
         for shape in shapes:
             with self.subTest(shape=shape):
                 case = probe.DIRECT_PRG_CASES[shape]

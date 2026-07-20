@@ -797,11 +797,14 @@ ABI, stores trace value 41, and observes SID volume 8. A second probe calls
 KERNAL CHROUT at numeric address `$FFD2` without selecting a library object.
 
 The first bounded REAL control-flow function runs in base-36 pass K,
-`ACTC_OVLK.BIN`. It recognizes only the exact two-REAL-parameter finite
-comparison/select body, emits one ordinary machine OBJ with separate root and
-function body closures, and declines all other forms before opening output.
-Its 3,257-byte image leaves 4,935 bytes in `$A000-$BFFF`. The focused release
+`ACTC_OVLK.BIN`. It recognizes the exact two-REAL-parameter finite
+comparison/select body and a bounded four-REAL `FClamp` assignment/print root,
+emits ordinary machine OBJ records, and declines other forms before opening
+output. The clamp root captures each named storage use instead of assuming
+fixed declaration order. Its 4,359-byte image leaves 3,833 bytes in
+`$A000-$BFFF`. The focused release
 probe links only integer conversion, comparison, and comparison's transitive
 special-value support; its direct PRG verifies 2.0/1.0 parameter copies and a
-1.0 result in VICE. General REAL expression/control lowering remains the next
-compiler dependency.
+1.0 result in VICE. A second direct PRG permutes all clamp storage roles and
+prints 5.0. General REAL expression/control lowering remains the next compiler
+dependency.

@@ -158,8 +158,8 @@ Current state:
   Function-aware pass G is 6,645 bytes with 1,547 bytes free under a 512-byte
   gate. Universal mixed pass H is 8,064 bytes with exactly 128 bytes free under a
   128-byte gate. Fixed-address and register-machine pass J is 7,901 bytes with
-  291 bytes free under a 256-byte gate. REAL function/ternary pass K is 4,208
-  bytes with 3,984 bytes free in its 8 KiB window. Native REAL emitter pass A
+  291 bytes free under a 256-byte gate. REAL function/ternary pass K is 4,359
+  bytes with 3,833 bytes free in its 8 KiB window. Native REAL emitter pass A
   is 7,406 bytes with 786 bytes free under its 768-byte growth reserve.
   Passes H and J share pass 9's typed-parameter bind prologue, so runtime helper calls
   inside supported functions retain the word-return ABI. Pass F is 6,709 bytes
@@ -251,10 +251,12 @@ Current state:
   exceptional-value support transitively. Exact checks and focused live VICE
   launches prove that unrelated helpers are pruned. This completes three
   utility routines, not general MATH1 source lowering. Pass K separately owns
-  the exact three-initializer `X=FClamp(A,B,C); PrintRE(X)` root. Its 171-byte
+  a bounded three-initializer `FClamp` assignment/print root. It captures all
+  eight named-storage uses, so initializer order, clamp arguments, destination,
+  and printed variable can differ from declaration order. Its 171-byte
   relocatable object imports only conversion, clamp, and print entry points;
   ALINK selects clamp's comparison/minimum/maximum closure and prunes unrelated
-  REAL helpers. This is a constrained ternary proof, not a general parser path.
+  REAL helpers. The fixed statement skeleton is not a general parser path.
 - REAL `DO ... UNTIL` now uses the same compiler-owned pass for all six
   comparisons and for eight `A=A+C` / `A=A-C` ordered update loops. Simple
   loops emit a 146-byte relocatable root; binary-update loops emit a 194-byte

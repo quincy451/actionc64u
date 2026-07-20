@@ -302,9 +302,7 @@ native_real_clamp_detect_var_loop:
     lda #ACTC_OVERLAY_CTX_SET_BODY_PTR_FN_LO
     jsr call_indexed_context_function
     jsr load_resident_body_ptr_to_scan_zp
-    lda #<native_real_clamp_body_pattern
-    ldy #>native_real_clamp_body_pattern
-    jsr native_real_function_match_scan_pattern
+    jsr native_real_clamp_match_body_pattern
     bcs :+
     jmp native_real_function_detect_no
 :
@@ -382,6 +380,69 @@ native_real_function_match_scan_pattern_no:
     clc
     rts
 native_real_function_match_scan_pattern_yes:
+    sec
+    rts
+
+native_real_clamp_match_body_pattern:
+    lda #<native_real_clamp_body_pattern
+    sta ACTC_OVERLAY_WORK_ZP
+    lda #>native_real_clamp_body_pattern
+    sta ACTC_OVERLAY_WORK_ZP+1
+    ldy #$00
+    ldx #$00
+native_real_clamp_match_body_pattern_loop:
+    lda (ACTC_OVERLAY_WORK_ZP),y
+    beq native_real_clamp_match_body_pattern_end
+    cmp #'?'
+    beq native_real_clamp_match_body_pattern_var
+    sta native_real_function_byte
+    jsr emit_object_peek_payload_y
+    cmp native_real_function_byte
+    bne native_real_clamp_match_body_pattern_no
+    jmp native_real_clamp_match_body_pattern_next
+native_real_clamp_match_body_pattern_var:
+    jsr emit_object_peek_payload_y
+    cmp #'0'
+    bcc native_real_clamp_match_body_pattern_no
+    cmp #'4'
+    bcs native_real_clamp_match_body_pattern_no
+    sta native_real_clamp_var_captures,x
+    inx
+native_real_clamp_match_body_pattern_next:
+    iny
+    bne native_real_clamp_match_body_pattern_loop
+native_real_clamp_match_body_pattern_no:
+    clc
+    rts
+native_real_clamp_match_body_pattern_end:
+    jsr emit_object_peek_payload_y
+    bne native_real_clamp_match_body_pattern_no
+    cpx #16
+    bne native_real_clamp_match_body_pattern_no
+
+    ldx #$00
+native_real_clamp_match_body_pattern_pair_loop:
+    lda native_real_clamp_var_captures,x
+    cmp native_real_clamp_var_captures+1,x
+    bne native_real_clamp_match_body_pattern_no
+    inx
+    inx
+    cpx #16
+    bcc native_real_clamp_match_body_pattern_pair_loop
+
+    ldx #$00
+    ldy #$00
+native_real_clamp_match_body_pattern_offset_loop:
+    lda native_real_clamp_var_captures,x
+    sec
+    sbc #'0'
+    asl
+    sta native_real_clamp_pointer_offsets,y
+    inx
+    inx
+    iny
+    cpy #8
+    bcc native_real_clamp_match_body_pattern_offset_loop
     sec
     rts
 
@@ -616,6 +677,14 @@ native_real_clamp_emit_machine_code_list:
     lda #$00
     sta native_real_function_index
 native_real_clamp_emit_machine_loop:
+    ldy #$00
+native_real_clamp_emit_machine_pointer_loop:
+    lda native_real_clamp_pointer_patch_positions,y
+    cmp native_real_function_index
+    beq native_real_clamp_emit_machine_pointer
+    iny
+    cpy #8
+    bcc native_real_clamp_emit_machine_pointer_loop
     ldy native_real_function_index
     lda native_real_clamp_machine_template,y
     ldx native_real_function_index
@@ -647,6 +716,9 @@ native_real_clamp_emit_machine_loop:
     cpx #56
     bne native_real_clamp_emit_machine_byte_ready
     lda native_real_clamp_third_hi
+    jmp native_real_clamp_emit_machine_byte_ready
+native_real_clamp_emit_machine_pointer:
+    lda native_real_clamp_pointer_offsets,y
 native_real_clamp_emit_machine_byte_ready:
     jsr native_real_function_emit_byte
     inc native_real_function_index
@@ -869,7 +941,7 @@ native_real_function_select_body_pattern:
 native_real_function_main_body_pattern:
     .asciiz "p2u1T0S0p4u1T1S1L0U0L1U1C0T2S2r"
 native_real_clamp_body_pattern:
-    .asciiz "p1u0T0S0p3u0T1S1p5u0T2S2L0U0L1U1L2U2u1T3S3L3U3p6u2r"
+    .asciiz "p1u0T?S?p3u0T?S?p5u0T?S?L?U?L?U?L?U?u1T?S?L?U?p6u2r"
 native_real_function_external_cmp:
     .asciiz "rt_f_cmp"
 native_real_function_external_i_to_f:
@@ -962,6 +1034,8 @@ native_real_clamp_reloc_offsets:
 native_real_clamp_reloc_targets:
     .byte 5,5,$80,5,5,$80,5,5,$80,5,5,5,5
     .byte 5,5,5,5,$81,5,5,$82,1,2,3,4
+native_real_clamp_pointer_patch_positions:
+    .byte 1,21,41,61,74,87,100,116
 
 native_real_function_machine_template:
     .byte $A2,$00,$BD,$00,$00,$85,$06,$E8,$BD,$00,$00,$85,$07,$A9,$00,$85
@@ -1005,6 +1079,11 @@ native_real_clamp_third_lo:
     .byte $00
 native_real_clamp_third_hi:
     .byte $00
+native_real_clamp_var_captures:
+    .byte $00,$00,$00,$00,$00,$00,$00,$00
+    .byte $00,$00,$00,$00,$00,$00,$00,$00
+native_real_clamp_pointer_offsets:
+    .byte $00,$00,$00,$00,$00,$00,$00,$00
 native_real_function_literal_lo:
     .byte $00
 native_real_function_literal_hi:

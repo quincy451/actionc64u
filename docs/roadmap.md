@@ -1373,3 +1373,23 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
 - Native MATH1 now exposes eight low-level calls. General REAL expression,
   function, and frame lowering remains the dependency for the other 35 public
   MATH1 routines and eight constants.
+
+## 2026-07-20 Native MATH1 Clamp Storage Mapping
+
+- Replaced pass K's fixed `A/B/C/X` body match with a bounded capture matcher
+  for all three initializer destinations, three clamp arguments, the result
+  destination, and the printed value. Every capture must be a declared one of
+  the four REAL slots, and paired low/high body references must agree.
+- Kept the emitted object at 171 machine bytes and retained ordinary imports
+  for integer conversion, clamp, and print. Generic ALINK still chooses the
+  comparison/minimum/maximum dependency closure and prunes unrelated helpers.
+- Added exact pointer-patch assertions and a source-backed direct VICE launch
+  that initializes slots 1/3/2, clamps slots 3/2/1 into slot 0, prints slot 0,
+  and produces 5.0.
+- Current inventories are 1,332 broad direct-PRG shapes, 171 non-runtime
+  source-backed object-emission shapes, and 291 compiled-runtime
+  relocation-oracle cases.
+  Pass K is 4,359 bytes with 3,833 bytes free in its 8 KiB window.
+- This removes declaration-order assumptions only. General REAL expression
+  trees, arbitrary call placement, locals, returns, and portable MATH1 bodies
+  remain the next compiler dependency.

@@ -65,12 +65,15 @@ Current contract:
   assignments, REAL printing, and conditions. Those calls use independently
   selected helpers with complete MATH1 NaN/signed-zero semantics. Neither path
   is general REAL expression, control-flow, nested-call, or return lowering.
-  Pass K additionally owns the exact four-REAL root that initializes three
-  named values with `REAL(integer)`, assigns
-  `X=FClamp(A,B,C)`, prints `X`, and returns. It emits only integer conversion,
-  clamp, and print imports; the clamp module's comparison/minimum/maximum
-  dependencies remain ALINK-selected. This constrained ternary proof is not
-  general three-argument call lowering
+  Pass K additionally owns a bounded four-REAL root that initializes three
+  named values with `REAL(integer)`, assigns one named destination from
+  `FClamp(value,lower,upper)`, prints a named value, and returns. The body
+  matcher captures all initializer, argument, destination, and print operands
+  and maps them to declared storage, so declaration and use order need not
+  match the original `A/B/C/X` proof. It emits only integer conversion, clamp,
+  and print imports; the clamp module's comparison/minimum/maximum dependencies
+  remain ALINK-selected. The fixed statement skeleton is still not general
+  three-argument call lowering.
 
 `ACTC.PRG` should not emit a standalone runtime artifact and should not depend
 on a separate launch program. The direct runtime product is created by ALINK.

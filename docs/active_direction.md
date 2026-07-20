@@ -89,6 +89,10 @@ conversion and nearest-even intermediate rounding. Pass K proves one finite
 two-REAL-parameter comparison/select function through generic OBJ1/ALINK/VICE.
 Bounded named-REAL `FSign`, `FMin`, `FMax`, and `FClamp` calls now have
 complete portable call semantics through independently link-selected helpers.
+The pass-K clamp root captures initializer, argument, destination, and print
+storage rather than assuming declaration order, but it remains a fixed
+three-initializer/one-call/one-print skeleton rather than a general expression
+parser.
 Remaining source parity includes general arrays/pointers/records, nested and
 recursive typed functions, and complete REAL expression/call/return behavior.
 Complete portable MATH1 follows, then
@@ -117,7 +121,7 @@ Treat `vice-action-actc-alink-launch-object-emission-matrix` as the all
 source-backed ACTC object-emission launch matrix; it currently enumerates 171
 non-runtime, non-object-code source shapes.
 Treat `vice-action-alink-prg-matrix` as the broad direct-PRG object/link matrix;
-it currently enumerates 1331 shape probes.
+it currently enumerates 1332 shape probes.
 Treat `vice-action-alink-prg-object-code-matrices` as the focused direct
 object-code graph, behavior, and rejection gate.
 Treat `vice-action-actc-alink-launch-runtime-matrices` as the focused

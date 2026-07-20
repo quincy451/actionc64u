@@ -77,7 +77,7 @@ constant-only arithmetic does not select target conversion or arithmetic
 helpers. The evaluator is resident, while pass I retains its full 512-byte code
 reserve.
 
-The first item now has five tested checkpoints. Native pass A accepts two named
+The first item now has six tested checkpoints. Native pass A accepts two named
 REAL arguments after their immediate `REAL(integer)` initializers, copies both
 values into distinct parameter storage, and returns the first parameter by
 pointer. Dedicated pass K then lowers the exact finite comparison/select form
@@ -89,11 +89,13 @@ positions. Their 77-byte modules implement the complete MATH1 NaN and signed-
 zero selection policy through ordinary `RT_F_CMP.OBJ` closure. Native ACTC also
 lowers `FSign(A)` in those positions through a dependency-free 123-byte helper
 that canonicalizes NaN, preserves signed zero, and returns signed one for every
-other input. Pass K also owns the exact four-REAL root that initializes three
-values, assigns `X=FClamp(A,B,C)`, prints the result, and returns. Its 199-byte
-selected helper validates all three inputs and bound order, then uses the
-ordinary comparison/minimum/maximum closure. This establishes the ternary ABI
-and complete portable clamp semantics without claiming arbitrary
+other input. Pass K also owns a bounded four-REAL root that initializes three
+values, assigns a named destination from `FClamp(value,lower,upper)`, prints a
+named value, and returns. It captures initializer, argument, destination, and
+print storage independently, so those roles need not follow declaration order.
+Its 199-byte selected helper validates all three inputs and bound order, then
+uses the ordinary comparison/minimum/maximum closure. This establishes the
+ternary ABI and complete portable clamp semantics without claiming arbitrary
 three-argument expression lowering. General REAL expression trees, nested
 calls, and the rest of MATH1 remain incomplete.
 
@@ -222,7 +224,7 @@ make sync-native-check NATIVE_ACTION_ROOT=/path/to/actionc64u
 
 The 2026-07-20 current cross-product baseline passed:
 
-- 793 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
+- 794 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
   ALINK closure, IEEE-754, ACTEDIT, ACTDBG, Linux compatibility, export, and
   release-image checks;
 - 133 UDOS integration tests, with one intentional embedded-AUTOEXEC capacity
@@ -352,13 +354,18 @@ The following native `FClamp` slice adds byte-identical `RT_F_CLAMP.OBJ` to
 both products. The 199-byte module reads value/lower/upper pointers through
 `$02-$05` and `$08/$09`, writes through `$06/$07`, rejects any NaN or inverted
 bounds with canonical quiet NaN, and otherwise preserves the selected operand
-through `FMin(FMax(value,lower),upper)`. Pass K emits the exact constrained
+through `FMin(FMax(value,lower),upper)`. Pass K emits the bounded constrained
 three-initializer assignment-and-print root because adding it to pass A would
-have violated that overlay's enforced 768-byte growth reserve. Pass A remains
-7,406 bytes with 786 bytes free; pass K is 4,208 bytes with 3,984 bytes free.
-The direct-PRG matrix now has 1,331 shapes and the independent relocation oracle
-has 290 cases. This closes the eighth native declaration; the other 35 public
-MATH1 routines and all 8 constants still depend on general REAL source lowering.
+have violated that overlay's enforced 768-byte growth reserve. A follow-up
+matcher captures all eight named-storage uses and patches the same 171-byte
+machine root, proving permuted initializer, argument, destination, and print
+roles without widening the statement grammar. Pass A remains 7,406 bytes with
+786 bytes free; pass K is 4,359 bytes with 3,833 bytes free. The current
+direct-PRG inventory is 1,332 shapes, the non-runtime source-backed
+object-emission inventory remains 171 shapes, and the compiled-runtime
+relocation oracle covers 291 cases. This closes the eighth native declaration;
+the other 35 public MATH1 routines and all 8 constants still depend on general
+REAL source lowering.
 
 Pass 1 now contains only the streamed module-header validator. Moving the
 transform into `ACTC_OVLI.BIN` reduced pass 1 to 788 bytes. Integer folding,
@@ -371,9 +378,9 @@ Tool-ABI-preserved and active only before body/ASMBLOCK work. All pass code is
 hard-limited to `$A000-$BFFF`; UDOS live state at `$C000+` is forbidden.
 Linker-allocated pass BSS is limited to `$8000-$9DFF`; ASMBLOCK's transfer page,
 label index, and emitter state occupy the reserved `$9E00-$9F1E` range. Pass J
-is 7,901 bytes with 291 bytes free under its 256-byte reserve; pass K is 4,208
-bytes with 3,984 bytes free. The complete
-204-test overlay suite and 198-test source-cache suite pass with this layout.
+is 7,901 bytes with 291 bytes free under its 256-byte reserve; pass K is 4,359
+bytes with 3,833 bytes free. The complete
+207-test overlay suite and 198-test source-cache suite pass with this layout.
 
 Shipped and ordinary harness builds default to
 `ACTC_ENABLE_REAL_CONST_EVALUATOR=1`. The legacy all-resident body, layout, and

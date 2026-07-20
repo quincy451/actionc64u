@@ -178,7 +178,9 @@ Examples:
 - `FMin(a,b)` imports `rt_f_min` and its comparison closure
 - `FMax(a,b)` imports `rt_f_max` and its comparison closure
 - `FClamp(value,lower,upper)` imports `rt_f_clamp` plus its
-  comparison/minimum/maximum closure
+  comparison/minimum/maximum closure. The current pass-K source form captures
+  named initializer, argument, destination, and print storage independently,
+  but remains a bounded four-REAL statement skeleton
 - `PrintR` / `PrintRE` imports `rt_print_f` plus required text output support
 
 Programs that do not use REAL must not pay for REAL helper code. Programs that

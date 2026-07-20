@@ -1304,6 +1304,11 @@ try_consume_fsign_open_local:
 try_consume_ftrunc_open_local:
     lda #<pattern_ftrunc
     ldx #>pattern_ftrunc
+    bne try_consume_real_unary_open_local
+
+try_consume_ffloor_open_local:
+    lda #<pattern_ffloor
+    ldx #>pattern_ffloor
 try_consume_real_unary_open_local:
     sty symbol_start_y_local
     sta pattern_ptr_local
@@ -2069,8 +2074,14 @@ emit_runtime_real_value_local_try_fsign:
     jmp emit_runtime_real_unary_value_local_or_fail
 emit_runtime_real_value_local_try_ftrunc:
     jsr try_consume_ftrunc_open_local
-    bcs emit_runtime_real_value_local_try_binary
+    bcs emit_runtime_real_value_local_try_ffloor
     lda #'c'
+    sta real_operator_local
+    jmp emit_runtime_real_unary_value_local_or_fail
+emit_runtime_real_value_local_try_ffloor:
+    jsr try_consume_ffloor_open_local
+    bcs emit_runtime_real_value_local_try_binary
+    lda #'o'
     sta real_operator_local
     jmp emit_runtime_real_unary_value_local_or_fail
 emit_runtime_real_value_local_try_binary:
@@ -2161,34 +2172,21 @@ condition_starts_with_local_real_value_or_fail:
     jsr call_skip_inline_spaces_context
     jsr call_copy_symbol_from_scan_y_context
     bcs condition_starts_with_local_real_value_or_fail_fail_restore
-    lda #<pattern_real_decl
-    ldy #>pattern_real_decl
+    ldx #$00
+condition_starts_with_local_real_value_or_fail_pattern_loop:
+    lda real_value_pattern_table_local,x
+    sta pattern_ptr_local
+    inx
+    lda real_value_pattern_table_local,x
+    tay
+    lda pattern_ptr_local
+    inx
+    stx real_lhs_index_local
     jsr symbol_buffer_matches_local_const
     bcc condition_starts_with_local_real_value_or_fail_ok_restore
-    lda #<pattern_fabs
-    ldy #>pattern_fabs
-    jsr symbol_buffer_matches_local_const
-    bcc condition_starts_with_local_real_value_or_fail_ok_restore
-    lda #<pattern_fsqrt
-    ldy #>pattern_fsqrt
-    jsr symbol_buffer_matches_local_const
-    bcc condition_starts_with_local_real_value_or_fail_ok_restore
-    lda #<pattern_fsign
-    ldy #>pattern_fsign
-    jsr symbol_buffer_matches_local_const
-    bcc condition_starts_with_local_real_value_or_fail_ok_restore
-    lda #<pattern_ftrunc
-    ldy #>pattern_ftrunc
-    jsr symbol_buffer_matches_local_const
-    bcc condition_starts_with_local_real_value_or_fail_ok_restore
-    lda #<pattern_fmin
-    ldy #>pattern_fmin
-    jsr symbol_buffer_matches_local_const
-    bcc condition_starts_with_local_real_value_or_fail_ok_restore
-    lda #<pattern_fmax
-    ldy #>pattern_fmax
-    jsr symbol_buffer_matches_local_const
-    bcc condition_starts_with_local_real_value_or_fail_ok_restore
+    ldx real_lhs_index_local
+    cpx #(real_value_pattern_table_local_end-real_value_pattern_table_local)
+    bcc condition_starts_with_local_real_value_or_fail_pattern_loop
     jsr call_find_var_index_context
     bcs condition_starts_with_local_real_value_or_fail_fail_restore
     stx real_lhs_index_local
@@ -2887,10 +2885,22 @@ pattern_fsign:
     .asciiz "FSIGN"
 pattern_ftrunc:
     .asciiz "FTRUNC"
+pattern_ffloor:
+    .asciiz "FFLOOR"
 pattern_fmin:
     .asciiz "FMIN"
 pattern_fmax:
     .asciiz "FMAX"
+real_value_pattern_table_local:
+    .word pattern_real_decl
+    .word pattern_fabs
+    .word pattern_fsqrt
+    .word pattern_fsign
+    .word pattern_ftrunc
+    .word pattern_ffloor
+    .word pattern_fmin
+    .word pattern_fmax
+real_value_pattern_table_local_end:
 pattern_fclamp:
     .asciiz "FCLAMP"
 pattern_proc:

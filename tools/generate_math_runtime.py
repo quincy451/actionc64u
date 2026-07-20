@@ -727,6 +727,113 @@ def trunc_module() -> ObjectBuilder:
     return b
 
 
+def floor_module() -> ObjectBuilder:
+    """Build binary32 floor from truncation plus an exact magnitude increment."""
+    b = ObjectBuilder("rt_f_floor")
+
+    count = 0x08
+    mask = 0x09
+    source_copy = 0x0A
+
+    # Preserve the input so source and destination may refer to the same cell.
+    b.immediate(0xA0, 0x00)  # LDY #0
+    b.label("save_loop")
+    b.emit(0xB1, 0x02)  # LDA ($02),Y
+    b.emit(0x99, source_copy, 0x00)  # STA source_copy,Y
+    b.emit(0xC8)  # INY
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "save_loop")
+
+    b.jsr("rt_f_trunc")
+
+    # Positive values already have their floor. Negative integral values,
+    # infinities, NaNs, and signed zero are unchanged by truncation too.
+    b.immediate(0xA0, 0x03)
+    b.emit(0xB9, source_copy, 0x00)  # LDA source_copy,Y
+    b.branch(0x10, "done")  # BPL
+    b.immediate(0xA0, 0x00)
+    b.label("compare_loop")
+    b.emit(0xB9, source_copy, 0x00)
+    b.emit(0xD1, 0x06)  # CMP ($06),Y
+    b.branch(0xD0, "negative_fraction")
+    b.emit(0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "compare_loop")
+    b.label("done")
+    b.emit(0x60)
+
+    b.label("negative_fraction")
+    # Reconstruct the truncated result's biased exponent.
+    b.immediate(0xA0, 0x03)
+    b.emit(0xB1, 0x06)
+    b.immediate(0x29, 0x7F)
+    b.emit(0x0A)  # ASL
+    b.zero_page(0x85, count)
+    b.emit(0x88)  # DEY
+    b.emit(0xB1, 0x06)
+    b.immediate(0x29, 0x80)
+    b.branch(0xF0, "exponent_ready")
+    b.zero_page(0xE6, count)
+
+    b.label("exponent_ready")
+    b.zero_page(0xA5, count)
+    b.immediate(0xC9, 0x7F)
+    b.branch(0x90, "write_negative_one")
+    b.immediate(0xA9, 0x96)
+    b.emit(0x38)  # SEC
+    b.zero_page(0xE5, count)
+    b.zero_page(0x85, count)
+
+    # Add one integer unit to the truncated magnitude. The low COUNT bits are
+    # zero, so this is an exact increment even when it carries into exponent.
+    b.immediate(0xA0, 0x00)
+    b.label("select_byte")
+    b.zero_page(0xA5, count)
+    b.immediate(0xC9, 0x08)
+    b.branch(0x90, "select_bit")
+    b.emit(0x38)
+    b.immediate(0xE9, 0x08)  # SBC #8
+    b.zero_page(0x85, count)
+    b.emit(0xC8)
+    b.branch(0xD0, "select_byte")
+
+    b.label("select_bit")
+    b.immediate(0xA9, 0x01)
+    b.zero_page(0xA6, count)  # LDX count
+    b.branch(0xF0, "add_unit")
+    b.label("shift_bit")
+    b.emit(0x0A)  # ASL
+    b.emit(0xCA)  # DEX
+    b.branch(0xD0, "shift_bit")
+
+    b.label("add_unit")
+    b.zero_page(0x85, mask)
+    b.emit(0x18)  # CLC
+    b.emit(0xB1, 0x06)
+    b.zero_page(0x65, mask)
+    b.emit(0x91, 0x06)
+    b.branch(0x90, "done")
+    b.label("carry_unit")
+    b.emit(0xC8)
+    b.emit(0xB1, 0x06)
+    b.immediate(0x69, 0x00)
+    b.emit(0x91, 0x06)
+    b.branch(0xB0, "carry_unit")
+    b.emit(0x60)
+
+    b.label("write_negative_one")
+    b.immediate(0xA0, 0x00)
+    b.immediate(0xA9, 0x00)
+    b.emit(0x91, 0x06, 0xC8, 0x91, 0x06, 0xC8)
+    b.immediate(0xA9, 0x80)
+    b.emit(0x91, 0x06, 0xC8)
+    b.immediate(0xA9, 0xBF)
+    b.emit(0x91, 0x06, 0x60)
+
+    b.export("rt_f_floor")
+    return b
+
+
 def float_to_int_module() -> ObjectBuilder:
     """Build finite binary32 to signed 16-bit truncation toward zero."""
     b = ObjectBuilder("rt_f_to_i")
@@ -2718,6 +2825,7 @@ def main() -> int:
             compare_module(),
             sign_module(),
             trunc_module(),
+            floor_module(),
             minmax_module("rt_f_min", maximum=False),
             minmax_module("rt_f_max", maximum=True),
             clamp_module(),

@@ -81,6 +81,10 @@ Current status:
   truncation toward zero through `$06/$07`. It preserves signed zero,
   infinities, NaN payloads, and already integral values bit-for-bit, and has no
   imports.
+- `rt_f_floor.obj` reads a REAL32 value through `$02/$03`, writes its floor
+  through `$06/$07`, and imports `rt_f_trunc.obj`. It preserves signed zero,
+  infinities, NaN payloads, and integral values; finite nonintegers round toward
+  negative infinity. Source and destination may alias.
 - `rt_f_sqrt.obj` reads a REAL32 value through zero page `$02/$03`, writes the
   result through `$06/$07`, and handles every non-negative normal,
   subnormal, and signed-zero value using an exact 48-bit scaled radicand and

@@ -1468,9 +1468,27 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   matcher. Pass 6 is 8,071 bytes and retains 121 bytes under its enforced
   96-byte growth reserve; pass A remains 7,418 bytes.
 - Exact host execution covers exponent boundaries, exceptional values, signed
-  zero, subnormals, and random bit patterns. The focused direct-PRG case raises
-  current inventories to 1,335 broad shapes and 292 compiled-runtime relocation
+  zero, subnormals, and random bit patterns. The focused direct-PRG case raised
+  inventories at that checkpoint to 1,335 broad shapes and 292 compiled-runtime relocation
   oracles; the non-runtime source-backed inventory remains 173.
 - Native MATH1 now exposes nine link-selected calls and all eight constants. The
   remaining native library gap is 34 public routines, plus the general REAL
   expression/call/frame support needed by their portable bodies.
+
+## 2026-07-20 Native MATH1 Floor
+
+- Added `RT_F_FLOOR.OBJ`, a 135-byte binary32 helper that imports only
+  `RT_F_TRUNC.OBJ`. It supports aliased source/destination pointers, preserves
+  NaN payloads, infinities, signed zero, and integral values, and rounds finite
+  nonintegers toward negative infinity.
+- Native ACTC recognizes `FFloor(A)` in assignment, direct-print, and
+  REAL-condition positions. A compact intrinsic-name table keeps pass 6 at
+  8,082 bytes with 110 bytes free under its enforced 96-byte reserve.
+- The focused VICE case proves direct `floor -> trunc` ALINK dependency closure,
+  output `-7`, and pruning of staged sibling helpers. The broad matrix is now
+  1,336 shapes and the independent compiled-runtime oracle covers 293 cases.
+- Idun ACTC parses, constant-folds, and emits the same shared helper. Its MATH1
+  source now declares `FFloor` without a body, and 116 full-domain VICE vectors
+  cover both truncation and floor results.
+- Native MATH1 now exposes ten link-selected calls plus all eight constants.
+  The remaining native library gap is 33 public routines.

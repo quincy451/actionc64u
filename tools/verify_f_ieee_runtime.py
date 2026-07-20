@@ -16,6 +16,7 @@ from generate_math_runtime import (
     addsub_wrapper_module,
     compare_module,
     clamp_module,
+    floor_module,
     link_runtime_builders,
     minmax_module,
     multiply_module,
@@ -71,14 +72,18 @@ int main(int argc, char **argv)
     unsigned left;
     unsigned right;
     unsigned upper = 0;
+    uint16_t destination;
     int comparison;
     int clamp;
+    int alias;
 
     if (argc != 3) {
         return 2;
     }
     comparison = strcmp(argv[2], "compare") == 0;
     clamp = strcmp(argv[2], "clamp") == 0;
+    alias = strcmp(argv[2], "alias") == 0;
+    destination = alias ? left_addr : result_addr;
     runtime = fopen(argv[1], "rb");
     if (!runtime) {
         return 3;
@@ -109,13 +114,15 @@ int main(int argc, char **argv)
         put32(memory, left_addr, left);
         put32(memory, right_addr, right);
         put32(memory, upper_addr, upper);
-        put32(memory, result_addr, 0xccccccccu);
+        if (!alias) {
+            put32(memory, result_addr, 0xccccccccu);
+        }
         memory[0x02] = left_addr & 0xff;
         memory[0x03] = left_addr >> 8;
         memory[0x04] = right_addr & 0xff;
         memory[0x05] = right_addr >> 8;
-        memory[0x06] = result_addr & 0xff;
-        memory[0x07] = result_addr >> 8;
+        memory[0x06] = destination & 0xff;
+        memory[0x07] = destination >> 8;
         memory[0x08] = upper_addr & 0xff;
         memory[0x09] = upper_addr >> 8;
 
@@ -140,7 +147,7 @@ int main(int argc, char **argv)
             printf("%04x\n", ((unsigned)cpu->registers->x << 8) |
                               cpu->registers->a);
         } else {
-            printf("%08x\n", get32(memory, result_addr));
+            printf("%08x\n", get32(memory, destination));
         }
     }
     M6502_delete(cpu);
@@ -297,6 +304,16 @@ def expected_trunc(value: int) -> int:
     return value & ~((1 << (150 - exponent)) - 1)
 
 
+def expected_floor(value: int) -> int:
+    truncated = expected_trunc(value)
+    if value >> 31 and truncated != value:
+        if truncated & 0x7FFFFFFF == 0:
+            return 0xBF800000
+        exponent = (value >> 23) & 0xFF
+        return truncated + (1 << (150 - exponent))
+    return truncated
+
+
 def expected_clamp(value: int, lower: int, upper: int) -> int:
     if is_nan(value) or is_nan(lower) or is_nan(upper):
         return CANONICAL_QNAN
@@ -328,6 +345,8 @@ def runtime_builders(operation: str):
         return [sign_module()]
     if operation == "trunc":
         return [trunc_module()]
+    if operation == "floor":
+        return [floor_module(), trunc_module()]
     if operation in ("min", "max"):
         return [
             minmax_module(f"rt_f_{operation}", maximum=operation == "max"),
@@ -415,7 +434,7 @@ def verification_clamp_cases(
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/sign/trunc/min/max/clamp code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/trunc/floor/min/max/clamp code against exact IEEE "
             "binary32"
         )
     )
@@ -465,6 +484,7 @@ def main() -> int:
             "cmp",
             "sign",
             "trunc",
+            "floor",
             "min",
             "max",
             "clamp",
@@ -511,6 +531,8 @@ def main() -> int:
                     expected = expected_sign(left)
                 elif operation == "trunc":
                     expected = expected_trunc(left)
+                elif operation == "floor":
+                    expected = expected_floor(left)
                 elif operation == "clamp":
                     expected = expected_clamp(left, right, case[2])
                 else:
@@ -527,6 +549,38 @@ def main() -> int:
                 f"rt_f_{operation} {len(image)} linked bytes: "
                 f"{len(operation_cases)} exact edge/random cases passed"
             )
+            if operation in ("sign", "trunc", "floor"):
+                alias_completed = subprocess.run(
+                    [str(harness_path), str(runtime_path), "alias"],
+                    input="".join(
+                        f"{left:08x} {right:08x}\n"
+                        for left, right in operation_cases
+                    ),
+                    text=True,
+                    capture_output=True,
+                    check=True,
+                )
+                alias_results = [
+                    int(line, 16) for line in alias_completed.stdout.splitlines()
+                ]
+                for index, ((left, _), actual) in enumerate(
+                    zip(operation_cases, alias_results)
+                ):
+                    expected = (
+                        expected_sign(left)
+                        if operation == "sign"
+                        else expected_trunc(left)
+                        if operation == "trunc"
+                        else expected_floor(left)
+                    )
+                    if actual != expected:
+                        raise SystemExit(
+                            f"{operation} alias case {index}: {left:08x}: "
+                            f"got {actual:08x}, expected {expected:08x}"
+                        )
+                print(
+                    f"rt_f_{operation} {len(alias_results)} in-place alias cases passed"
+                )
     return 0
 
 

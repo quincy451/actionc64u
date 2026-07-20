@@ -4341,20 +4341,28 @@ class TestActcOverlay(unittest.TestCase):
             "REAL A\r"
             "REAL R\r"
             "REAL Q\r"
+            "REAL S\r"
+            "REAL T\r"
+            "REAL U\r"
             "PROC MAIN()\r"
             "R=FABS(A)\r"
             "Q=FSQRT(A)\r"
+            "S=FSIGN(A)\r"
+            "T=FTRUNC(A)\r"
+            "U=FFLOOR(A)\r"
             "RETURN\r",
             "actc-overlay-preallocation-body-mode-real-unary-assignments",
             {"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
         )
 
-        runtime_imports = ("rt_f_abs", "rt_f_sqrt")
+        runtime_imports = ("rt_f_abs", "rt_f_sqrt", "rt_f_sign", "rt_f_trunc", "rt_f_floor")
         for runtime_import in runtime_imports:
             self.assertIn(f"u {runtime_import}\n", obj)
-        self.assertLess(obj.index("u rt_f_abs\n"), obj.index("u rt_f_sqrt\n"), msg=obj)
+        for earlier, later in zip(runtime_imports, runtime_imports[1:]):
+            self.assertLess(obj.index(f"u {earlier}\n"), obj.index(f"u {later}\n"), msg=obj)
         self.assertNotIn("u fabs\n", obj)
         self.assertNotIn("u fsqrt\n", obj)
+        self.assertNotIn("u ffloor\n", obj)
 
     def test_actc_preallocation_body_overlay_mode_maps_real_binary_assignments(self) -> None:
         obj = self.compile_overlay_object(
@@ -8204,6 +8212,15 @@ class TestActcOverlay(unittest.TestCase):
                 "00",
                 "p1u0T0S0L0U0u1T1S1L1U1p2u2r",
             ),
+            (
+                "ffloor",
+                "A=REAL(0-7)\rX=FFloor(A)\r",
+                "rt_s_to_f",
+                "rt_f_floor",
+                "F9",
+                "FF",
+                "p0u0T0S0L0U0u1T1S1L1U1p1u2r",
+            ),
         )
         for name, statements, convert_module, unary_module, value_lo, value_hi, compact_body in cases:
             with self.subTest(name=name):
@@ -8281,6 +8298,19 @@ class TestActcOverlay(unittest.TestCase):
                 "IF FTrunc(A)<B THEN\rPrintE(\"OK\")\rFI\rRETURN\r",
                 ("rt_f_trunc", "rt_f_cmp"),
             ),
+            (
+                "floor-print-position",
+                "MODULE MAIN\rREAL A\rPROC MAIN()\r"
+                "A=REAL(0-7)\rPrintRE(FFloor(A))\rRETURN\r",
+                ("rt_f_floor", "rt_print_f"),
+            ),
+            (
+                "floor-condition-position",
+                "MODULE MAIN\rREAL A\rREAL B\rPROC MAIN()\r"
+                "A=REAL(0-7)\rB=REAL(0)\r"
+                "IF FFloor(A)<B THEN\rPrintE(\"OK\")\rFI\rRETURN\r",
+                ("rt_f_floor", "rt_f_cmp"),
+            ),
         )
         for name, source, expected_modules in position_cases:
             with self.subTest(name=name):
@@ -8295,6 +8325,7 @@ class TestActcOverlay(unittest.TestCase):
                     "rt_f_sqrt",
                     "rt_f_sign",
                     "rt_f_trunc",
+                    "rt_f_floor",
                     "rt_f_min",
                     "rt_f_max",
                 ):

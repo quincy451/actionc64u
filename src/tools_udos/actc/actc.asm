@@ -12722,6 +12722,14 @@ find_or_store_rt_f_trunc_external:
     jsr copy_const_ptr_to_declared_module_name
     jmp find_or_store_external_from_declared
 
+find_or_store_rt_f_floor_external:
+    lda #<runtime_symbol_rt_f_floor
+    sta const_ptr
+    lda #>runtime_symbol_rt_f_floor
+    sta const_ptr+1
+    jsr copy_const_ptr_to_declared_module_name
+    jmp find_or_store_external_from_declared
+
 find_or_store_rt_f_min_external:
     lda #<runtime_symbol_rt_f_min
     sta const_ptr
@@ -12798,6 +12806,9 @@ find_or_store_real_operator_external_from_a:
 :   cmp #'c'
     bne :+
     jmp find_or_store_rt_f_trunc_external
+:   cmp #'o'
+    bne :+
+    jmp find_or_store_rt_f_floor_external
 :   cmp #'<'
     bne :+
     jmp find_or_store_rt_f_min_external
@@ -16186,6 +16197,8 @@ runtime_symbol_rt_f_sign:
     .asciiz "RT_F_SIGN"
 runtime_symbol_rt_f_trunc:
     .asciiz "RT_F_TRUNC"
+runtime_symbol_rt_f_floor:
+    .asciiz "RT_F_FLOOR"
 runtime_symbol_rt_f_min:
     .asciiz "RT_F_MIN"
 runtime_symbol_rt_f_max:

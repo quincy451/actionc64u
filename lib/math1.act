@@ -5,9 +5,9 @@
 ; only the referenced RT_*.OBJ modules in the final PRG.
 ;
 ; Current callable coverage is the core REAL32 proof surface: REAL(x), INT(x),
-; REAL arithmetic/comparison operators, FAbs, FSqrt, FSign, FTrunc, FMin, FMax,
-; FClamp, and PrintR/PrintRE. Wider functions such as trig remain deferred until
-; matching dependency-sized OBJ modules exist.
+; REAL arithmetic/comparison operators, FAbs, FSqrt, FSign, FTrunc, FFloor,
+; FMin, FMax, FClamp, and PrintR/PrintRE. Wider functions such as trig remain
+; deferred until matching dependency-sized OBJ modules exist.
 
 REAL CONST MATH_PI=3.14159265358979323846
 REAL CONST MATH_TWO_PI=6.28318530717958647692
@@ -25,6 +25,7 @@ REAL CONST MATH_SQRT2=1.41421356237309504880
 ; REAL FUNC FSqrt(REAL value)
 ; REAL FUNC FSign(REAL value)
 ; REAL FUNC FTrunc(REAL value)
+; REAL FUNC FFloor(REAL value)
 ; REAL FUNC FMin(REAL left,right)
 ; REAL FUNC FMax(REAL left,right)
 ; REAL FUNC FClamp(REAL value,lower,upper)

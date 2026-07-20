@@ -7,12 +7,14 @@ Target: C64 6502 generated program; no UDOS calls or resident service required.
 Numeric base: IEEE-754 binary32 REAL, round-to-nearest/ties-to-even core runtime.
 
 Native UDOS status: all 8 public constants are available through the usable
-INCLUDE "MATH1" header, and nine low-level calls are available: FAbs, FSqrt,
-FSign, FTrunc, FMin, FMax, FClamp, PrintR, and PrintRE. FSign is a dependency-free
+INCLUDE "MATH1" header, and ten low-level calls are available: FAbs, FSqrt,
+FSign, FTrunc, FFloor, FMin, FMax, FClamp, PrintR, and PrintRE. FSign is a dependency-free
 selected OBJ helper with canonical-NaN and signed-zero behavior. FMin/FMax use
 independently selected OBJ helpers with the complete portable NaN and
 signed-zero policy. FTrunc is a dependency-free bitwise binary32 helper that
-preserves signed zero, infinities, and NaN payloads. FClamp selects its
+preserves signed zero, infinities, and NaN payloads. FFloor imports only FTrunc,
+rounds finite nonintegers toward negative infinity, and preserves exceptional,
+zero, and integral inputs bit-for-bit. FClamp selects its
 comparison/minimum/maximum closure only
 when referenced, returns canonical NaN for NaN input or inverted bounds, and
 otherwise preserves the selected operand bits. Native source lowering remains
@@ -27,7 +29,7 @@ Idun/Alpine fork implements the complete source library: 8 public constants,
 43 public routines, and 1 private helper, producing 51 public help features.
 Native delivery still requires general REAL function parameters, locals,
 expressions, calls, and returns before those portable bodies can provide the
-remaining 34 public routines. See docs/idun_feature_parity.md.
+remaining 33 public routines. See docs/idun_feature_parity.md.
 
 The constants and routines below are public after INCLUDE "MATH1".  The
 transcendental routines are portable Action implementations over the binary32
@@ -130,7 +132,7 @@ Porting checklist for the native C64U tree
 
 1. Port lib/math1.act as source, retaining the public signatures above.
 2. Supply the same link-selected binary32 primitives for PrintR, PrintRE,
-   FAbs, FSqrt, FSign, FTrunc, FMin, FMax, FClamp, add, subtract, multiply, divide, compare, INT
+   FAbs, FSqrt, FSign, FTrunc, FFloor, FMin, FMax, FClamp, add, subtract, multiply, divide, compare, INT
    conversion, and REAL conversion.
 3. Keep _MathWrapPi private; help/catalog builders intentionally ignore names
    beginning with an underscore.

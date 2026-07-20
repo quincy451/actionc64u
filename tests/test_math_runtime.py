@@ -40,6 +40,7 @@ class TestMathRuntime(unittest.TestCase):
             "cmp",
             "sign",
             "trunc",
+            "floor",
             "min",
             "max",
             "clamp",

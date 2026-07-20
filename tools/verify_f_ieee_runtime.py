@@ -14,6 +14,7 @@ from pathlib import Path
 from generate_math_runtime import (
     addsub_core_module,
     addsub_wrapper_module,
+    ceil_module,
     compare_module,
     clamp_module,
     floor_module,
@@ -314,6 +315,10 @@ def expected_floor(value: int) -> int:
     return truncated
 
 
+def expected_ceil(value: int) -> int:
+    return expected_floor(value ^ 0x80000000) ^ 0x80000000
+
+
 def expected_clamp(value: int, lower: int, upper: int) -> int:
     if is_nan(value) or is_nan(lower) or is_nan(upper):
         return CANONICAL_QNAN
@@ -347,6 +352,8 @@ def runtime_builders(operation: str):
         return [trunc_module()]
     if operation == "floor":
         return [floor_module(), trunc_module()]
+    if operation == "ceil":
+        return [ceil_module(), floor_module(), trunc_module()]
     if operation in ("min", "max"):
         return [
             minmax_module(f"rt_f_{operation}", maximum=operation == "max"),
@@ -434,7 +441,7 @@ def verification_clamp_cases(
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/sign/trunc/floor/min/max/clamp code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/min/max/clamp code against exact IEEE "
             "binary32"
         )
     )
@@ -485,6 +492,7 @@ def main() -> int:
             "sign",
             "trunc",
             "floor",
+            "ceil",
             "min",
             "max",
             "clamp",
@@ -533,6 +541,8 @@ def main() -> int:
                     expected = expected_trunc(left)
                 elif operation == "floor":
                     expected = expected_floor(left)
+                elif operation == "ceil":
+                    expected = expected_ceil(left)
                 elif operation == "clamp":
                     expected = expected_clamp(left, right, case[2])
                 else:
@@ -549,7 +559,7 @@ def main() -> int:
                 f"rt_f_{operation} {len(image)} linked bytes: "
                 f"{len(operation_cases)} exact edge/random cases passed"
             )
-            if operation in ("sign", "trunc", "floor"):
+            if operation in ("sign", "trunc", "floor", "ceil"):
                 alias_completed = subprocess.run(
                     [str(harness_path), str(runtime_path), "alias"],
                     input="".join(
@@ -572,6 +582,8 @@ def main() -> int:
                         else expected_trunc(left)
                         if operation == "trunc"
                         else expected_floor(left)
+                        if operation == "floor"
+                        else expected_ceil(left)
                     )
                     if actual != expected:
                         raise SystemExit(

@@ -834,6 +834,43 @@ def floor_module() -> ObjectBuilder:
     return b
 
 
+def ceil_module() -> ObjectBuilder:
+    """Build binary32 ceiling by applying floor to the negated operand."""
+    b = ObjectBuilder("rt_f_ceil")
+
+    source_copy = 0x0A
+
+    # Preserve the input before changing its sign so source and destination may
+    # refer to the same cell. The identity ceil(x) = -floor(-x) also preserves
+    # NaN payloads, infinities, integral values, and signed zero bit-for-bit.
+    b.immediate(0xA0, 0x00)  # LDY #0
+    b.label("save_loop")
+    b.emit(0xB1, 0x02)  # LDA ($02),Y
+    b.emit(0x99, source_copy, 0x00)  # STA source_copy,Y
+    b.emit(0xC8)  # INY
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "save_loop")
+
+    b.immediate(0xA0, 0x03)
+    b.emit(0xB9, source_copy, 0x00)
+    b.immediate(0x49, 0x80)
+    b.emit(0x99, source_copy, 0x00)
+    b.immediate(0xA9, source_copy)
+    b.zero_page(0x85, 0x02)
+    b.immediate(0xA9, 0x00)
+    b.zero_page(0x85, 0x03)
+    b.jsr("rt_f_floor")
+
+    b.immediate(0xA0, 0x03)
+    b.emit(0xB1, 0x06)
+    b.immediate(0x49, 0x80)
+    b.emit(0x91, 0x06)
+    b.emit(0x60)
+
+    b.export("rt_f_ceil")
+    return b
+
+
 def float_to_int_module() -> ObjectBuilder:
     """Build finite binary32 to signed 16-bit truncation toward zero."""
     b = ObjectBuilder("rt_f_to_i")
@@ -2826,6 +2863,7 @@ def main() -> int:
             sign_module(),
             trunc_module(),
             floor_module(),
+            ceil_module(),
             minmax_module("rt_f_min", maximum=False),
             minmax_module("rt_f_max", maximum=True),
             clamp_module(),

@@ -39,6 +39,7 @@
     "src/runtime/modules/rt_f_abs.obj": "04fdada4c82be13da01e44aa9def6386b44afe3c51ce0edf764916b3adaff558",
     "src/runtime/modules/rt_f_add.obj": "3f463ac6a68c9462c3a3cc6fe3e2400b19890d96fc7793868992d55da6e6430f",
     "src/runtime/modules/rt_f_addsub_core.obj": "2e1e74306c9b24338ac4778a2ae59e95546951e20d17864acedadb4e8571dad2",
+    "src/runtime/modules/rt_f_ceil.obj": "02edcd630d4444e66d6f734dc6b39d540f2323da138c5199871143383901d8dd",
     "src/runtime/modules/rt_f_clamp.obj": "8bc492eb7d57519f85b0a24321fd1ca768802c7437c8305fef693e5adc147d1f",
     "src/runtime/modules/rt_f_cmp.obj": "ebaa475488ce202303665d411ffa9f7cfec9aabf3f3e28bb4b576329c5e0cfa2",
     "src/runtime/modules/rt_f_div.obj": "275324ef70f4af97a7b14a7ba5dba36daf1ecfcf0297a21f0cae9323b277ff34",
@@ -137,7 +138,7 @@
     "src/runtime/modules/rt_sprite_yexp.obj": "9b53bd53a49e5ae69790728f1500738c6dd2c5659b02d9922eca94ef200f6824",
     "tools/generate_exact_print_runtime.py": "1f58d909496e2b82a4c85accb7f6bd41dd84c23a481cc6b1217e1995dfddeef2",
     "tools/generate_input_runtime.py": "ac43be898e1c975fce7de5e4084c52a84a535bf530f38c956c0978d3986e1c34",
-    "tools/generate_math_runtime.py": "3f401d3323e4bc5df70e4a273859ec685d9a15a308aac83b008d21d251cf8671",
+    "tools/generate_math_runtime.py": "cd79ced1ebc6e6038e037a16ec4c3a01fe5c8360b62d937efdbd7b03393869f7",
     "tools/generate_reu_runtime.py": "0f63e4cdfc71934dbdd6eeb408b691c4d88f161856e9473cc2595412cda7c695",
     "tools/shared_6502_sync.py": "096671a9c12ce6211873a65c6f451e6e6baea09531aaccc65d9608f30e68c04f"
   },

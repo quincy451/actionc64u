@@ -51,12 +51,12 @@ not parity artifacts.
 | Program-owned overlay sections | `OVERLAY`/`ENDOVERLAY` and relocated `OverlayCall` | No native source lowering | Native compiler gap; ACTC tool overlays are not equivalent |
 | Program argument entry | `MAIN(argc,argv)` through the Idun target service | `MAIN()` and UDOS command-tail workflow | OS-specific contracts; expose equivalent user arguments without copying the Idun upload ABI |
 | IEEE-754 binary32 arithmetic and exceptional values | Standalone modules | Standalone modules plus native support modules | Parity at runtime |
-| General REAL source expressions, calls, and returns | Full binary32 compiler path with intrinsic `FTrunc` and `FFloor` | Core operations, direct `FSign`/`FTrunc`/`FFloor`/`FMin`/`FMax` on named REAL values, a constrained `FClamp` ternary root, and constrained zero-, one-, and two-parameter native function shapes | Native compiler gap; these builtin semantics are complete, but arbitrary expression trees, calls, and returns are not |
+| General REAL source expressions, calls, and returns | Full binary32 compiler path with intrinsic `FTrunc`, `FFloor`, and `FCeil` | Core operations, direct `FSign`/`FTrunc`/`FFloor`/`FCeil`/`FMin`/`FMax` on named REAL values, a constrained `FClamp` ternary root, and constrained zero-, one-, and two-parameter native function shapes | Native compiler gap; these builtin semantics are complete, but arbitrary expression trees, calls, and returns are not |
 | INPUT1 joystick/two-button mouse API | 19 declarations | 19 declarations | Parity; physical checks remain |
 | DBF1 API | 20 declarations | 20 declarations | Parity; physical REU/disk checks remain |
 | SIDSPR1 API | 37 declarations | 37 declarations | Parity; physical SID/display checks remain |
-| Full MATH1 source library | 43 public routines plus 8 constants, 51 catalog features; `FTrunc` and `FFloor` are intrinsic and the remaining implementations are portable source | Eight compile-time constants plus ten link-selected callable builtins: `PrintR`, `PrintRE`, `FAbs`, `FSqrt`, `FSign`, `FTrunc`, `FFloor`, `FMin`, `FMax`, and `FClamp` | Constant, truncation, and floor parity; native implementation gap remains for 33 public routines |
-| MATH1 reachable-only packaging | `FTrunc` and `FFloor` import independent OBJs, but full-source `INCLUDE` still emits all other MATH1 implementation bodies into the application OBJ | Constants emit no code; ten callable builtins import independent OBJ modules | Cross-product packaging gap; Idun needs call-graph pruning or dependency-sized library objects before full parity |
+| Full MATH1 source library | 43 public routines plus 8 constants, 51 catalog features; `FTrunc`, `FFloor`, and `FCeil` are intrinsic and the remaining implementations are portable source | Eight compile-time constants plus eleven link-selected callable builtins: `PrintR`, `PrintRE`, `FAbs`, `FSqrt`, `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FMin`, `FMax`, and `FClamp` | Constant, truncation, floor, and ceiling parity; native implementation gap remains for 32 public routines |
+| MATH1 reachable-only packaging | `FTrunc`, `FFloor`, and `FCeil` import independent OBJs, but full-source `INCLUDE` still emits all other MATH1 implementation bodies into the application OBJ | Constants emit no code; eleven callable builtins import independent OBJ modules | Cross-product packaging gap; Idun needs call-graph pruning or dependency-sized library objects before full parity |
 | Full GFX1 source library | 67 public source routines plus 16 constants; 60 routines plus the constants form the 76-feature GFX1 catalog, while seven low-level sprite aliases are cataloged under SIDSPR1 | Fifteen low-level callable declarations | Native implementation gap |
 | ASP1/ABM1 resources and compiler embedding | Linux editors and ACTC loader | Contract documented only | Native implementation gap |
 | Source formatting | `actspc` and ACTEDIT F6 | No complete UDOS formatter | Native workflow gap |
@@ -83,13 +83,13 @@ The shipped native `LIB/MATH1.ACT` is now an actual include header rather than
 a second application module. `INCLUDE "MATH1"` exposes all eight portable
 constants before or after the caller's `MODULE` declaration. The constants
 fold to literal binary32 words, allocate no target storage, and select no
-runtime object. The ten currently supported calls remain compiler-recognized
+runtime object. The eleven currently supported calls remain compiler-recognized
 builtins documented in the header; each helper is still an independent OBJ1
-module selected only when reachable. Idun lowers `FTrunc` and `FFloor` to the
+module selected only when reachable. Idun lowers `FTrunc`, `FFloor`, and `FCeil` to the
 same shared helpers and keeps portable source implementations for the other
 MATH1 routines because its host compiler can lower those bodies directly.
 
-The first item now has nine tested checkpoints. Native pass A accepts two named
+The first item now has ten tested checkpoints. Native pass A accepts two named
 REAL arguments after their immediate `REAL(integer)` initializers, copies both
 values into distinct parameter storage, and returns either named parameter by
 pointer. Dedicated pass K then lowers the exact finite comparison/select form
@@ -109,7 +109,10 @@ zero, and integral values while clearing only fractional significand bits for
 finite nonintegers. `FFloor(A)` uses a 135-byte helper in the same positions;
 ALINK selects its truncation dependency transitively, and finite nonintegers
 round toward negative infinity while exceptional and integral values are
-preserved. Pass K also owns a bounded four-REAL root that initializes three
+preserved. `FCeil(A)` uses a 42-byte helper in those same positions and imports
+floor, which in turn imports truncation. It implements `-FFloor(-A)`, preserving
+NaN payloads, infinities, signed zero, and integral values while rounding finite
+nonintegers toward positive infinity. Pass K also owns a bounded four-REAL root that initializes three
 values, assigns a named destination from `FClamp(value,lower,upper)`, prints a
 named value, and returns. It captures initializer, argument, destination, and
 print storage independently, so those roles need not follow declaration order.
@@ -123,7 +126,7 @@ Remaining work is dependency ordered:
 
 1. Generalize native REAL declarations, parameters, locals, expressions, calls,
    and returns enough to compile portable multi-function MATH1 modules.
-2. Port the remaining 33 MATH1 routines in dependency-sized OBJ modules and
+2. Port the remaining 32 MATH1 routines in dependency-sized OBJ modules and
    prove representative values in direct linked PRGs without making unused
    functions reachable. Give Idun equivalent call-graph pruning or generated
    dependency-sized modules so its full-source include no longer embeds every
@@ -431,10 +434,25 @@ direct-print, and REAL-condition forms; the focused VICE PRG proves the
 `floor -> trunc` ALINK closure and sibling pruning. Idun ACTC parses,
 constant-folds, and emits the same intrinsic, and MATH1 no longer embeds its
 portable `FFloor` body. Exact host checks and 116 full-domain Idun VICE vectors
-pass. Current inventories are 1,336 broad direct-PRG shapes, 173 non-runtime
+pass. At that checkpoint inventories were 1,336 broad direct-PRG shapes, 173 non-runtime
 source-backed object-emission shapes, and
 293 compiled-runtime relocation-oracle cases. Pass 6 is 8,082 bytes and retains 110 bytes under its
-96-byte growth reserve; the native MATH1 gap is now 33 public routines.
+96-byte growth reserve; the native MATH1 gap was 33 public routines.
+
+The next MATH1 ceiling slice adds the 42-byte `RT_F_CEIL.OBJ`. It implements
+`ceil(x) = -floor(-x)`, imports `RT_F_FLOOR.OBJ` and therefore transitively
+`RT_F_TRUNC.OBJ`, is safe when source and destination alias, and preserves NaN
+payloads, infinities, signed zero, and integral values while rounding finite
+nonintegers toward positive infinity. Native ACTC handles assignment,
+direct-print, and REAL-condition forms; the focused VICE PRG proves the
+`ceil -> floor -> trunc` ALINK closure and sibling pruning. Idun ACTC parses,
+constant-folds, and emits the same intrinsic, and MATH1 no longer embeds its
+portable `FCeil` body. Exact host checks and 116 full-domain Idun VICE vectors
+pass. Current inventories are 1,337 broad direct-PRG shapes, 173 non-runtime
+source-backed object-emission shapes, and 294 compiled-runtime relocation-oracle
+cases. Refactoring pass 6 unary dispatch reduced it to 8,062 bytes with 130
+bytes free under its 96-byte growth reserve; the native MATH1 gap is now 32
+public routines.
 
 Pass 1 now contains only the streamed module-header validator. Moving the
 transform into `ACTC_OVLI.BIN` reduced pass 1 to 788 bytes. Integer folding,

@@ -1490,5 +1490,16 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
 - Idun ACTC parses, constant-folds, and emits the same shared helper. Its MATH1
   source now declares `FFloor` without a body, and 116 full-domain VICE vectors
   cover both truncation and floor results.
-- Native MATH1 now exposes ten link-selected calls plus all eight constants.
-  The remaining native library gap is 33 public routines.
+- At that checkpoint native MATH1 exposed ten link-selected calls plus all
+  eight constants, leaving a 33-routine native library gap.
+- Native ACTC now recognizes `FCeil(A)` in assignment, direct-print, and
+  REAL-condition positions. The 42-byte helper imports floor and transitively
+  truncation, implements `-FFloor(-A)`, supports aliased pointers, and preserves
+  NaN payloads, infinities, signed zero, and integral values.
+- Linux ACTC parses and constant-folds the same intrinsic, emits `RT_F_CEIL`
+  for dynamic expressions, and no longer compiles the portable MATH1 ceiling
+  body. Exact host checks, 116 Idun VICE vectors, and a focused native direct
+  PRG prove complete semantics and `ceil -> floor -> trunc` closure.
+- Current inventories are 1,337 broad and 294 compiled-runtime cases. Pass 6
+  is 8,062 bytes with 130 bytes free after compacting unary dispatch. Native
+  MATH1 now exposes eleven link-selected calls and lacks 32 public routines.

@@ -367,6 +367,7 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
                 "FSIGN",
                 "FTRUNC",
                 "FFLOOR",
+                "FCEIL",
                 "FMIN",
                 "FMAX",
                 "FCLAMP",
@@ -384,6 +385,7 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
             "actc_runtime_math1_fsign_split_linked",
             "actc_runtime_math1_ftrunc_split_linked",
             "actc_runtime_math1_ffloor_split_linked",
+            "actc_runtime_math1_fceil_split_linked",
             "actc_runtime_math1_fmin_split_linked",
             "actc_runtime_math1_fmax_split_linked",
             "actc_runtime_math1_fclamp_split_linked",
@@ -400,6 +402,7 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
             "rt_f_sign",
             "rt_f_trunc",
             "rt_f_floor",
+            "rt_f_ceil",
             "rt_f_min",
             "rt_f_max",
             "rt_f_clamp",
@@ -1828,6 +1831,7 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
             "actc_runtime_math1_fsign_split_linked",
             "actc_runtime_math1_ftrunc_split_linked",
             "actc_runtime_math1_ffloor_split_linked",
+            "actc_runtime_math1_fceil_split_linked",
             "actc_runtime_math1_fmin_split_linked",
             "actc_runtime_math1_fmax_split_linked",
             "actc_runtime_math1_fclamp_split_linked",
@@ -2648,8 +2652,8 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
         import run_action_alink_prg_probe as probe
 
         shapes = probe.COMPILED_RUNTIME_LINK_ORACLE_SHAPES
-        self.assertEqual(len(shapes), 293)
-        self.assertEqual(len(set(shapes)), 293)
+        self.assertEqual(len(shapes), 294)
+        self.assertEqual(len(set(shapes)), 294)
         for shape in shapes:
             with self.subTest(shape=shape):
                 case = probe.DIRECT_PRG_CASES[shape]

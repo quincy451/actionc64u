@@ -1286,29 +1286,6 @@ try_consume_real_open_local_fail_restore:
     sec
     rts
 
-try_consume_fabs_open_local:
-    lda #<pattern_fabs
-    ldx #>pattern_fabs
-    bne try_consume_real_unary_open_local
-
-try_consume_fsqrt_open_local:
-    lda #<pattern_fsqrt
-    ldx #>pattern_fsqrt
-    bne try_consume_real_unary_open_local
-
-try_consume_fsign_open_local:
-    lda #<pattern_fsign
-    ldx #>pattern_fsign
-    bne try_consume_real_unary_open_local
-
-try_consume_ftrunc_open_local:
-    lda #<pattern_ftrunc
-    ldx #>pattern_ftrunc
-    bne try_consume_real_unary_open_local
-
-try_consume_ffloor_open_local:
-    lda #<pattern_ffloor
-    ldx #>pattern_ffloor
 try_consume_real_unary_open_local:
     sty symbol_start_y_local
     sta pattern_ptr_local
@@ -2055,35 +2032,27 @@ emit_runtime_real_value_local_or_fail:
     bcs emit_runtime_real_value_local_try_fabs
     jmp emit_runtime_real_explicit_value_after_open_local_or_fail
 emit_runtime_real_value_local_try_fabs:
-    jsr try_consume_fabs_open_local
-    bcs emit_runtime_real_value_local_try_fsqrt
-    lda #'a'
+    ldx #$00
+emit_runtime_real_value_local_unary_loop:
+    lda real_unary_pattern_table_local,x
+    sta pattern_ptr_local
+    inx
+    lda real_unary_pattern_table_local,x
+    sta pattern_ptr_local+1
+    inx
+    lda real_unary_pattern_table_local,x
     sta real_operator_local
+    inx
+    stx real_lhs_index_local
+    lda pattern_ptr_local
+    ldx pattern_ptr_local+1
+    jsr try_consume_real_unary_open_local
+    bcs emit_runtime_real_value_local_unary_next
     jmp emit_runtime_real_unary_value_local_or_fail
-emit_runtime_real_value_local_try_fsqrt:
-    jsr try_consume_fsqrt_open_local
-    bcs emit_runtime_real_value_local_try_fsign
-    lda #'q'
-    sta real_operator_local
-    jmp emit_runtime_real_unary_value_local_or_fail
-emit_runtime_real_value_local_try_fsign:
-    jsr try_consume_fsign_open_local
-    bcs emit_runtime_real_value_local_try_ftrunc
-    lda #'g'
-    sta real_operator_local
-    jmp emit_runtime_real_unary_value_local_or_fail
-emit_runtime_real_value_local_try_ftrunc:
-    jsr try_consume_ftrunc_open_local
-    bcs emit_runtime_real_value_local_try_ffloor
-    lda #'c'
-    sta real_operator_local
-    jmp emit_runtime_real_unary_value_local_or_fail
-emit_runtime_real_value_local_try_ffloor:
-    jsr try_consume_ffloor_open_local
-    bcs emit_runtime_real_value_local_try_binary
-    lda #'o'
-    sta real_operator_local
-    jmp emit_runtime_real_unary_value_local_or_fail
+emit_runtime_real_value_local_unary_next:
+    ldx real_lhs_index_local
+    cpx #(real_unary_pattern_table_local_end-real_unary_pattern_table_local)
+    bcc emit_runtime_real_value_local_unary_loop
 emit_runtime_real_value_local_try_binary:
     jsr emit_runtime_real_binary_value_local_or_fail
     bcs emit_runtime_real_value_local_or_fail_generic
@@ -2887,6 +2856,8 @@ pattern_ftrunc:
     .asciiz "FTRUNC"
 pattern_ffloor:
     .asciiz "FFLOOR"
+pattern_fceil:
+    .asciiz "FCEIL"
 pattern_fmin:
     .asciiz "FMIN"
 pattern_fmax:
@@ -2898,9 +2869,24 @@ real_value_pattern_table_local:
     .word pattern_fsign
     .word pattern_ftrunc
     .word pattern_ffloor
+    .word pattern_fceil
     .word pattern_fmin
     .word pattern_fmax
 real_value_pattern_table_local_end:
+real_unary_pattern_table_local:
+    .word pattern_fabs
+    .byte 'a'
+    .word pattern_fsqrt
+    .byte 'q'
+    .word pattern_fsign
+    .byte 'g'
+    .word pattern_ftrunc
+    .byte 'c'
+    .word pattern_ffloor
+    .byte 'o'
+    .word pattern_fceil
+    .byte 'l'
+real_unary_pattern_table_local_end:
 pattern_fclamp:
     .asciiz "FCLAMP"
 pattern_proc:

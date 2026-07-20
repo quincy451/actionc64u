@@ -1,0 +1,7 @@
+OBJ1
+x rt_f_ceil 0 42
+b u0M
+u rt_f_floor
+m A0 00 B1 02 99 0A 00 C8 C0 04 D0 F6 A0 03 B9 0A 00 49 80 99 0A 00 A9 0A 85 02 A9 00 85 03 20 00 00 A0 03 B1 06 49 80 91 06 60
+r 31 u0
+n rt_f_ceil

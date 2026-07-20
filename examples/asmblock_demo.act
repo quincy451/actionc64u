@@ -1,0 +1,18 @@
+; Native ASMBLOCK code is emitted into the final linked PRG.
+; Labels remain private to the block and Action globals relocate normally.
+
+MODULE ASMBLOCK_DEMO
+CARD VALUE
+PROC MAIN()
+ASMBLOCK [
+LDA #21
+ASL A
+STA VALUE
+LDA VALUE
+STA $0400
+LDX #3
+DELAY:
+DEX
+BNE DELAY
+]
+RETURN

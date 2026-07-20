@@ -7,7 +7,8 @@ import tempfile
 import unittest
 
 
-ACTC_MIN_RESIDENT_HEADROOM = 8
+ACTC_MIN_RESIDENT_HEADROOM = 80
+ACTC_OVERLAY_SCRATCH_BASE = 0x8000
 
 
 def count_body_ops(body: str) -> int:
@@ -71,7 +72,14 @@ class TestActcCapacity(unittest.TestCase):
         match = re.search(r"^BSS\s+([0-9A-Fa-f]{6})\s+([0-9A-Fa-f]{6})\s+", map_text, re.MULTILINE)
         self.assertIsNotNone(match, msg=map_text)
         bss_end = int(match.group(2), 16)
-        self.assertLessEqual(bss_end, 0x9FFF, msg=map_text)
+        self.assertLess(
+            bss_end,
+            ACTC_OVERLAY_SCRATCH_BASE,
+            msg=(
+                f"ACTC BSS end ${bss_end:04X} overlaps overlay scratch at "
+                f"${ACTC_OVERLAY_SCRATCH_BASE:04X}\n{map_text}"
+            ),
+        )
         resident_floor = self.find_resident_floor()
         self.assertLess(
             bss_end,
@@ -89,8 +97,18 @@ class TestActcCapacity(unittest.TestCase):
             ),
         )
 
+    def current_actc_labels(self) -> set[str]:
+        return {
+            fields[2].lstrip(".")
+            for line in (self.build_dir / "actc.current.labels").read_text(
+                encoding="ascii"
+            ).splitlines()
+            if len(fields := line.split()) >= 3
+        }
+
     def find_resident_floor(self) -> int:
         udos_dir = self.root.parent / "udos"
+        floor_symbols = ("tool_abi_preserved_start", "reu_transfer_chunk_loop")
         candidates = [
             udos_dir / "build" / "release" / "udos-resident.labels",
             udos_dir / "build" / "udos-resident.labels",
@@ -100,9 +118,82 @@ class TestActcCapacity(unittest.TestCase):
                 continue
             for line in path.read_text(encoding="ascii", errors="ignore").splitlines():
                 parts = line.split()
-                if len(parts) >= 3 and parts[2].lstrip(".") == "reu_transfer_chunk_loop":
+                if len(parts) >= 3 and parts[2].lstrip(".") in floor_symbols:
                     return int(parts[1], 16)
         return 0x4AFE
+
+    def test_production_actc_omits_disabled_fallback_scratch(self) -> None:
+        self.require_toolchain()
+        self.run_checked([str(self.root / "tools" / "build_actc_udos.sh")])
+        self.assert_actc_stays_inside_tool_window()
+
+        labels = self.current_actc_labels()
+        fallback_only = {
+            "payload_offset_hi",
+            "expr_group_saved_saved_lo",
+            "expr_group_saved_saved_hi",
+            "expr_compare_hi",
+            "expr_group_saved_compare_lo",
+            "expr_group_saved_compare_hi",
+            "expr_runtime_wrapped_data",
+            "preallocate_condition_start_y_data",
+            "preallocate_call_arg_scan_depth_data",
+            "preallocate_bool_primary_start_y_data",
+            "preallocate_print_start_y_data",
+            "expr_print_op",
+            "expr_digit_count",
+            "param_bind_count_data",
+            "param_bind_base_data",
+            "real_rhs_index_data",
+            "body_marker_visit_mask_data",
+        }
+        self.assertTrue(fallback_only.isdisjoint(labels), msg=sorted(fallback_only & labels))
+
+    def test_resident_fallback_builds_retain_required_scratch(self) -> None:
+        self.require_toolchain()
+        build = str(self.root / "tools" / "build_actc_udos.sh")
+        cases = (
+            (
+                "ACTC_KEEP_BODY_RESIDENT_FALLBACK=1",
+                {
+                    "expr_group_saved_saved_lo",
+                    "expr_compare_hi",
+                    "expr_group_saved_compare_hi",
+                    "expr_runtime_wrapped_data",
+                    "preallocate_condition_start_y_data",
+                    "preallocate_call_arg_scan_depth_data",
+                    "preallocate_bool_primary_start_y_data",
+                    "preallocate_print_start_y_data",
+                    "expr_print_op",
+                    "param_bind_count_data",
+                    "param_bind_base_data",
+                    "real_rhs_index_data",
+                },
+            ),
+            ("ACTC_USE_LAYOUT_OVERLAY=0", {"payload_offset_hi"}),
+            (
+                "ACTC_USE_EMIT_OVERLAY=0",
+                {"expr_digit_count", "body_marker_visit_mask_data"},
+            ),
+        )
+        try:
+            for setting, required in cases:
+                with self.subTest(setting=setting):
+                    self.run_checked(
+                        [
+                            "env",
+                            setting,
+                            "ACTC_ENABLE_REAL_CONST_EVALUATOR=0",
+                            build,
+                        ]
+                    )
+                    self.assert_actc_stays_inside_tool_window()
+                    labels = self.current_actc_labels()
+                    self.assertTrue(required <= labels, msg=sorted(required - labels))
+                    self.assertIn("actc_eval_real_const", labels)
+                    self.assertNotIn("actc_real_const_parse_expr", labels)
+        finally:
+            self.run_checked([build])
 
     def assert_production_actc_loads_and_compiles_reu_source(
         self,
@@ -242,7 +333,7 @@ class TestActcCapacity(unittest.TestCase):
             msg=json.dumps(summary),
         )
         self.assertTrue(
-            any(op["params"][0:3] == [0, 0xEE, 0] and op["actual_len"] == 3 for op in reu_writes),
+            any(op["params"][0:3] == [0, 0x10, 0xFF] and op["actual_len"] == 3 for op in reu_writes),
             msg=json.dumps(summary),
         )
         self.assertTrue(

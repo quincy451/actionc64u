@@ -1,0 +1,276 @@
+ActionC64U GFX1, ACTSPRITE, and ACTBITMAP additions
+==================================================
+
+Sources of record
+-----------------
+
+lib/gfx1.act
+src/tools_linux/action_graphics_editor.cpp
+src/tools_linux/action_workspace_tools.cpp
+src/tools_linux/action_help_editor.cpp
+
+The Linux editors and compiler resource loader run on Idun.  GFX1 runs in the
+generated C64 PRG.  None of this functionality depends on UDOS.
+
+Native UDOS status: the fifteen low-level GFX1 declarations and link-selected
+VIC-II/sprite helpers are present; the expanded source library, resource
+declarations, ASP1/ABM1 loader, ACTSPRITE, ACTBITMAP, and ACTEDIT F8 dispatch
+remain to be implemented with UDOS filesystem and REU services. See
+docs/idun_feature_parity.md.
+The Idun source has 16 public constants and 67 public routines. Its GFX1 help
+catalog has 76 features: all constants and 60 routines. Seven retained
+low-level sprite aliases are documented under SIDSPR1 rather than duplicated
+in GFX1 help.
+
+Resource declarations
+---------------------
+
+SPRITE  Player=RESOURCE "player.spr"
+MSPRITE Enemy=RESOURCE "enemy.spr"
+BITMAP  Logo=RESOURCE "logo.abm"
+MBITMAP Tile=RESOURCE "tile.abm"
+
+SPITE is accepted as a compatibility spelling of SPRITE, but new source should
+use SPRITE.  Declarations are global.  ACTC searches beside the source, then
+project RES/, then the project root.  Absolute paths and parent traversal are
+rejected.  The source contains only a filename and symbolic object name; it
+never contains the packed pixel bytes.
+
+ACTEDIT integration
+-------------------
+
+Place the cursor on one of the declarations above and press F8.  ACTEDIT
+suspends its terminal, starts ACTSPRITE or ACTBITMAP, and restores the source
+editor after the graphics editor exits.  A missing SPRITE/MSPRITE file starts
+as a blank 24x21/12x21 object.  A missing BITMAP/MBITMAP starts as a blank
+32x32 object.  The declaration selects hires or multicolor mode.
+
+Graphics-editor keys
+--------------------
+
+Arrow keys    Move the pixel cursor
+Space         Cycle the selected pixel through its legal values
+0 or 1       Paint a hires pixel
+0 through 3  Paint a multicolor pixel
+C             Clear every pixel
+Ctrl-S        Save atomically
+Ctrl-Q        Exit; press twice to discard unsaved edits
+
+Large bitmap objects use a scrolling viewport.  The selected cell is shown in
+inverse video, so the editor remains usable on a C64-sized terminal.
+
+Standalone ACTSPRITE commands
+-----------------------------
+
+actsprite FILE
+actsprite FILE tui
+actsprite FILE new [multicolor]
+actsprite FILE set X Y [VALUE]
+actsprite FILE clear
+actsprite FILE color C64_COLOR
+actsprite FILE print
+actsprite FILE info
+
+Standalone ACTBITMAP commands
+-----------------------------
+
+actbitmap FILE
+actbitmap FILE tui
+actbitmap FILE new WIDTH HEIGHT [multicolor]
+actbitmap FILE set X Y [VALUE]
+actbitmap FILE clear
+actbitmap FILE print
+actbitmap FILE info
+
+ASP1 sprite file
+----------------
+
+Offset  Size  Meaning
+0       4     ASCII ASP1
+4       1     0=24-pixel hires, 1=12-pixel multicolor
+5       1     Default sprite color, low nibble
+6       1     Suggested shared multicolor 1, low nibble
+7       1     Suggested shared multicolor 2, low nibble
+8       63    VIC-II sprite rows, three bytes per row
+
+ACTC also accepts raw 63-byte and 64-byte sprite files.  It emits a 64-byte-
+aligned object: 63 VIC bytes followed by metadata.  Metadata bit 7 is the
+multicolor flag and bits 0-3 hold the default color.  SpritePlace copies only
+the 63 VIC bytes into active-bank sprite RAM and uses the metadata for VIC
+setup.  The compiler rejects a hires/multicolor declaration mismatch.
+
+ABM1 bitmap file
+----------------
+
+Offset  Size  Meaning
+0       4     ASCII ABM1
+4       1     0=hires, 1=multicolor
+5       1     Suggested foreground/color 1
+6       1     Suggested background/color 2
+7       1     Reserved
+8       2     Logical width, little endian
+10      2     Height, little endian
+12      2     Packed row stride, little endian
+14      2     Payload length, little endian
+16      ...   Row-major packed pixels
+
+Hires supports 1..320 by 1..200 at one bit per pixel.  Multicolor supports
+1..160 by 1..200 at two bits per logical pixel.  ACTC validates magic, mode,
+dimensions, stride, payload length, and exact file size, then embeds the ABM1
+header and payload in the linked PRG.
+
+Recommended C64 memory layout
+-----------------------------
+
+GfxHires($8400,$A000)
+GfxUseSprites($8800)
+GfxBitmapClear(0)
+GfxScreenClear(0,GFX_BLACK)
+
+This selects VIC bank 2, with screen RAM at $8400, eight 64-byte sprite staging
+slots beginning at $8800, and bitmap RAM at $A000.  It avoids the expanded
+program image near $0801-$7FFF.  The high-level routines briefly expose RAM
+beneath BASIC ROM with interrupts disabled, then restore $01.  Use the tracked
+GfxBitmapClear rather than the legacy bank-0 BitmapFill for this layout.
+
+Color constants
+---------------
+
+GFX_BLACK, GFX_WHITE, GFX_RED, GFX_CYAN, GFX_PURPLE, GFX_GREEN,
+GFX_BLUE, GFX_YELLOW, GFX_ORANGE, GFX_BROWN, GFX_LIGHTRED,
+GFX_DARKGRAY, GFX_GRAY, GFX_LIGHTGREEN, GFX_LIGHTBLUE, GFX_LIGHTGRAY.
+
+Low-level VIC-II functions retained
+-----------------------------------
+
+PROC VicBank(BYTE bank)
+PROC BgColor(BYTE color)
+PROC BorderColor(BYTE color)
+PROC ScreenBase(CARD base)
+PROC BitmapBase(CARD base)
+PROC ScreenCell(BYTE x,y,ch)
+PROC ColorCell(BYTE x,y,color)
+PROC ScreenCopy(CARD addr)
+PROC ColorCopy(CARD addr)
+PROC BitmapFill(BYTE value)
+PROC BitmapCopy(CARD addr)
+PROC BitmapOn()
+PROC BitmapOff()
+PROC MBitmapOn()
+PROC MBitmapOff()
+
+Tracked setup and clearing
+--------------------------
+
+PROC GfxUseBank(BYTE bank)
+PROC GfxUseScreen(CARD base)
+PROC GfxUseBitmap(CARD base)
+PROC GfxUseSprites(CARD base)
+PROC GfxHires(CARD screen,bitmap)
+PROC GfxMulticolor(CARD screen,bitmap)
+PROC GfxBitmapClear(BYTE value)
+PROC GfxScreenClear(BYTE value,color)
+
+Pixel, clipping, and cell-color functions
+-----------------------------------------
+
+PROC ClipSet(CARD left,top,right,bottom)
+PROC ClipReset()
+PROC Plot(CARD x,BYTE y)
+PROC Unplot(CARD x,BYTE y)
+PROC PlotXor(CARD x,BYTE y)
+BYTE FUNC Point(CARD x,BYTE y)
+PROC MPlot(CARD x,BYTE y,BYTE color)
+BYTE FUNC MPoint(CARD x,BYTE y)
+PROC GfxCellColors(BYTE x,y,foreground,background)
+PROC GfxMCellColors(BYTE x,y,color1,color2,color3)
+
+Hires coordinates are 0..319 by 0..199.  Multicolor coordinates are 0..159 by
+0..199 and values are color slots 0..3.
+
+Shape functions
+---------------
+
+PROC HLineDraw(INT x0,x1,y)
+PROC HLineUnplot(INT x0,x1,y)
+PROC VLineDraw(INT x,y0,y1)
+PROC LineDraw(INT x0,y0,x1,y1)
+PROC RectangleDraw(INT left,top,right,bottom)
+PROC RectangleFill(INT left,top,right,bottom)
+PROC RectangleClear(INT left,top,right,bottom)
+PROC SquareDraw(INT left,top,size)
+PROC SquareFill(INT left,top,size)
+PROC CircleDraw(INT centerX,centerY,radius)
+PROC CircleFill(INT centerX,centerY,radius)
+PROC TriangleDraw(INT x0,y0,x1,y1,x2,y2)
+
+Bitmap-resource functions
+-------------------------
+
+PROC BitmapStamp(CARD asset,originX,originY)
+PROC BitmapDrawResource(CARD asset,originX,originY)
+PROC BitmapErase(CARD asset,originX,originY)
+PROC BitmapMove(CARD asset,oldX,oldY,newX,newY)
+PROC MBitmapStamp(CARD asset,originX,originY)
+PROC MBitmapDrawResource(CARD asset,originX,originY)
+PROC MBitmapErase(CARD asset,originX,originY)
+PROC MBitmapMove(CARD asset,oldX,oldY,newX,newY)
+
+Stamp copies nonzero pixels and preserves the destination's zero pixels.
+DrawResource is opaque and copies every pixel value.  Erase clears the
+resource's nonzero mask.  Move erases the old mask then stamps it at the new
+location.  Repeated Stamp calls copy one resource to any number of locations.
+Cell colors are controlled separately with GfxCellColors/GfxMCellColors.
+
+Sprite-resource functions
+-------------------------
+
+BYTE FUNC SpriteDefaultColor(CARD asset)
+BYTE FUNC SpriteIsMulticolor(CARD asset)
+PROC SpritePlace(BYTE slot,CARD asset,CARD x,BYTE y)
+PROC SpriteMove(BYTE slot,CARD x,BYTE y)
+PROC SpriteShow(BYTE slot)
+PROC SpriteHide(BYTE slot)
+PROC SpriteSharedColors(BYTE color1,color2)
+
+SpritePlace validates slot 0..7 and the active-bank staging layout, copies the
+resource into the selected 64-byte slot, writes the screen's sprite pointer,
+applies color/mode/position, and enables the sprite.  SpriteMove changes only
+position.  SpriteShow/SpriteHide retain all other state.
+
+Complete source example
+-----------------------
+
+INCLUDE "GFX1"
+
+SPRITE Player=RESOURCE "player.spr"
+BITMAP Marker=RESOURCE "marker.abm"
+
+MODULE MAIN
+
+PROC MAIN()
+    GfxHires($8400,$A000)
+    GfxUseSprites($8800)
+    GfxBitmapClear(0)
+    GfxScreenClear(0,GFX_BLACK)
+    GfxCellColors(4,4,GFX_WHITE,GFX_BLACK)
+    BitmapStamp(Marker,32,32)
+    SpritePlace(0,Player,120,80)
+    SpriteMove(0,121,80)
+    RETURN
+ENDPROC
+
+Native C64U port checklist
+--------------------------
+
+1. Port the four RESOURCE declaration types and global-only validation.
+2. Preserve ASP1/ABM1 formats so the same asset files work in both forks.
+3. Align every compiled sprite object to 64 bytes and preserve metadata byte 63.
+4. Port ACTSPRITE/ACTBITMAP as host-side tools and bind ACTEDIT F8 to them.
+5. Port lib/gfx1.act high-level code plus the existing standalone RT_GFX_* and
+   RT_SPRITE_* low-level modules; do not restore a UDOS dependency.
+6. Keep the safe bank-2 layout available because the full source libraries can
+   make a linked PRG too large for a bitmap at $2000.
+7. Test on target that $01 is restored, sprite pointers are relative to the
+   selected VIC bank, resource mode mismatches fail at compile time, and all
+   edge pixels (319,199 or multicolor 159,199) address the correct bitmap byte.

@@ -24,7 +24,10 @@ Current object records include:
 - `s <text>`, `i <byte>`, and `v <name> <initial> [width]` literal/storage
   metadata
 - `m <hex bytes>` non-relocating machine-code bytes for the exported body
-- `r <offset> u<index>` machine-code relocation for an imported symbol operand
+- `r <offset> u<index> [addend]` word relocation for an imported symbol operand
+- `r <offset> x <symbol> [addend]` word relocation for a named symbol operand
+- `r <offset> l|h x <symbol> [addend]` compact low/high-byte relocation emitted
+  by native ACTC; ALINK also accepts the Linux `lo`/`hi` selector aliases
 
 Responsibilities
 
@@ -75,6 +78,76 @@ Current machine-code emission slices:
 - A no-data fanout call graph (`A(): RETURN`, `B(): A(); RETURN`,
   `MAIN(): A(); B(); RETURN`) emits one module-level `m` stream with `MAIN`
   first, then `B`, then `A`.
+- A core `BYTE`, `CARD`, or `INT FUNC` emits a local export whose metadata marks
+  a word result. Its call site emits `JSR`, pushes A/X back as one word, and its
+  `RETURN(expression)` pops the low byte into A and high byte into X before
+  `RTS`. Procedure calls retain their existing no-result ABI.
+- `ASMBLOCK` inside a word function resolves globals, that function's typed
+  scalar parameters and locals, and block-local labels through ordinary OBJ
+  relocations. ALINK does not interpret function or inline-assembly syntax.
+- Relocatable ASMBLOCK symbol operands accept a decimal, hexadecimal, or binary
+  `+constant` or `-constant` suffix in the native range -128 through 127. ACTC
+  preserves that signed addend on word and `#<`/`#>` byte relocation records.
+- `ASMBLOCK` modules may contain two-byte scalar and four-byte `REAL` global or
+  local storage. Native OBJ exports retain each variable's declared width, so
+  indexed 6502 accesses and following data offsets remain link-correct.
+- A `PROC` or `BYTE`/`CARD`/`INT FUNC` declared with `=*(...)` is a fixed
+  register-entry machine routine. Its maintained native body is ASMBLOCK or an
+  unchecked raw `[ ... ]` block and owns the terminating `RTS`. Raw values may
+  be byte/word/character constants, positive constant sums, compact adjacent
+  constants, storage/local-routine addresses with signed addends, or the
+  current code address. BYTE/CARD/INT parameter bytes flatten
+  left-to-right into A, X, Y, then `$A3` through `$AF`, with a 16-byte maximum.
+  BYTE results return in A and are zero-extended by the caller; CARD/INT results
+  return in A/X. REAL parameters/results and Action locals are rejected.
+- Calls to fixed register-entry routines emit ordinary local JSR relocation
+  records. The routine body is an OBJ1 machine export; ALINK performs only
+  normal closure, placement, and relocation.
+- A bodyless routine declaration may bind directly to a 16-bit numeric address,
+  for example `PROC KERNALOUT=$FFD2(BYTE VALUE)`. Calls emit a direct `JSR` and
+  create no import, export, wrapper, or runtime dependency for the declaration.
+- A bodyless declaration may instead alias a local routine declared before or
+  after it, for example `PROC COPY=WORKER()` or
+  `PROC NEXT=(1 LSH 2)+WORKER()`. The single linked symbol may appear on either
+  side of a top-level plus; the other side is a checked constant expression in
+  the signed 16-bit range. ACTC canonicalizes the expression and emits an
+  ordinary `r <offset> x <symbol> [addend]` record at each call site. The alias
+  itself creates no OBJ1 export or import.
+- A function with bare `RETURN` is rejected during declaration validation.
+  Legacy `RETURN(expression)` under `PROC` remains accepted for source
+  compatibility but does not create a typed function ABI.
+- The native `REAL FUNC` form includes a local no-argument function with
+  `RETURN(REAL_VARIABLE)`. It returns the four-byte storage address in A/X; a
+  direct assignment caller copies those bytes to its REAL destination. Source
+  and destination selectors, all module REAL exports, aggregate data size, and
+  pointer placement are derived from declaration order rather than fixed slots.
+  Mixed module globals preserve two-byte word-scalar and four-byte REAL export
+  widths while accumulating offsets; the selected source and destination must
+  be REAL.
+- The first parameterized native `REAL FUNC` form accepts exactly one typed
+  two-byte scalar and either one direct integer-literal argument or one named
+  module word scalar initialized by the immediately preceding literal
+  assignment. The callee binds the scalar from the machine stack, evaluates
+  `REAL(parameter)` into named module REAL storage, and returns that storage
+  address in A/X. Other statement sequences, general variable/expression
+  arguments, expression-valued returns, nested/recursive calls, and external
+  REAL functions are not yet native core forms.
+- A second bounded native `REAL FUNC` form accepts exactly two REAL parameters.
+  The caller pushes two named module REAL storage addresses left-to-right; the
+  callee pops and copies them into distinct four-byte parameter exports, then
+  restores the 6502 return address. The maintained initial shape returns the
+  first parameter directly and requires both arguments to be initialized by
+  the two immediately preceding `REAL(integer)` assignments. ALINK sees only
+  ordinary machine exports and relocations, and selects `RT_I_TO_F.OBJ` once
+  for the two conversions. General two-argument expressions and function
+  bodies remain outside this bounded form.
+- Dedicated native pass K extends that exact two-parameter layout with one
+  finite comparison/select body: `IF B<A THEN RETURN(B) FI RETURN(A)`. The root
+  body carries both reachable imports, the function body carries comparison,
+  and ordinary relocations call `RT_F_CMP.OBJ` and select either parameter
+  address. ALINK also closes comparison's `RT_F_SPECIAL.OBJ` dependency. This
+  form does not define `FMin` NaN behavior and must decline any other function
+  body before opening OBJ output.
 
 Non-responsibilities
 

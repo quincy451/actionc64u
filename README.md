@@ -15,6 +15,11 @@ The current UDOS-facing alpha ships:
 
 - `ALINK.PRG`: UDOS-native linker; the default live gate now emits direct `.PRG` output
 - `ACTC.PRG`: UDOS-native compiler front end
+- core `ASMBLOCK [ ... ]` inline NMOS 6502 assembly with local labels and
+  relocatable global/parameter/local references, including `#<`/`#>` addresses
+- raw `[ ... ]` machine-code bodies for fixed register-entry routines, with
+  byte/word/character constants and ordinary OBJ1 address relocations
+- `ACTDBG.PRG`: native source debugger for ALINK-linked `.PRG` output
 - `ACTMON.PRG`: monitor-style front end
 - workspace/project helper tools under `src/tools_udos/`
 - dead-strip linkable runtime modules
@@ -34,6 +39,12 @@ Required host tools:
 - a C compiler and C++ compiler
 - `pytest`
 - `cc65` tools for UDOS `.PRG` assembly
+
+The optional Idun/Linux host tools additionally require `pkg-config` and the
+SQLite 3 development package.
+
+The host 6502 execution harness uses the MIT-licensed `lib6502` sources vendored
+under `third_party/lib6502`; no retired sibling tree is a build dependency.
 
 The repo also carries a minimal `pytest` shim for constrained environments, but
 a normal `pytest` install is still recommended.
@@ -65,6 +76,10 @@ Use the sibling UDOS repo as the source of truth for current development:
 make -C ../udos PROOF_DEPS= RESIDENT_DEPS= RELEASE_DEPS= vice-action-actc
 make -C ../udos PROOF_DEPS= RESIDENT_DEPS= RELEASE_DEPS= vice-action-alink
 make -C ../udos PROOF_DEPS= RESIDENT_DEPS= RELEASE_DEPS= vice-action-actc-alink-launch
+make -C ../udos PROOF_DEPS= RESIDENT_DEPS= RELEASE_DEPS= vice-action-actc-alink-launch-object-emission-matrix
+make -C ../udos PROOF_DEPS= RESIDENT_DEPS= RELEASE_DEPS= vice-action-alink-prg-matrix
+make -C ../udos PROOF_DEPS= RESIDENT_DEPS= RELEASE_DEPS= vice-action-alink-prg-object-code-matrices
+make -C ../udos PROOF_DEPS= RESIDENT_DEPS= RELEASE_DEPS= vice-action-actc-alink-launch-runtime-matrices
 make -C ../udos PROOF_DEPS= RESIDENT_DEPS= RELEASE_DEPS= vice-action-actc-alink-launch-printmath
 ```
 
@@ -76,8 +91,17 @@ default is:
 ACTC.PRG -> ALINK.PRG -> MAIN.PRG
 ```
 
+ALINK also writes `BIN/MAIN.DBG`. It is used only when launching
+`ACTDBG.PRG MAIN`; normal execution remains the linked `MAIN.PRG` itself.
+
 The lower-level default linker gate is `make -C ../udos vice-action-alink`,
 which now verifies `ALINK.PRG -> BIN/MAIN.PRG`.
+The broad linker matrix is `make -C ../udos vice-action-alink-prg-matrix`,
+which currently enumerates 1329 direct-PRG object/link shapes.
+The source-backed matrix contains 171 native ACTC/ALINK/VICE shapes, including
+the shared finite two-REAL-parameter comparison fixture in `tests/parity`.
+The MATH1 runtime matrix additionally launches link-selected `FMin` and `FMax`
+programs and verifies that each prunes its unreferenced sibling helper.
 
 ## Build UDOS Tools
 
@@ -86,12 +110,18 @@ Build individual UDOS-native tools:
 ```sh
 ./tools/build_actc_udos.sh
 ./tools/build_alink_udos.sh
+./tools/build_actdbg_udos.sh
 ./tools/build_actmon_udos.sh
+./tools/build_acttree_udos.sh
+./tools/build_xcopy_udos.sh
+./tools/build_deltree_udos.sh
 ```
 
-The outputs are written under:
+The outputs are written under `build/udos_tools/`. `build_acttree_udos.sh`,
+`build_xcopy_udos.sh`, and `build_deltree_udos.sh` emit the UDOS command modules
+`TREE.OVL`, `XCOPY.OVL`, and `DELTREE.OVL`; the Action compiler and linker remain
+direct `.PRG` tools.
 
-- `build/udos_tools/`
 
 ## Host Tests
 
@@ -109,6 +139,42 @@ This covers:
 
 Host tests are useful, but they are not the current target proof. UDOS VICE
 gates above are authoritative for current toolchain work.
+
+## Optional Idun/Linux Host Tools
+
+The same project tree includes Linux-native workspace, compiler, linker,
+editor-index, and debugger-sidecar commands for the Raspberry Pi side of an
+Idun cartridge. This is an additional host-development path; it does not replace
+the maintained UDOS tools. Host `alink` still emits a direct C64 `.PRG` with
+only referenced 6502 runtime modules and no separate runtime runner.
+
+Host `alink` consumes the native machine-code OBJ1 records emitted by the UDOS
+compiler, including canonical `f`/`q`/`L`/`V` source-debug metadata. Dependency
+lookup first uses conventional object names, then scans project and library
+objects by exported symbol. A selected malformed object or multiple providers
+for one export is rejected rather than linked nondeterministically.
+Reachability is export-body-specific: only selected byte ranges, relocations,
+and imports enter the final PRG. OBJ1 import references use one-character
+indexes (`0`-`9`, then `A`-`Z`); lowercase letters are accepted on input.
+
+The Linux compiler path supports dynamically sized metadata for
+`BYTE`/`CARD`/`INT`/`REAL` arrays, typed pointers and indirect parameters, and
+typed `BYTE`/`CARD`/`INT`/`REAL FUNC` declarations. Function calls participate
+in word and REAL expressions. Local-call edges in direct or mutual recursion
+preserve mutable scalar parameters, scalar locals, and compiler temporaries on
+the 6502 hardware stack. Recursion depth is stack-bounded; local array storage
+remains shared, and asynchronous or general reentry remains unsupported.
+
+```sh
+bash tools/build_linux_tools.sh
+python3 -m unittest -v tests.test_linux_workspace_tools
+python3 -m unittest -v tests.test_idun_workspace_export
+python3 tools/export_idun_workspace.py
+```
+
+The default export is `build/idun-action/`. See
+[docs/idun_linux_process_split.md](docs/idun_linux_process_split.md) for the
+host/target boundary and current limitations.
 
 ## Export A UDOS Workspace
 
@@ -135,10 +201,15 @@ toolchain and direct `.PRG` output from `ALINK.PRG`.
 
 Key current docs:
 
+- [docs/idun_feature_parity.md](docs/idun_feature_parity.md)
 - [docs/actc_roadmap.md](docs/actc_roadmap.md)
 - [docs/alink_roadmap.md](docs/alink_roadmap.md)
+- [docs/source_debugger_roadmap.md](docs/source_debugger_roadmap.md)
+- [docs/idun_linux_process_split.md](docs/idun_linux_process_split.md)
 - [docs/active_direction.md](docs/active_direction.md)
 - [docs/real32.md](docs/real32.md)
+- [docs/new_math_func.txt](docs/new_math_func.txt)
+- [docs/new_gfx_func.txt](docs/new_gfx_func.txt)
 - [docs/reu.md](docs/reu.md)
 - [docs/disk_layout.md](docs/disk_layout.md)
 - [docs/release.md](docs/release.md)

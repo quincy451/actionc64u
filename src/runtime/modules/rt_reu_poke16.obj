@@ -1,2 +1,8 @@
 OBJ1
-{"entry_offset":0,"exports":[["rt.reu_poke16",0]],"imports":[],"module":"rt.reu_poke16","payload_hex":"72742e7265755f706f6b65313600","version":1}
+x RT_REU_POKE16 0 34
+b u0u1M
+u RT_REU_RESOLVE
+u RT_REU_TRANSFER
+m 48A902850AA900850B68200000B003A90060A90E8502A9008503A9EC200000A90160
+r 11 u0
+r 29 u1

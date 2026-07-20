@@ -3,6 +3,10 @@
 The host harness runs UDOS-native tools against a mounted workspace and validates
 file-service behavior without requiring manual C64 interaction.
 
+Its 6502 execution engine is the MIT-licensed `lib6502` copy in
+`third_party/lib6502`. Keeping that source in the maintained ActionC64U tree
+makes the harness independent of retained historical workspace snapshots.
+
 Current maintained uses:
 
 - run `ACTC.PRG` and verify `OBJ/<MODULE>.OBJ`

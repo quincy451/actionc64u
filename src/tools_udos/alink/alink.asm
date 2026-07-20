@@ -6,6 +6,7 @@ READST = $FFB7
 CLOSE_K = $FFC3
 CLRCHN = $FFCC
 CHRIN = $FFCF
+CHROUT = $FFD2
 VICE_LFN_FILE = 2
 TOOL_ABI_FILE_NAME_LO = $CDC6
 TOOL_ABI_FILE_NAME_HI = $CDC7
@@ -36,17 +37,8 @@ EXPORT_MAX = 8
 .ifndef EXTERNAL_MAX
 EXTERNAL_MAX = 8
 .endif
-.ifndef PENDING_SYMBOL_MAX
-PENDING_SYMBOL_MAX = 7
-.endif
-.ifndef ALINK_PENDING_REU_BASE_LO
-ALINK_PENDING_REU_BASE_LO = $00
-.endif
-.ifndef ALINK_PENDING_REU_BASE_HI
-ALINK_PENDING_REU_BASE_HI = $00
-.endif
-.ifndef ALINK_PENDING_REU_BASE_BANK
-ALINK_PENDING_REU_BASE_BANK = $03
+.ifndef RELOC_MAX
+RELOC_MAX = 128
 .endif
 .ifndef ALINK_EXTERNAL_REU_BASE_LO
 ALINK_EXTERNAL_REU_BASE_LO = $00
@@ -64,7 +56,7 @@ ALINK_BODY_REU_BASE_LO = $00
 ALINK_BODY_REU_BASE_HI = $10
 .endif
 .ifndef ALINK_BODY_REU_BASE_BANK
-ALINK_BODY_REU_BASE_BANK = $03
+ALINK_BODY_REU_BASE_BANK = $04
 .endif
 .ifndef ALINK_EXPORT_REU_BASE_LO
 ALINK_EXPORT_REU_BASE_LO = $00
@@ -210,24 +202,6 @@ ALINK_RELOC_REU_BASE_HI = $44
 .ifndef ALINK_RELOC_REU_BASE_BANK
 ALINK_RELOC_REU_BASE_BANK = $03
 .endif
-.ifndef ALINK_RUNTIME_STORE_REU_BASE_LO
-ALINK_RUNTIME_STORE_REU_BASE_LO = $00
-.endif
-.ifndef ALINK_RUNTIME_STORE_REU_BASE_HI
-ALINK_RUNTIME_STORE_REU_BASE_HI = $45
-.endif
-.ifndef ALINK_RUNTIME_STORE_REU_BASE_BANK
-ALINK_RUNTIME_STORE_REU_BASE_BANK = $03
-.endif
-.ifndef ALINK_LINKED_LITERAL_REU_BASE_LO
-ALINK_LINKED_LITERAL_REU_BASE_LO = $00
-.endif
-.ifndef ALINK_LINKED_LITERAL_REU_BASE_HI
-ALINK_LINKED_LITERAL_REU_BASE_HI = $46
-.endif
-.ifndef ALINK_LINKED_LITERAL_REU_BASE_BANK
-ALINK_LINKED_LITERAL_REU_BASE_BANK = $03
-.endif
 .ifndef ALINK_ROOT_EXPORT_REU_BASE_LO
 ALINK_ROOT_EXPORT_REU_BASE_LO = $00
 .endif
@@ -245,6 +219,15 @@ ALINK_FILE_LOAD_REU_BASE_HI = $00
 .endif
 .ifndef ALINK_FILE_LOAD_REU_BASE_BANK
 ALINK_FILE_LOAD_REU_BASE_BANK = $02
+.endif
+.ifndef ALINK_DEBUG_REU_BASE_LO
+ALINK_DEBUG_REU_BASE_LO = $00
+.endif
+.ifndef ALINK_DEBUG_REU_BASE_HI
+ALINK_DEBUG_REU_BASE_HI = $00
+.endif
+.ifndef ALINK_DEBUG_REU_BASE_BANK
+ALINK_DEBUG_REU_BASE_BANK = $01
 .endif
 .ifndef LOOP_MAX
 LOOP_MAX = 8
@@ -292,6 +275,18 @@ EXPORT_META_BYTES = 4
 EXPORT_LAYOUT_LO = 0
 EXPORT_LAYOUT_HI = 1
 EXPORT_LAYOUT_BYTES = 2
+EXTERNAL_NAME_REU_BYTES = $1C00
+PENDING_META_REU_BYTES = $0400
+.assert EXPORT_MAX > 0, error, "EXPORT_MAX must be positive"
+.assert EXPORT_MAX < $100, error, "EXPORT_MAX must fit in export_count"
+.assert EXPORT_MAX * EXPORT_NAME_BYTES <= $400, error, "export names exceed their REU window"
+.assert EXPORT_MAX * EXPORT_META_BYTES <= $100, error, "export metadata exceeds its REU page"
+.assert EXPORT_MAX * EXPORT_LAYOUT_BYTES <= $100, error, "export layout exceeds its REU page"
+.assert (ALINK_BODY_REU_BASE_LO + (ALINK_BODY_REU_BASE_HI << 8)) + (EXPORT_MAX * BODY_OPS_STRIDE) <= $10000, error, "export bodies exceed their REU bank"
+.assert EXTERNAL_MAX > 0, error, "EXTERNAL_MAX must be positive"
+.assert EXTERNAL_MAX < $100, error, "EXTERNAL_MAX must fit in external_count"
+.assert EXTERNAL_MAX * EXTERNAL_NAME_BYTES <= EXTERNAL_NAME_REU_BYTES, error, "external names exceed their REU window"
+.assert EXTERNAL_MAX * PENDING_META_BYTES <= PENDING_META_REU_BYTES, error, "external placement metadata exceeds its REU window"
 VAR_LAYOUT_LO = 0
 VAR_LAYOUT_HI = 1
 VAR_LAYOUT_BYTES = 2
@@ -306,45 +301,20 @@ RELOC_RECORD_OFFSET_LO = 0
 RELOC_RECORD_OFFSET_HI = 1
 RELOC_RECORD_ADDR_LO = 2
 RELOC_RECORD_ADDR_HI = 3
-RELOC_RECORD_BYTES = 4
-RUNTIME_STORE_VAR = 0
-RUNTIME_STORE_LITERAL = 1
-RUNTIME_STORE_BYTES = 2
-LINKED_LITERAL_LO = 0
-LINKED_LITERAL_HI = 1
-LINKED_LITERAL_BYTES = 2
+RELOC_RECORD_KIND = 4
+RELOC_RECORD_BYTES = 5
+RELOC_KIND_WORD = 0
+RELOC_KIND_LOW = 1
+RELOC_KIND_HIGH = 2
+RELOC_REU_BYTES = $300
+.assert RELOC_MAX > 0, error, "RELOC_MAX must be positive"
+.assert RELOC_MAX < $100, error, "RELOC_MAX must fit in linked_reloc_count"
+.assert RELOC_MAX * RELOC_RECORD_BYTES <= RELOC_REU_BYTES, error, "relocation records exceed their REU region"
+.assert (ALINK_RELOC_REU_BASE_LO + (ALINK_RELOC_REU_BASE_HI << 8)) + RELOC_REU_BYTES <= (ALINK_ROOT_EXPORT_REU_BASE_LO + (ALINK_ROOT_EXPORT_REU_BASE_HI << 8)), error, "relocation region overlaps root exports"
 PRG_BUILD_DIRECT = 0
-PRG_BUILD_PRINTMATH_STRING_INT = 12
-PRG_BUILD_REAL_PRINT_INT = 13
-PRG_BUILD_REAL_PRINT_BINARY = 14
 PRG_BUILD_OBJECT_CODE = 15
-PRG_BUILD_REAL_IF_GT = 19
-PRG_BUILD_REAL_DO_UNTIL = 20
-PRG_BUILD_REAL_WHILE = 21
-PRG_BUILD_RUNTIME_HELPER_SEQUENCE = 23
-PRG_BUILD_REAL_PRINT_FABS = 24
-PRG_BUILD_INPUT_REAL_PRINT_INT = 25
-PRG_BUILD_INPUT_STORED_REAL_PRINT_INT = 26
-PRG_BUILD_REAL_TO_INT = 27
-PRG_BUILD_RUNTIME_HELPER_CONDITION = 28
-RUNTIME_HELPER_KIND_NONE = 0
-RUNTIME_HELPER_KIND_SPRITE_DATA = 1
-RUNTIME_HELPER_KIND_SPRITE_POS = 2
-RUNTIME_HELPER_KIND_GFX_BGCOLOR = 3
-RUNTIME_HELPER_KIND_SID_FREQ = 4
-RUNTIME_HELPER_KIND_XA_BYTE = 5
-RUNTIME_HELPER_KIND_XY_WORD = 6
-RUNTIME_HELPER_KIND_NO_ARG = 7
-RUNTIME_HELPER_KIND_A_BYTE = 8
-RUNTIME_HELPER_KIND_AY_BYTE = 9
-RUNTIME_HELPER_KIND_AXY_BYTES_CLC = 10
-RUNTIME_HELPER_KIND_X1_A0_BYTES = 11
-RUNTIME_HELPER_KIND_BYTE_READBACK = 12
-RUNTIME_HELPER_KIND_A_BYTE_READBACK = 13
-RUNTIME_HELPER_KIND_XY_WORD_READBACK = 14
-RUNTIME_HELPER_KIND_AY_BYTE_READBACK = 15
-RUNTIME_HELPER_KIND_AXY_BYTES_CLC_READBACK = 16
-RUNTIME_HELPER_KIND_AXY_E0_BYTES_CLC_READBACK = 17
+ALINK_CHAIN_NONE = $00
+ALINK_CHAIN_DEBUG = $01
 
 
 .segment "ZPTEMP": zeropage
@@ -367,6 +337,7 @@ body_ptr = src_ptr
 
 start:
     jsr init_module_name
+    jsr detect_alink_chain_mode
     jsr build_manifest_entry
     jsr require_loaded_project
     jsr require_manifest_entry_tracked
@@ -421,12 +392,27 @@ start:
     jsr save_source_buffer_to_target
     lda #$43
     sta debug_phase_zp
+    bcc save_prg_ok
+    lda #<msg_save_fail
+    ldy #>msg_save_fail
+    jmp fail_with_ptr
+
+save_prg_ok:
+    lda #$44
+    sta debug_phase_zp
+    jsr emit_debug_sidecar_or_fail
     bcc save_ok
     lda #<msg_save_fail
     ldy #>msg_save_fail
     jmp fail_with_ptr
 
 save_ok:
+    jsr queue_alink_successor
+    bcc :+
+    lda #<msg_chain_fail
+    ldy #>msg_chain_fail
+    jmp fail_with_ptr
+:
     lda #$00
     sta svc_retptr
     sta svc_retptr+1
@@ -461,6 +447,66 @@ init_module_name_default_loop:
     iny
     bne init_module_name_default_loop
 init_module_name_done:
+    rts
+
+detect_alink_chain_mode:
+    lda #ALINK_CHAIN_NONE
+    sta alink_chain_mode
+    ldx #svc_retptr
+    jsr alink_svc_program_get_cmdline_len
+    lda svc_retptr
+    ora svc_retptr+1
+    beq detect_alink_chain_mode_done
+    ldx #svc_retptr
+    jsr alink_svc_program_get_cmdline_ptr
+    lda svc_retptr
+    sta src_ptr
+    lda svc_retptr+1
+    sta src_ptr+1
+    ldy #$00
+detect_alink_chain_mode_scan:
+    lda (src_ptr),y
+    beq detect_alink_chain_mode_done
+    cmp #':'
+    beq detect_alink_chain_mode_debug
+    iny
+    bne detect_alink_chain_mode_scan
+detect_alink_chain_mode_debug:
+    lda #ALINK_CHAIN_DEBUG
+    sta alink_chain_mode
+detect_alink_chain_mode_done:
+    rts
+
+queue_alink_successor:
+    lda alink_chain_mode
+    beq queue_alink_successor_done
+    ldy #$00
+queue_alink_successor_prefix:
+    lda actdbg_command_prefix,y
+    beq queue_alink_successor_module_begin
+    sta target_path,y
+    iny
+    bne queue_alink_successor_prefix
+queue_alink_successor_module_begin:
+    ldx #$00
+queue_alink_successor_module:
+    lda module_name,x
+    beq queue_alink_successor_terminate
+    sta target_path,y
+    iny
+    inx
+    bne queue_alink_successor_module
+queue_alink_successor_terminate:
+    lda #$00
+    sta target_path,y
+    lda #<target_path
+    sta svc_retptr
+    lda #>target_path
+    sta svc_retptr+1
+    ldx #svc_retptr
+    jmp svc_program_chain_sc0
+queue_alink_successor_done:
+    clc
     rts
 
 skip_cmdline_spaces:
@@ -1613,98 +1659,11 @@ set_var_name_reu_params_from_x_loop:
 set_var_name_reu_params_from_x_done:
     rts
 
-set_pending_ptr_from_x:
-    jsr load_pending_name_window_from_x_or_fail
-    jmp set_pending_window_ptr
-
 set_pending_window_ptr:
     lda #<pending_name_window
     sta export_ptr
     lda #>pending_name_window
     sta export_ptr+1
-    rts
-
-load_pending_name_window_from_x_or_fail:
-    txa
-    pha
-    jsr set_pending_name_reu_params_from_x
-    lda #<pending_name_window
-    sta file_params+3
-    lda #>pending_name_window
-    sta file_params+4
-    lda #<PENDING_NAME_BYTES
-    sta file_params+5
-    lda #>PENDING_NAME_BYTES
-    sta file_params+6
-    lda #$00
-    sta file_params+7
-    ldx #file_params
-    jsr alink_svc_reu_read_sc0
-    lda file_params+7
-    cmp #tool_file_status_ok
-    beq load_pending_name_window_from_x_ok
-    pla
-    tax
-    lda #<msg_load_fail
-    ldy #>msg_load_fail
-    jmp fail_with_ptr
-load_pending_name_window_from_x_ok:
-    pla
-    tax
-    rts
-
-store_pending_name_window_from_x_or_fail:
-    txa
-    pha
-    jsr set_pending_name_reu_params_from_x
-    lda #<pending_name_window
-    sta file_params+3
-    lda #>pending_name_window
-    sta file_params+4
-    lda #<PENDING_NAME_BYTES
-    sta file_params+5
-    lda #>PENDING_NAME_BYTES
-    sta file_params+6
-    lda #$00
-    sta file_params+7
-    ldx #file_params
-    jsr alink_svc_reu_write_sc0
-    lda file_params+7
-    cmp #tool_file_status_ok
-    beq store_pending_name_window_from_x_ok
-    pla
-    tax
-    lda #<msg_save_fail
-    ldy #>msg_save_fail
-    jmp fail_with_ptr
-store_pending_name_window_from_x_ok:
-    pla
-    tax
-    rts
-
-set_pending_name_reu_params_from_x:
-    lda #ALINK_PENDING_REU_BASE_LO
-    sta file_params+0
-    lda #ALINK_PENDING_REU_BASE_HI
-    sta file_params+1
-    lda #ALINK_PENDING_REU_BASE_BANK
-    sta file_params+2
-set_pending_name_reu_params_from_x_loop:
-    cpx #$00
-    beq set_pending_name_reu_params_from_x_done
-    clc
-    lda file_params+0
-    adc #PENDING_NAME_BYTES
-    sta file_params+0
-    lda file_params+1
-    adc #$00
-    sta file_params+1
-    lda file_params+2
-    adc #$00
-    sta file_params+2
-    dex
-    bne set_pending_name_reu_params_from_x_loop
-set_pending_name_reu_params_from_x_done:
     rts
 
 set_body_ptr_from_x:
@@ -2206,172 +2165,6 @@ set_linked_reloc_reu_params_from_x_loop:
     dex
     bne set_linked_reloc_reu_params_from_x_loop
 set_linked_reloc_reu_params_from_x_done:
-    rts
-
-load_linked_runtime_store_window_from_x_or_fail:
-    txa
-    pha
-    jsr set_linked_runtime_store_reu_params_from_x
-    lda #<linked_runtime_store_window
-    sta file_params+3
-    lda #>linked_runtime_store_window
-    sta file_params+4
-    lda #<RUNTIME_STORE_BYTES
-    sta file_params+5
-    lda #>RUNTIME_STORE_BYTES
-    sta file_params+6
-    lda #$00
-    sta file_params+7
-    ldx #file_params
-    jsr alink_svc_reu_read_sc0
-    lda file_params+7
-    cmp #tool_file_status_ok
-    beq load_linked_runtime_store_window_from_x_ok
-    pla
-    tax
-    lda #<msg_load_fail
-    ldy #>msg_load_fail
-    jmp fail_with_ptr
-load_linked_runtime_store_window_from_x_ok:
-    pla
-    tax
-    rts
-
-store_linked_runtime_store_window_from_x_or_fail:
-    txa
-    pha
-    jsr set_linked_runtime_store_reu_params_from_x
-    lda #<linked_runtime_store_window
-    sta file_params+3
-    lda #>linked_runtime_store_window
-    sta file_params+4
-    lda #<RUNTIME_STORE_BYTES
-    sta file_params+5
-    lda #>RUNTIME_STORE_BYTES
-    sta file_params+6
-    lda #$00
-    sta file_params+7
-    ldx #file_params
-    jsr alink_svc_reu_write_sc0
-    lda file_params+7
-    cmp #tool_file_status_ok
-    beq store_linked_runtime_store_window_from_x_ok
-    pla
-    tax
-    lda #<msg_save_fail
-    ldy #>msg_save_fail
-    jmp fail_with_ptr
-store_linked_runtime_store_window_from_x_ok:
-    pla
-    tax
-    rts
-
-set_linked_runtime_store_reu_params_from_x:
-    lda #ALINK_RUNTIME_STORE_REU_BASE_LO
-    sta file_params+0
-    lda #ALINK_RUNTIME_STORE_REU_BASE_HI
-    sta file_params+1
-    lda #ALINK_RUNTIME_STORE_REU_BASE_BANK
-    sta file_params+2
-set_linked_runtime_store_reu_params_from_x_loop:
-    cpx #$00
-    beq set_linked_runtime_store_reu_params_from_x_done
-    clc
-    lda file_params+0
-    adc #RUNTIME_STORE_BYTES
-    sta file_params+0
-    lda file_params+1
-    adc #$00
-    sta file_params+1
-    lda file_params+2
-    adc #$00
-    sta file_params+2
-    dex
-    bne set_linked_runtime_store_reu_params_from_x_loop
-set_linked_runtime_store_reu_params_from_x_done:
-    rts
-
-load_linked_literal_window_from_x_or_fail:
-    txa
-    pha
-    jsr set_linked_literal_reu_params_from_x
-    lda #<linked_literal_window
-    sta file_params+3
-    lda #>linked_literal_window
-    sta file_params+4
-    lda #<LINKED_LITERAL_BYTES
-    sta file_params+5
-    lda #>LINKED_LITERAL_BYTES
-    sta file_params+6
-    lda #$00
-    sta file_params+7
-    ldx #file_params
-    jsr alink_svc_reu_read_sc0
-    lda file_params+7
-    cmp #tool_file_status_ok
-    beq load_linked_literal_window_from_x_ok
-    pla
-    tax
-    lda #<msg_load_fail
-    ldy #>msg_load_fail
-    jmp fail_with_ptr
-load_linked_literal_window_from_x_ok:
-    pla
-    tax
-    rts
-
-store_linked_literal_window_from_x_or_fail:
-    txa
-    pha
-    jsr set_linked_literal_reu_params_from_x
-    lda #<linked_literal_window
-    sta file_params+3
-    lda #>linked_literal_window
-    sta file_params+4
-    lda #<LINKED_LITERAL_BYTES
-    sta file_params+5
-    lda #>LINKED_LITERAL_BYTES
-    sta file_params+6
-    lda #$00
-    sta file_params+7
-    ldx #file_params
-    jsr alink_svc_reu_write_sc0
-    lda file_params+7
-    cmp #tool_file_status_ok
-    beq store_linked_literal_window_from_x_ok
-    pla
-    tax
-    lda #<msg_save_fail
-    ldy #>msg_save_fail
-    jmp fail_with_ptr
-store_linked_literal_window_from_x_ok:
-    pla
-    tax
-    rts
-
-set_linked_literal_reu_params_from_x:
-    lda #ALINK_LINKED_LITERAL_REU_BASE_LO
-    sta file_params+0
-    lda #ALINK_LINKED_LITERAL_REU_BASE_HI
-    sta file_params+1
-    lda #ALINK_LINKED_LITERAL_REU_BASE_BANK
-    sta file_params+2
-set_linked_literal_reu_params_from_x_loop:
-    cpx #$00
-    beq set_linked_literal_reu_params_from_x_done
-    clc
-    lda file_params+0
-    adc #LINKED_LITERAL_BYTES
-    sta file_params+0
-    lda file_params+1
-    adc #$00
-    sta file_params+1
-    lda file_params+2
-    adc #$00
-    sta file_params+2
-    dex
-    bne set_linked_literal_reu_params_from_x_loop
-set_linked_literal_reu_params_from_x_done:
     rts
 
 load_int_value_window_from_x_or_fail:
@@ -3327,11 +3120,17 @@ parse_body_ops_loop:
     ldy #$00
 parse_body_ops_string_loop:
     lda (scan_ptr),y
-    beq parse_body_ops_string_done_branch
+    bne :+
+    jmp parse_body_ops_string_done
+:
     cmp #10
-    beq parse_body_ops_string_done_branch
+    bne :+
+    jmp parse_body_ops_string_done
+:
     cmp #13
-    beq parse_body_ops_string_done_branch
+    bne :+
+    jmp parse_body_ops_string_done
+:
     cmp #'c'
     beq parse_body_ops_store_branch
     cmp #'u'
@@ -3349,6 +3148,10 @@ parse_body_ops_string_loop:
     cmp #'a'
     beq parse_body_ops_store_branch
     cmp #'m'
+    beq parse_body_ops_store_branch
+    cmp #'*'
+    beq parse_body_ops_store_branch
+    cmp #'/'
     beq parse_body_ops_store_branch
     cmp #'q'
     beq parse_body_ops_store_branch
@@ -3949,6 +3752,10 @@ build_live_set_check_single_ops:
     beq build_live_set_single_branch
     cmp #'m'
     beq build_live_set_single_branch
+    cmp #'*'
+    beq build_live_set_single_branch
+    cmp #'/'
+    beq build_live_set_single_branch
     cmp #'q'
     beq build_live_set_single_branch
     cmp #'n'
@@ -4147,6 +3954,7 @@ advance_scan_ptr_by_const_ptr_done:
     rts
 
 .include "direct_prg.inc"
+.include "debug_sidecar.inc"
 
 
 append_payload_byte:
@@ -4273,11 +4081,7 @@ copy_target_path_to_binary_target_path_done:
 save_source_buffer_to_target:
     lda #$C2
     sta binary_target_path+16
-    sta $03F0
     lda #$00
-    sta $03F1
-    sta $03F2
-    sta $03F3
     jsr flush_output_stream_or_fail
     jsr close_output_stream
     bcc save_source_buffer_to_target_ok
@@ -4638,7 +4442,8 @@ snapshot_bad_object_target_loop:
 
 print_line_ptr:
     jsr print_ptr
-    jmp svc_console_newline
+    lda #13
+    jmp CHROUT
 
 fail_with_ptr:
     sta svc_retptr
@@ -4692,8 +4497,15 @@ fail_with_ptr_snapshot_meta:
 print_ptr:
     sta svc_retptr
     sty svc_retptr+1
-    ldx #svc_retptr
-    jmp svc_console_write_sc0
+    ldy #$00
+print_ptr_loop:
+    lda (svc_retptr),y
+    beq print_ptr_done
+    jsr CHROUT
+    iny
+    bne print_ptr_loop
+print_ptr_done:
+    rts
 
 msg_bad_name:
     .asciiz "BAD NAME"
@@ -4709,6 +4521,8 @@ msg_load_fail:
     .asciiz "LOAD FAIL"
 msg_save_fail:
     .asciiz "SAVE FAIL"
+msg_chain_fail:
+    .asciiz "CHAIN FAIL"
 msg_bad_object:
     .asciiz "BAD OBJECT"
 msg_too_large:
@@ -4721,6 +4535,9 @@ msg_updated:
     .asciiz "UPDATED"
 msg_ok:
     .asciiz "ALINK OK"
+
+actdbg_command_prefix:
+    .asciiz "ACTDBG "
 
 default_module_name:
     .asciiz "MAIN"
@@ -4751,6 +4568,8 @@ bit_masks:
 
 module_name:
     .res 25
+alink_chain_mode:
+    .res 1
 target_path_pad:
     .res $0000
 target_path:
@@ -4810,8 +4629,6 @@ source_window_end_ptr:
 source_window_valid:
     .res 1
 alink_source_direct_cached:
-    .res 1
-direct_candidate_index:
     .res 1
 prg_build_strategy:
     .res 1
@@ -4889,56 +4706,18 @@ external_name_window:
     .res EXTERNAL_NAME_BYTES
 external_count:
     .res 1
-pending_count:
-    .res 1
 pending_name_window:
     .res PENDING_NAME_BYTES
 pending_meta_window:
     .res PENDING_META_BYTES
-external_print_string_ptr:
-    .res 2
 linked_store_value:
     .res 1
 linked_store_value_hi:
-    .res 1
-linked_unary_value_index:
-    .res 1
-linked_unary_print_index:
     .res 1
 linked_machine_byte:
     .res 1
 linked_binary_rhs_value:
     .res 1
-linked_loop_update_value:
-    .res 1
-linked_real_binary_update_op:
-    .res 1
-linked_loop_update_uses_conversion:
-    .res 1
-linked_loop_update_uses_real_binary:
-    .res 1
-linked_real_binary_literal_layout:
-    .res 1
-linked_condition_store_value:
-    .res 1
-linked_condition_else_value:
-    .res 1
-linked_condition_cmp_value:
-    .res 1
-linked_condition_skip_opcode:
-    .res 1
-linked_condition_body_op:
-    .res 1
-linked_condition_has_else:
-    .res 1
-linked_condition_is_nested:
-    .res 1
-linked_condition_is_loop:
-    .res 1
-linked_literal_count:
-    .res 1
-linked_literal_window:
-    .res LINKED_LITERAL_BYTES
 linked_next_addr_lo:
     .res 1
 linked_next_addr_hi:
@@ -4957,44 +4736,34 @@ current_object_export_end_lo:
     .res 1
 current_object_export_end_hi:
     .res 1
-linked_runtime_arg_count:
-    .res 1
-linked_runtime_arg0:
-    .res 1
-linked_runtime_arg1:
-    .res 1
-linked_runtime_arg2:
-    .res 1
-linked_runtime_arg3:
-    .res 1
-linked_runtime_call_count:
-    .res 1
-linked_runtime_body_pos:
-    .res 1
-linked_runtime_helper_kind:
-    .res 1
-linked_runtime_result_pending:
-    .res 1
-linked_runtime_result_arg_count:
-    .res 1
-linked_runtime_result_loaded:
-    .res 1
-linked_runtime_result_store_ordinal:
-    .res 1
-linked_runtime_store_count:
-    .res 1
-linked_runtime_store_addr_lo:
-    .res 1
-linked_runtime_store_addr_hi:
-    .res 1
-linked_runtime_store_window:
-    .res RUNTIME_STORE_BYTES
 linked_import_index:
     .res 1
 linked_external_index:
     .res 1
 linked_reloc_count:
     .res 1
+linked_reloc_cursor_consumed:
+    .res 1
+linked_reloc_cursor_valid:
+    .res 1
+linked_reloc_cursor_advance:
+    .res 1
+linked_reloc_previous_lo:
+    .res 1
+linked_reloc_previous_hi:
+    .res 1
+linked_reloc_previous_kind:
+    .res 1
+linked_reloc_kind:
+    .res 1
+linked_reloc_addend_lo:
+    .res 1
+linked_reloc_addend_hi:
+    .res 1
+linked_reloc_addend_negative:
+    .res 1
+linked_reloc_cursor_window:
+    .res RELOC_RECORD_BYTES
 linked_reloc_saved_scan_lo:
     .res 1
 linked_reloc_saved_scan_hi:

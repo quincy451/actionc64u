@@ -1,2 +1,8 @@
 OBJ1
-{"entry_offset":0,"exports":[["rt.reu_peek16",0]],"imports":[],"module":"rt.reu_peek16","payload_hex":"72742e7265755f7065656b313600","version":1}
+x RT_REU_PEEK16 0 38
+b u0u1M
+u RT_REU_RESOLVE
+u RT_REU_TRANSFER
+m 48A902850AA900850B68200000B005A900A20060A90E8502A9008503A9ED200000A60FA50E60
+r 11 u0
+r 31 u1

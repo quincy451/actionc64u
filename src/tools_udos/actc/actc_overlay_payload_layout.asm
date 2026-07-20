@@ -74,7 +74,20 @@ compute_payload_layout_overlay_body_loop:
     bne :+
     jmp compute_payload_layout_overlay_ret
 :
+    cmp #'X'
+    bne :+
+    jmp compute_payload_layout_overlay_add_call
+:
     cmp #'c'
+    bne :+
+    jmp compute_payload_layout_overlay_add_call
+:   cmp #ACTC_BODY_OP_FIXED_CALL
+    bne :+
+    jmp compute_payload_layout_overlay_add_call
+:   cmp #'C'
+    bne :+
+    jmp compute_payload_layout_overlay_add_call
+:   cmp #'A'
     bne :+
     jmp compute_payload_layout_overlay_add_call
 :   cmp #'u'
@@ -84,10 +97,18 @@ compute_payload_layout_overlay_body_loop:
     bne :+
     jmp compute_payload_layout_overlay_add_call
 :
+    cmp #'@'
+    bne :+
+    jmp compute_payload_layout_overlay_skip_selector
+:
     cmp #'s'
-    beq compute_payload_layout_overlay_add_string
+    bne :+
+    jmp compute_payload_layout_overlay_add_string
+:
     cmp #'e'
-    beq compute_payload_layout_overlay_add_string
+    bne :+
+    jmp compute_payload_layout_overlay_add_string
+:
     cmp #'i'
     bne :+
     jmp compute_payload_layout_overlay_add_int
@@ -132,6 +153,10 @@ compute_payload_layout_overlay_body_loop:
     beq compute_payload_layout_overlay_add_single
     cmp #'m'
     beq compute_payload_layout_overlay_add_single
+    cmp #'*'
+    beq compute_payload_layout_overlay_add_single
+    cmp #'/'
+    beq compute_payload_layout_overlay_add_single
     cmp #'q'
     beq compute_payload_layout_overlay_add_single
     cmp #'n'
@@ -142,7 +167,22 @@ compute_payload_layout_overlay_body_loop:
     beq compute_payload_layout_overlay_add_single
     cmp #'r'
     beq compute_payload_layout_overlay_add_single
+    cmp #'F'
+    beq compute_payload_layout_overlay_skip_for
+    cmp #'O'
+    beq compute_payload_layout_overlay_add_zero
     jmp compute_payload_layout_overlay_bad
+
+compute_payload_layout_overlay_skip_for:
+    iny
+    iny
+    iny
+    jmp compute_payload_layout_overlay_body_loop
+
+compute_payload_layout_overlay_skip_selector:
+    iny
+    iny
+    jmp compute_payload_layout_overlay_body_loop
 
 compute_payload_layout_overlay_add_call:
     lda #$03

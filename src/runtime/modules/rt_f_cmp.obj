@@ -1,2 +1,9 @@
 OBJ1
-{"entry_offset":0,"exports":[["rt.f_cmp",0]],"imports":[],"module":"rt.f_cmp","payload_hex":"72742e665f636d7000","version":1}
+x rt_f_cmp 0 137
+b u0M
+u rt_f_special
+m A9 05 20 00 00 90 01 60 A0 03 B1 02 51 04 10 42 B1 02 29 7F 85 08 88 B1 02 05 08 85 08 88 B1 02 05 08 85 08 88 B1 02 05 08 85 08 A0 03 B1 04 29 7F 05 08 85 08 88 B1 04 05 08 85 08 88 B1 04 05
+m 08 85 08 88 B1 04 05 08 F0 26 A0 03 B1 02 30 2A 10 32 A0 03 B1 04 29 7F 85 08 B1 02 29 7F C5 08 90 12 D0 1A 88 B1 02 D1 04 90 09 D0 11 88 10 F5 A9 00 AA 60 A0 03 B1 02 30 0A A9 FF AA 60 A0 03
+m B1 02 30 F6 A9 01 A2 00 60
+r 3 u0
+n rt_f_cmp

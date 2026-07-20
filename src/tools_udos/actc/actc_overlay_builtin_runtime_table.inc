@@ -1,0 +1,91 @@
+; Front-coded builtin names keep the duplicated body-overlay lookup table small.
+; Bit 7 marks a one-word X/Y argument, bits 6..3 retain bytes from the prior
+; name, and bits 2..0 hold arity.
+.macro builtin_runtime_row arity, prefix_len, builtin_suffix, runtime_suffix
+    .byte ((prefix_len << 3) | arity)
+    .asciiz builtin_suffix
+    .asciiz runtime_suffix
+.endmacro
+
+.macro builtin_runtime_row_xy arity, prefix_len, builtin_suffix, runtime_suffix
+    .byte ($80 | (prefix_len << 3) | arity)
+    .asciiz builtin_suffix
+    .asciiz runtime_suffix
+.endmacro
+
+builtin_runtime_import_table:
+    builtin_runtime_row $02, 0, "SIDFREQ", "SID_FREQ"
+    builtin_runtime_row $02, 3, "PULSE", "SID_PULSE"
+    builtin_runtime_row $02, 3, "WAVE", "SID_WAVE"
+    builtin_runtime_row $02, 3, "AD", "SID_AD"
+    builtin_runtime_row $02, 3, "SR", "SID_SR"
+    builtin_runtime_row $01, 3, "ON", "SID_ON"
+    builtin_runtime_row $01, 4, "FF", "SID_OFF"
+    builtin_runtime_row $00, 3, "RST", "SID_RST"
+    builtin_runtime_row $01, 4, "OUTE", "SID_ROUTE"
+    builtin_runtime_row $01, 4, "ES", "SID_RES"
+    builtin_runtime_row_xy $01, 3, "CUTOFF", "SID_CUTOFF"
+    builtin_runtime_row $01, 3, "MODE", "SID_MODE"
+    builtin_runtime_row $01, 3, "VOL", "SID_VOL"
+    builtin_runtime_row $00, 3, "OSC3", "SID_OSC3"
+    builtin_runtime_row $00, 3, "ENV3", "SID_ENV3"
+    builtin_runtime_row $01, 0, "VICBANK", "GFX_VIC_BANK"
+    builtin_runtime_row $01, 0, "BGCOLOR", "GFX_BGCOLOR"
+    builtin_runtime_row $01, 1, "ORDERCOLOR", "GFX_BORDERCOLOR"
+    builtin_runtime_row_xy $01, 0, "SCREENBASE", "GFX_SCREEN_BASE"
+    builtin_runtime_row_xy $01, 0, "BITMAPBASE", "GFX_BITMAP_BASE"
+    builtin_runtime_row $03, 0, "SCREENCELL", "GFX_SCREEN_CELL"
+    builtin_runtime_row $03, 0, "COLORCELL", "GFX_COLOR_CELL"
+    builtin_runtime_row_xy $01, 0, "SCREENCOPY", "GFX_SCREEN_COPY"
+    builtin_runtime_row_xy $01, 0, "COLORCOPY", "GFX_COLOR_COPY"
+    builtin_runtime_row $01, 0, "BITMAPFILL", "GFX_BITMAP_FILL"
+    builtin_runtime_row_xy $01, 6, "COPY", "GFX_BITMAP_COPY"
+    builtin_runtime_row $00, 6, "ON", "GFX_BITMAP_ON"
+    builtin_runtime_row $00, 7, "FF", "GFX_BITMAP_OFF"
+    builtin_runtime_row $00, 0, "MBITMAPON", "GFX_MBITMAP_ON"
+    builtin_runtime_row $00, 8, "FF", "GFX_MBITMAP_OFF"
+    builtin_runtime_row $01, 0, "SPRITEON", "SPRITE_ON"
+    builtin_runtime_row $01, 7, "FF", "SPRITE_OFF"
+    builtin_runtime_row $00, 6, "HIT", "SPRITE_HIT"
+    builtin_runtime_row $00, 9, "BG", "SPRITE_HIT_BG"
+    builtin_runtime_row $02, 6, "COLOR", "SPRITE_COLOR"
+    builtin_runtime_row $03, 6, "POS", "SPRITE_POS"
+    builtin_runtime_row $02, 6, "MC", "SPRITE_MC"
+    builtin_runtime_row $02, 6, "XEXP", "SPRITE_XEXP"
+    builtin_runtime_row $02, 6, "YEXP", "SPRITE_YEXP"
+    builtin_runtime_row $02, 6, "PRIO", "SPRITE_PRIO"
+    builtin_runtime_row $02, 7, "TR", "SPRITE_PTR"
+    builtin_runtime_row $02, 6, "DATA", "SPRITE_DATA"
+    builtin_runtime_row $02, 1, "ETSPRITEMC", "SPRITE_SET_MC"
+    builtin_runtime_row $01, 0, "JOY", "JOY"
+    builtin_runtime_row $01, 3, "SEEN", "JP"
+    builtin_runtime_row $01, 3, "BTN1", "JB1"
+    builtin_runtime_row $01, 6, "2", "JB2"
+    builtin_runtime_row $01, 0, "MOUSEPOLL", "MP"
+    builtin_runtime_row $00, 5, "SEEN", "MSEEN"
+    builtin_runtime_row $00, 5, "X", "MX"
+    builtin_runtime_row $00, 5, "Y", "MY"
+    builtin_runtime_row $00, 5, "BTN", "MB"
+    builtin_runtime_row $00, 8, "1", "MB1"
+    builtin_runtime_row $00, 8, "2", "MB2"
+    builtin_runtime_row_xy $01, 0, "DBFCREATE", "DBF_CREATE"
+    builtin_runtime_row_xy $01, 3, "OPEN", "DBF_OPEN"
+    builtin_runtime_row $01, 3, "CLOSE", "DBF_CLOSE"
+    builtin_runtime_row $02, 3, "GO", "DBF_GO"
+    builtin_runtime_row $01, 3, "FIELDCOUNT", "DBF_FIELDCOUNT"
+    builtin_runtime_row $02, 8, "LEN", "DBF_FIELDLEN"
+    builtin_runtime_row $02, 3, "READBYTE", "DBF_READBYTE"
+    builtin_runtime_row $03, 7, "FIELDBYTE", "DBF_READFIELDBYTE"
+    builtin_runtime_row $04, 3, "WRITEFIELDBYTE", "DBF_WRITEFIELDBYTE"
+    builtin_runtime_row $03, 8, "BYTE", "DBF_WRITEBYTE"
+    builtin_runtime_row $01, 3, "APPEND", "DBF_APPEND"
+    builtin_runtime_row $01, 3, "PACK", "DBF_PACK"
+    builtin_runtime_row $01, 3, "SAVE", "DBF_SAVE"
+    builtin_runtime_row $01, 3, "DELETE", "DBF_DELETE"
+    builtin_runtime_row $01, 3, "UNDELETE", "DBF_UNDELETE"
+    builtin_runtime_row $01, 3, "DELETED", "DBF_DELETED"
+    builtin_runtime_row $01, 3, "HEADERLEN", "DBF_HEADERLEN"
+    builtin_runtime_row $01, 3, "RECORDLEN", "DBF_RECORDLEN"
+    builtin_runtime_row $01, 3, "TOTALRECS", "DBF_TOTALRECS"
+    builtin_runtime_row $01, 3, "CURRRECNO", "DBF_CURRRECNO"
+    .byte $FF

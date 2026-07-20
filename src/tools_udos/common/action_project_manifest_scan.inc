@@ -28,7 +28,8 @@ copy_manifest_line_to_buffer_loop:
     beq copy_manifest_line_to_buffer_done
     ldy line_len
     sta line_buffer,y
-    jsr source_reader_consume_scan_ptr
+    jsr project_reader_consume_manifest_line_byte_from_scan_ptr
+    bcs copy_manifest_line_to_buffer_done
     inc line_len
     lda line_len
     cmp #31

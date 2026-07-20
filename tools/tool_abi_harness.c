@@ -14,7 +14,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "../../cpm65-u64/third_party/lib6502/lib6502.h"
+#include "lib6502.h"
 
 #define CMDLINE_ADDR 0xCF80
 #define RTS_STUB_ADDR 0xFFF0
@@ -29,6 +29,18 @@
 #define KERNAL_CLRCHN 0xFFCC
 #define KERNAL_CHRIN 0xFFCF
 #define KERNAL_CHROUT 0xFFD2
+#define KERNAL_BRK_STUB 0xFFE0
+#define REU_COMMAND 0xDF01
+#define REU_C64ADDR_LO 0xDF02
+#define REU_C64ADDR_HI 0xDF03
+#define REU_REUADDR_LO 0xDF04
+#define REU_REUADDR_HI 0xDF05
+#define REU_REUADDR_BANK 0xDF06
+#define REU_COUNT_LO 0xDF07
+#define REU_COUNT_HI 0xDF08
+#define REU_TRIGGER 0xFF00
+#define REU_STORE 0xEC
+#define REU_FETCH 0xED
 #define TOOL_ABI_FILE_NAME_LO 0xCDC6
 #define TOOL_ABI_FILE_NAME_HI 0xCDC7
 #define VICE_LFN_FILE 2
@@ -55,6 +67,7 @@ typedef struct {
     uint16_t svc_program_get_cmdline_ptr;
     uint16_t svc_program_get_cmdline_len;
     uint16_t svc_program_exit;
+    uint16_t svc_program_chain_sc0;
     uint16_t svc_file_load_sc0;
     uint16_t svc_file_save_sc0;
     uint16_t svc_file_write_begin_sc0;
@@ -178,6 +191,8 @@ typedef struct {
     char workspace[MAX_PATH_LEN];
     char program_dir[MAX_PATH_LEN];
     char cmdline[256];
+    char chain_command[32];
+    bool chain_requested;
     uint8_t exit_status;
     bool exited;
     bool hit_limit;
@@ -400,6 +415,8 @@ static void load_services_inc(ServiceAbi* abi, const char* path)
             parse_u16_value(value, &abi->svc_program_get_cmdline_len);
         } else if (strcmp(name, "svc_program_exit") == 0) {
             parse_u16_value(value, &abi->svc_program_exit);
+        } else if (strcmp(name, "svc_program_chain_sc0") == 0) {
+            parse_u16_value(value, &abi->svc_program_chain_sc0);
         } else if (strcmp(name, "svc_file_load_sc0") == 0) {
             parse_u16_value(value, &abi->svc_file_load_sc0);
         } else if (strcmp(name, "svc_file_save_sc0") == 0) {
@@ -1238,6 +1255,12 @@ static int kernal_chrout(M6502* cpu, uint16_t address, uint8_t data)
     (void)address;
     (void)data;
     Harness* h = G;
+    if (h->current_output_lfn == 0) {
+        append_console_char(h, (char)cpu->registers->a);
+        h->kernal_status = 0;
+        record_kernal_op(h, "CHROUT", cpu, NULL, NULL);
+        return RTS_STUB_ADDR;
+    }
     HostChannel* ch = find_channel(h, h->current_output_lfn, false);
     if (!ch || !ch->open || !ch->is_write || ch->is_cmd) {
         h->kernal_status = 0x04;
@@ -1311,11 +1334,31 @@ static int service_program_get_cmdline_len(M6502* cpu, uint16_t address, uint8_t
 
 static int service_program_exit(M6502* cpu, uint16_t address, uint8_t data)
 {
-    (void)address;
     (void)data;
+    if (G->mem[address] == 0x00) {
+        return 0;
+    }
     G->exit_status = G->mem[cpu->registers->x];
     G->exited = true;
     longjmp(G->escape, 1);
+}
+
+static int service_program_chain(M6502* cpu, uint16_t address, uint8_t data)
+{
+    (void)address;
+    (void)data;
+    uint8_t x = cpu->registers->x;
+    uint16_t command_ptr = read_u16(G, x);
+    char command[256];
+    read_cstr_mem(G, command_ptr, command, sizeof(command));
+    size_t command_len = strlen(command);
+    bool accepted = command_len > 0 && command_len <= 31;
+    set_carry_flag(cpu, !accepted);
+    if (accepted) {
+        memcpy(G->chain_command, command, command_len + 1);
+        G->chain_requested = true;
+    }
+    return RTS_STUB_ADDR;
 }
 
 static int service_file_load(M6502* cpu, uint16_t address, uint8_t data)
@@ -1769,6 +1812,34 @@ static int service_file_write_close(M6502* cpu, uint16_t address, uint8_t data)
     return RTS_STUB_ADDR;
 }
 
+static int reu_trigger_write(M6502* cpu, uint16_t address, uint8_t data)
+{
+    Harness* h = G;
+    uint16_t c64_addr = read_u16(h, REU_C64ADDR_LO);
+    uint32_t reu_addr = read_u24(h, REU_REUADDR_LO);
+    uint32_t count = read_u16(h, REU_COUNT_LO);
+    uint8_t command = h->mem[REU_COMMAND];
+    (void)cpu;
+    h->mem[address] = data;
+    if (count == 0) {
+        count = 0x10000u;
+    }
+    if (reu_addr + count > h->reu_size) {
+        die("raw REU transfer exceeds simulated REU");
+    }
+    for (uint32_t i = 0; i < count; i++) {
+        uint16_t mem_addr = (uint16_t)(c64_addr + (uint16_t)i);
+        if (command == REU_STORE) {
+            h->reu[reu_addr + i] = h->mem[mem_addr];
+        } else if (command == REU_FETCH) {
+            h->mem[mem_addr] = h->reu[reu_addr + i];
+        } else {
+            die("unsupported raw REU command");
+        }
+    }
+    return data;
+}
+
 static void install_callbacks(Harness* h)
 {
     memset(&h->callbacks, 0, sizeof(h->callbacks));
@@ -1787,6 +1858,10 @@ static void install_callbacks(Harness* h)
     M6502_setCallback(h->cpu, call, h->abi.svc_program_get_cmdline_ptr, service_program_get_cmdline_ptr);
     M6502_setCallback(h->cpu, call, h->abi.svc_program_get_cmdline_len, service_program_get_cmdline_len);
     M6502_setCallback(h->cpu, call, h->abi.svc_program_exit, service_program_exit);
+    h->mem[h->abi.svc_program_exit] = 0x60;
+    if (h->abi.svc_program_chain_sc0) {
+        M6502_setCallback(h->cpu, call, h->abi.svc_program_chain_sc0, service_program_chain);
+    }
     M6502_setCallback(h->cpu, call, h->abi.svc_file_load_sc0, service_file_load);
     M6502_setCallback(h->cpu, call, h->abi.svc_file_save_sc0, service_file_save);
     M6502_setCallback(h->cpu, call, h->abi.svc_file_write_begin_sc0, service_file_write_begin);
@@ -1808,6 +1883,7 @@ static void install_callbacks(Harness* h)
             h->abi.svc_open_program_read_path_preserved,
             service_open_program_read_path_preserved);
     }
+    M6502_setCallback(h->cpu, write, REU_TRIGGER, reu_trigger_write);
 }
 
 static void load_prg(Harness* h, const char* path, uint16_t* entry_out)
@@ -1975,6 +2051,10 @@ static void print_summary(Harness* h)
     printf("{\n");
     printf("  \"exit_status\": %u,\n", h->exit_status);
     printf("  \"exited\": %s,\n", h->exited ? "true" : "false");
+    printf("  \"chain_requested\": %s,\n", h->chain_requested ? "true" : "false");
+    printf("  \"chain_command\": ");
+    json_escape(stdout, h->chain_command);
+    printf(",\n");
     printf("  \"hit_limit\": %s,\n", h->hit_limit ? "true" : "false");
     printf("  \"broke_on_pc\": %s,\n", h->broke_on_pc ? "true" : "false");
     printf("  \"steps\": %llu,\n", (unsigned long long)h->steps);
@@ -2103,6 +2183,7 @@ int main(int argc, char** argv)
     const char* services_inc = NULL;
     const char* labels_path = NULL;
     const char* overlay_prg = NULL;
+    bool cmdline_screen_code = false;
     uint64_t max_steps = 10000000ULL;
 
     for (int i = 1; i < argc; i++) {
@@ -2114,6 +2195,8 @@ int main(int argc, char** argv)
             workspace = argv[++i];
         } else if (strcmp(argv[i], "--cmdline") == 0 && i + 1 < argc) {
             cmdline = argv[++i];
+        } else if (strcmp(argv[i], "--cmdline-screen-code") == 0) {
+            cmdline_screen_code = true;
         } else if (strcmp(argv[i], "--services-inc") == 0 && i + 1 < argc) {
             services_inc = argv[++i];
         } else if (strcmp(argv[i], "--labels") == 0 && i + 1 < argc) {
@@ -2208,7 +2291,7 @@ int main(int argc, char** argv)
                 die("bad --poke-scstr spec, expected NAME=TEXT");
             }
         } else {
-            fprintf(stderr, "usage: %s --prg TOOL.PRG [--overlay-prg RESIDENT.PRG] --workspace DIR [--cmdline TEXT] --services-inc udos_services.inc [--labels file] [--entry-label NAME] [--entry-addr ADDR] [--stop-pc ADDR] [--reg-a N] [--reg-x N] [--reg-y N] [--reg-sp N] [--poke-byte NAME=VALUE] [--poke-word NAME=VALUE] [--poke-cstr NAME=TEXT] [--poke-scstr NAME=TEXT] [--dump NAME:LEN] [--dump-cstr NAME:LEN] [--op-dump NAME:LEN] [--op-dump-cstr NAME:LEN] [--trace-pc-range START:END] [--extra-entry-frames N] [--extra-load-frames N] [--extra-save-frames N] [--max-steps N]\n", argv[0]);
+            fprintf(stderr, "usage: %s --prg TOOL.PRG [--overlay-prg RESIDENT.PRG] --workspace DIR [--cmdline TEXT] [--cmdline-screen-code] --services-inc udos_services.inc [--labels file] [--entry-label NAME] [--entry-addr ADDR] [--stop-pc ADDR] [--reg-a N] [--reg-x N] [--reg-y N] [--reg-sp N] [--poke-byte NAME=VALUE] [--poke-word NAME=VALUE] [--poke-cstr NAME=TEXT] [--poke-scstr NAME=TEXT] [--dump NAME:LEN] [--dump-cstr NAME:LEN] [--op-dump NAME:LEN] [--op-dump-cstr NAME:LEN] [--trace-pc-range START:END] [--extra-entry-frames N] [--extra-load-frames N] [--extra-save-frames N] [--max-steps N]\n", argv[0]);
             return 2;
         }
     }
@@ -2221,6 +2304,11 @@ int main(int argc, char** argv)
     snprintf(h.workspace, sizeof(h.workspace), "%s", workspace);
     copy_parent_dir(prg_path, h.program_dir, sizeof(h.program_dir));
     snprintf(h.cmdline, sizeof(h.cmdline), "%s", cmdline);
+    if (cmdline_screen_code) {
+        for (size_t i = 0; h.cmdline[i] != 0; i++) {
+            h.cmdline[i] = (char)ascii_to_screen_code((uint8_t)h.cmdline[i]);
+        }
+    }
     load_services_inc(&h.abi, services_inc);
     if (labels_path) {
         load_ld65_labels(&h, labels_path);
@@ -2264,6 +2352,16 @@ int main(int argc, char** argv)
     h.cpu->registers->pc = entry;
     h.mem[RTS_STUB_ADDR] = 0x60;
     h.mem[STOP_STUB_ADDR] = 0x60;
+    h.mem[KERNAL_BRK_STUB + 0] = 0x48; /* PHA */
+    h.mem[KERNAL_BRK_STUB + 1] = 0x8A; /* TXA */
+    h.mem[KERNAL_BRK_STUB + 2] = 0x48; /* PHA */
+    h.mem[KERNAL_BRK_STUB + 3] = 0x98; /* TYA */
+    h.mem[KERNAL_BRK_STUB + 4] = 0x48; /* PHA */
+    h.mem[KERNAL_BRK_STUB + 5] = 0x6C; /* JMP ($0316) */
+    h.mem[KERNAL_BRK_STUB + 6] = 0x16;
+    h.mem[KERNAL_BRK_STUB + 7] = 0x03;
+    h.mem[0xFFFE] = (uint8_t)(KERNAL_BRK_STUB & 0xFF);
+    h.mem[0xFFFF] = (uint8_t)(KERNAL_BRK_STUB >> 8);
     if (h.stop_on_pc) {
         uint8_t sp = (uint8_t)(0xFDu - (uint8_t)(h.extra_entry_frames * 2u));
         h.cpu->registers->s = sp;

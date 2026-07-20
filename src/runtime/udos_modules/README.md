@@ -9,6 +9,15 @@ and UDOS object readers converge.
 
 Current status:
 
+- `rt_i_mul.obj` multiplies two unsigned 16-bit values. The left operand is in
+  `A` low and `X` high, the right operand is read through zero page `$02/$03`,
+  and the low 16 bits of the product are returned in `A`/`X`.
+- `rt_i_div.obj` divides an unsigned 16-bit value in `A`/`X` by the unsigned
+  16-bit divisor read through zero page `$02/$03`. It returns the quotient in
+  `A`/`X`; division by zero returns zero.
+- `rt_print_i.obj` prints a signed 16-bit value in `A` low and `X` high as
+  decimal text through UDOS's `$CF03` console ABI so mixed string and numeric
+  output shares the resident cursor.
 - `rt_i_to_f.obj` converts an unsigned 16-bit integer in `A` low and `X` high
   to a little-endian IEEE-754 binary32 value through the destination pointer in
   zero page `$02/$03`.
@@ -17,42 +26,58 @@ Current status:
   page `$02/$03`.
 - `rt_f_to_i.obj` converts a little-endian IEEE-754 binary32 value read through
   the source pointer in zero page `$02/$03` back to a signed 16-bit integer in
-  `A` low and `X` high, truncating toward zero. Unsupported and out-of-range
-  inputs return zero.
-- `rt_f_add.obj` adds two non-negative REAL32 values with sums below `128.0`.
-  It reads source pointers from zero page `$02/$03` and `$04/$05`, writes
-  through the destination pointer in `$06/$07`, accumulates in Q8.8 precision,
-  and imports `rt_s_to_f` so ALINK must resolve its transitive runtime helper
-  dependency.
-- `rt_f_sub.obj` subtracts two non-negative REAL32 values where the result is
-  greater than or equal to zero and below `128.0`. It reads source pointers from
-  zero page `$02/$03` and `$04/$05`, writes through the destination pointer in
-  `$06/$07`, accumulates in Q8.8 precision, returns zero on underflow, and
-  imports `rt_s_to_f` so ALINK must resolve its transitive runtime helper
-  dependency.
-- `rt_f_mul.obj` multiplies two non-negative REAL32 values where the Q8.8
-  product is below `128.0`. It reads source pointers from zero page `$02/$03`
-  and `$04/$05`, writes through the destination pointer in `$06/$07`, returns
-  zero on overflow, and imports `rt_s_to_f` so ALINK must resolve its
-  transitive runtime helper dependency.
-- `rt_f_div.obj` divides two non-negative REAL32 values where the Q8.8 quotient
-  is below `128.0`. It reads source pointers from zero page `$02/$03` and
-  `$04/$05`, writes through the destination pointer in `$06/$07`, returns zero
-  on divide-by-zero or wider results, and imports `rt_s_to_f` so ALINK must
-  resolve its transitive runtime helper dependency.
-- `rt_f_cmp.obj` compares two non-negative REAL32 values below `128.0`. It
-  reads source pointers from zero page `$02/$03` and `$04/$05`, converts both
-  operands through Q8.8 fixed-point precision, and returns signed byte
-  comparison in `A`/`X` (`-1`, `0`, or `1`).
+  `A` low and `X` high, truncating every finite in-range value toward zero.
+  Out-of-range values, infinities, and NaNs return zero.
+- `rt_f_add.obj` and `rt_f_sub.obj` are six-byte operation selectors that import
+  the shared `rt_f_addsub_core.obj` implementation. They preserve the public
+  source pointers in zero page `$02/$03` and `$04/$05` plus destination pointer
+  `$06/$07` ABI while allowing ALINK to include the core only when addition or
+  subtraction is reachable.
+- `rt_f_special.obj` is the dependency-only IEEE-754 exceptional-value core
+  selected transitively by arithmetic, comparison, and square-root helpers. It
+  classifies zero, finite, infinity, and NaN operands and writes signed zero,
+  signed infinity, or canonical quiet NaN (`$7FC00000`) results as required.
+- `rt_f_addsub_core.obj` is the dependency-only binary32 add/sub core. It
+  handles signed operands, subnormals, cancellation, guard/round/sticky
+  alignment, nearest-even rounding, infinities, NaNs, and overflow to signed
+  infinity.
+- `rt_f_mul.obj` multiplies signed binary32 values read through source
+  pointers in zero page `$02/$03` and `$04/$05`, writing through destination
+  pointer `$06/$07`. It forms the exact 48-bit significand product, handles
+  normal and subnormal results, and rounds to nearest with ties to even.
+  Infinity times zero produces canonical quiet NaN; finite overflow produces
+  signed infinity.
+- `rt_f_div.obj` divides signed binary32 values read through source
+  pointers in zero page `$02/$03` and `$04/$05`, writing through destination
+  pointer `$06/$07`. It handles normal and subnormal operands with a restoring
+  quotient and nearest-even rounding. Finite nonzero division by zero and
+  finite overflow produce signed infinity; zero divided by zero and infinity
+  divided by infinity produce canonical quiet NaN; finite zero and underflow
+  preserve the XOR result sign.
+- `rt_f_cmp.obj` compares REAL32 values read through source pointers in
+  zero page `$02/$03` and `$04/$05`. It orders signed, fractional, subnormal,
+  infinite, and full-magnitude values directly from their binary32
+  representation, treats signed zeroes as equal, and returns `-1`, `0`, or `1`
+  in `A`/`X`. A NaN operand returns `2` to report unordered; source predicates
+  make every ordered comparison false and `<>` true for unordered operands.
+- `rt_f_min.obj` and `rt_f_max.obj` read two REAL32 values through `$02/$03`
+  and `$04/$05`, write the selected value through `$06/$07`, and import
+  `rt_f_cmp.obj`. One NaN operand is ignored, two NaN operands select the right
+  operand, and equal ordered values preserve the left operand bit-for-bit,
+  including its signed-zero representation. The two selectors remain separate
+  modules so ALINK includes only the function referenced by source.
 - `rt_f_abs.obj` copies a REAL32 value read through zero page `$02/$03` to the
   destination pointer in `$06/$07`, clearing the sign bit in the copied value.
 - `rt_f_sqrt.obj` reads a REAL32 value through zero page `$02/$03`, writes the
-  result through `$06/$07`, and currently returns floor square roots for
-  non-negative unsigned 16-bit REAL integer inputs. Unsupported inputs write zero.
-- `rt_print_f.obj` prints non-negative REAL32 values below `128.0` read through
-  zero page `$02/$03` as decimal text through the C64 `CHROUT` vector. It
-  converts through Q8.8 fixed-point precision and emits up to two fractional
-  decimal digits with trailing zeroes trimmed.
+  result through `$06/$07`, and handles every non-negative normal,
+  subnormal, and signed-zero value using an exact 48-bit scaled radicand and
+  restoring integer square root with nearest result rounding. Positive infinity
+  is preserved, negative nonzero values produce canonical quiet NaN, and
+  negative zero is preserved.
+- `rt_print_f.obj` prints REAL32 values read through zero page
+  `$02/$03` as decimal text through the C64 `CHROUT` vector. It uses exact
+  integer scaling to emit the complete finite decimal expansion and trims
+  trailing fractional zeroes. Non-finite values print `INF`, `-INF`, or `NAN`.
 - ALINK's current direct-PRG REAL proof cases lower the reachable ACTC body
   operations into target-side calls to the referenced REAL helper OBJ modules,
   including transitive helper imports such as `rt_s_to_f`.
@@ -191,8 +216,9 @@ Current status:
 - `rt_joy.obj` reads a C64 joystick port selected by `A` (`1` for CIA1
   port B at `$DC01`, any other value for CIA1 port A at `$DC00`) and returns an
   active-high bitfield in `A`: bit 0 up, bit 1 down, bit 2 left, bit 3 right,
-  bit 4 button 1/fire, and bit 5 button 2 using the project POT-line threshold
-  convention.
+  bit 4 button 1/fire, and bit 5 C64GS-style button 2 from POTX. It selects the
+  requested SID POT pair through CIA1 port A bits 6-7, waits for the SID input
+  to settle, and restores the original CIA1 port and data-direction registers.
 - `rt_js.obj` exports two bytes of linked joystick presence state, one byte per
   control port.
 - `rt_jp.obj` imports `rt_joy` and `rt_js`, latches a port's state to `1` after
@@ -201,14 +227,16 @@ Current status:
   distinguished from no joystick by this helper.
 - `rt_jb1.obj` and `rt_jb2.obj` import `rt_joy` and return `1` when joystick
   button 1 or button 2 is active on the selected port, otherwise `0`.
-- `rt_ms.obj` exports seven bytes of linked helper state:
-  initialized, last raw POT X, last raw POT Y, accumulated X, accumulated Y,
-  buttons, and inferred presence.
+- `rt_ms.obj` exports fifteen bytes of linked helper state: the current port
+  record selector followed by independent seven-byte records for ports 1 and 2.
+  Each record stores initialized, last normalized POT X, last normalized POT Y,
+  accumulated X, accumulated Y, buttons, and inferred presence.
 - `rt_mp.obj` samples the selected control port, updates
-  `rt_ms`, and returns inferred presence in `A`. It treats normal fire
-  as mouse button 1 and a selected POT line below `$80` as mouse button 2. The
-  first poll initializes the raw POT baseline before movement deltas are
-  accumulated.
+  `rt_ms`, and returns inferred presence in `A`. It implements Commodore 1351
+  proportional mode: FIRE is button 1, UP is button 2, and POTX/POTY bits 1-6
+  are modulo-64 coordinates. The first poll initializes the selected port's
+  normalized baseline; later polls accumulate signed wrapped deltas, with Y
+  inverted so increasing values move down in C64 screen coordinates.
 - `rt_mseen.obj` returns the last inferred mouse presence byte from `rt_ms`.
 - `rt_mx.obj` returns the current 8-bit accumulated mouse X position from
   `rt_ms`.
@@ -218,6 +246,8 @@ Current status:
   button 1, bit 1 button 2.
 - `rt_mb1.obj` and `rt_mb2.obj` import `rt_mb` and return `1` when mouse
   button 1 or button 2 is active, otherwise `0`.
+- `rt_joy.obj` through `rt_mb2.obj` are generated reproducibly in both runtime
+  trees by `tools/generate_input_runtime.py`.
 - `rt_dbf_state.obj` exports thirteen bytes of linked DBF state: active handle,
   total-record low/high bytes, current-record low/high bytes, DBF header-size
   low/high bytes, DBF record-size low/high bytes, original filename pointer

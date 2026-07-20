@@ -1,6 +1,6 @@
 # ACTC REU Overlay Pass Plan
 
-Current as of `2026-04-23`.
+Current as of `2026-07-19`.
 
 ## Goal
 
@@ -34,10 +34,16 @@ the next pass.
 
 ## Current Overlay Artifacts
 
-The first artifacts are intentionally small and raw:
+The overlay artifacts share one stable execution ABI:
 
-- `src/tools_udos/actc/actc_overlay_abi.inc` defines overlay ABI version `1`.
-- `src/tools_udos/actc/actc_overlay_noop.asm` builds a no-op pass.
+- `src/tools_udos/actc/actc_overlay_abi.inc` defines overlay ABI version `5`.
+  Version 5 extends the compact v4 context to 231 contiguous bytes with the
+  resident binary32 `REAL CONST` evaluator callback; the resident loader rejects
+  stale overlay binaries.
+- `src/tools_udos/actc/actc_overlay_noop.asm` builds the pass-0 workflow helper.
+  A zero body mode preserves the original no-op ABI, while nonzero workflow
+  modes construct strict 31-byte `ALINK` or source-positioned `ACTEDIT`
+  successor commands outside resident ACTC.
 - `tools/build_actc_overlay_noop.sh` emits `build/udos_tools/ACTC_OVL0.BIN`.
 - `src/tools_udos/actc/actc_overlay_source_header.asm` builds the first
   source-aware pass.
@@ -46,12 +52,18 @@ The first artifacts are intentionally small and raw:
 - `src/tools_udos/actc/actc_overlay_decl_counts.asm` builds the first
   declaration-scanning pass.
 - `tools/build_actc_overlay_decl_counts.sh` emits
-  `build/udos_tools/ACTC_OVL2.BIN`.
-- The workspace exporter and UDOS release Makefile include `ACTC_OVL0.BIN`
-  through `ACTC_OVL7.BIN` next to `ACTC.PRG`, so pass files are present when
-  the scheduler runs from an exported or release image.
+  `build/udos_tools/ACTC_OVL2.BIN`. Forward/backward linked-routine alias
+  resolution plus general routine-address expressions occupy 6,348 code bytes,
+  leaving 1,844 bytes under the hard 8 KiB ceiling. Its mutable declaration
+  caches live in the shared `$8000-$9FFF` overlay scratch window.
+- `src/tools_udos/actc/actc_overlay_preprocess.asm` builds the atomic source
+  transform as base-36 pass `I`; `tools/build_actc_overlay_preprocess.sh` emits
+  `build/udos_tools/ACTC_OVLI.BIN`.
+- The workspace exporter and UDOS release Makefile include base-36 passes
+  `ACTC_OVL0.BIN` through `ACTC_OVLK.BIN` next to `ACTC.PRG`, so pass files are
+  present when the scheduler runs from an exported or release image.
 - `tests/test_actc_overlay.py` proves the `ACOV` header, ABI version, pass id,
-  `$A000` execution base, encoded byte length, no-op return sequence, and the
+  `$A000` execution base, encoded byte length, compatibility no-op return, and the
   source-header/declaration-count passes receiving the resident source-window
   context. The declaration-count pass also proves writing resident count state
   through explicit context pointers and writing module variable names/metadata,
@@ -62,39 +74,125 @@ The first artifacts are intentionally small and raw:
   validation so duplicate names, malformed
   declaration tails, and invalid initializer tails return failed overlay status
   instead of partial success.
-- `actc_overlay_run_pass` in `ACTC.PRG` accepts a pass id in `A`, finds a pass
-  descriptor, stages that file into REU at `$008000`, copies it to `$A000`, passes
+- `actc_overlay_run_pass` in `ACTC.PRG` accepts a pass id in `A`, constructs its
+  base-36 pass filename, stages that file into REU at `$008000`, copies it to `$A000`, passes
   a context block to the overlay in `X/Y`, banks out BASIC ROM for the call,
   executes it, and restores the previous memory configuration.
 - `ACTC.PRG` now has a multi-stage compile-path overlay handoff. When built with
   `ACTC_USE_SOURCE_HEADER_OVERLAY=1` and `ACTC_USE_DECL_OVERLAY=1`, it calls
-  `ACTC_OVL1.BIN` for module-header validation and then `ACTC_OVL2.BIN` for
-  declaration scanning. The current production path also stages `ACTC_OVL6.BIN`
+  `ACTC_OVL1.BIN` for module-header validation, conditionally calls
+  `ACTC_OVLI.BIN` when the streamed whole-source preflight finds a transform,
+  and then calls `ACTC_OVL2.BIN` for declaration scanning. The current
+  production path also stages `ACTC_OVL6.BIN`
   for proc-body lowering, `ACTC_OVL4.BIN` for runtime-import detection,
-  `ACTC_OVL3.BIN` for payload layout, `ACTC_OVL5.BIN` for streamed object
-  emission, and `ACTC_OVL7.BIN` for overlay-hosted body external
-  preallocation; on
+  two-pass ASMBLOCK assembly, and raw code-block encoding, `ACTC_OVL3.BIN` for payload layout,
+  `ACTC_OVL9.BIN` for multi-procedure native integer and ASMBLOCK object
+  emission, `ACTC_OVLG.BIN` for runtime-argument integer control,
+  `ACTC_OVLH.BIN` as the universal composed emitter for runtime-argument calls,
+  ASMBLOCK, `=*(...)`, and numeric absolute-address declarations in one unit,
+  `ACTC_OVLJ.BIN` for compact numeric absolute-address routine units, and
+  `ACTC_OVLK.BIN` for bounded two-REAL-parameter finite comparison/select
+  functions. Passes 8 and A through H retain their native integer, REAL,
+  runtime, and composition roles.
+  The same path stages `ACTC_OVL5.BIN` as the generic object-emission fallback
+  and `ACTC_OVL7.BIN` for overlay-hosted body external preallocation. On
   success, later compiler phases consume the overlay-written REU metadata.
   Overlay staging uses the executable-relative tool ABI path prefix, so
-  `!ACTC_OVL1.BIN` through `!ACTC_OVL7.BIN` resolve beside the launched
+  `!ACTC_OVL1.BIN` through `!ACTC_OVLK.BIN` resolve beside the launched
   `ACTC.PRG`.
+- `tools/build_actc_udos.sh` always builds `ACTC_OVL0.BIN`, including compiler
+  harness builds, because compile/link/debug chaining and compile-error editor
+  return use pass 0 even when no normal compilation pass needs it.
 - `tools/build_actc_overlay_body_collect.sh` now also builds
   `build/udos_tools/ACTC_OVL6.BIN`, pass id `6`, which is the current
   proc-body lowering overlay. `tools/build_actc_overlay_body_preallocate.sh`
   builds `build/udos_tools/ACTC_OVL7.BIN`, pass id `7`, which owns the
   overlay-hosted preallocation scanner. Both are packaged beside `ACTC.PRG` and
   enabled in the default production build.
+- `tools/build_actc_overlay_emit_native_local_object.sh` builds
+  `build/udos_tools/ACTC_OVL9.BIN`, pass id `9`. It owns native local-procedure
+  exports, calls, control-flow targets, debug offsets, and relocations. It also
+  owns single-procedure plain DO, WHILE, and DO/WHILE EXIT bodies that pass 8
+  declines, including dynamic word arithmetic, integer printing, and
+  stack-neutral no-argument external calls inside WHILE control. Multiply,
+  divide, printing, and external procedures remain ordinary link-selected
+  imports with compiler-emitted call relocations.
+  It also consumes pass-4 ASMBLOCK/raw-block pages, inserts their machine bytes at body
+  markers, exports block-local absolute targets, and emits normal word or
+  low/high-byte variable, local-routine, and label relocations. Variable data allocation and
+  exports preserve two-byte scalar and four-byte REAL widths.
+  It returns not-applicable before the remaining single-procedure or generic
+  emitters run. Its 7,599-byte image leaves 593 bytes free under a dedicated
+  128-byte minimum reserve.
+- `tools/build_actc_overlay_emit_native_local_runtime_object.sh` builds
+  `ACTC_OVLG.BIN`, pass id `16`, for one-word byte-in-A and word-in-X/Y runtime
+  calls inside integer control. Its 6,645-byte image leaves 1,547 bytes free under
+  a 512-byte reserve.
+- `tools/build_actc_overlay_emit_native_local_mixed_object.sh` builds
+  `ACTC_OVLH.BIN`, pass id `17`. It requires both assembled blocks and a
+  supported runtime argument call, or acts as the fallback for a composed
+  numeric fixed-address unit, then emits one native OBJ with ordinary imports
+  and relocations. Writable emitter state is BSS in the shared scratch window;
+  the 8,064-byte code image leaves exactly 128 bytes free under a
+  128-byte reserve.
+- `ACTC_OVLI.BIN`, pass id `18`, owns bounded token-aware `DEFINE`, `SET`,
+  recursive `INCLUDE`, typed-constant transformation, and routine-address
+  expression canonicalization, including the shared signed 64-bit integer-
+  expression grammar, binary32 `REAL CONST` folding, and a packed 1,350-byte
+  definition store. Its 7,680-byte code image occupies `$A000-$BDFF` and leaves
+  exactly the enforced 512-byte reserve in the `$A000-$BFFF` overlay window.
+  Binary32 parsing and arithmetic run through the ABI-v5 resident callback, so
+  the evaluator does not consume pass I's reserve. Its 3,150-byte mutable
+  workspace occupies `$8000-$8C4D`, reusing
+  ACTC's Tool-ABI-preserved overlay scratch area before ASMBLOCK collection begins.
+  Production and ordinary harness builds enable this callback. Explicit legacy
+  all-resident capacity builds use an ABI-compatible rejecting stub so the
+  evaluator is not duplicated beside resident body/layout/emitter fallbacks.
+- `tools/build_actc_overlay_emit_native_fixed_object.sh` builds
+  `ACTC_OVLJ.BIN`, pass id `19`. It emits numeric and linked absolute-address
+  declarations as direct or relocated `JSR` instructions and owns `*=...`
+  register-ABI machine routines with ASMBLOCK bodies. It declines composed
+  runtime units so pass H can own them. Its 7,901-byte image leaves 291 bytes
+  free in the 8 KiB execution window, guarded by a 256-byte reserve.
+- `tools/build_actc_overlay_emit_native_real_function_object.sh` builds
+  `ACTC_OVLK.BIN`, pass id `20`. It owns the exact finite
+  `REAL FUNC MIN2(REAL A,B)` comparison/select checkpoint, emits separate root
+  and function body closures plus ordinary named/import relocations, and
+  declines every unsupported body before opening output. Its 3,257-byte image
+  leaves 4,935 bytes free in the 8 KiB execution window.
+- `tools/build_actc_overlay_emit_native_object.sh` builds
+  `build/udos_tools/ACTC_OVL8.BIN`, pass id `8`. In addition to straight-line
+  word expressions and integer IF/DO control flow, it owns two word FOR loop
+  instances with once-only final/step staging, runtime step direction, zero-step
+  exit, nearest-loop FOR EXIT, and 16-bit wrap termination. It also owns plain
+  plain and post-test DO/EXIT when the body contains dynamic word arithmetic,
+  including named backward and post-loop relocations. Its 6,719-byte image
+  leaves 1,473 bytes free and retains a dedicated 1 KiB minimum reserve; the
+  other emission overlays retain 2 KiB.
+- `tools/build_actc_overlay_emit_native_real_object.sh` builds
+  `build/udos_tools/ACTC_OVLA.BIN`, pass id `10`. The resident selector encodes
+  pass filenames as one-character base-36 values, and this overlay owns native
+  REAL bridge, REAL-to-INT, straight-line binary REAL print, unary
+  `FAbs`/`FSqrt` print, and one-argument helper plus REAL print detection,
+  machine records, relocations, and debug offsets. It runs after integer passes
+  9 and 8 and before generic pass 5.
+- `tools/build_actc_overlay_emit_native_real_control_object.sh` builds
+  `build/udos_tools/ACTC_OVLB.BIN`, pass id `11`. It owns plain, ELSE, and
+  two-level nested REAL comparisons plus simple and binary-update REAL
+  `DO ... UNTIL` loops. It emits relocatable machine roots instead of leaving
+  those compact bodies for ALINK to compile. The current 5,220-byte pass leaves
+  2,972 bytes free in the 8 KiB execution window.
 - In the normal production build that path is now mandatory rather than
   best-effort: resident module-header parsing and resident declaration
-  collection are compiled out, the build emits `ACTC_OVL1.BIN` and
-  `ACTC_OVL2.BIN` automatically, and both overlays must be present beside
-  `ACTC.PRG`.
+  collection are compiled out, the build emits `ACTC_OVL1.BIN`,
+  `ACTC_OVLI.BIN`, and `ACTC_OVL2.BIN` automatically, and all three overlays
+  must be present beside `ACTC.PRG`.
 - The overlay context includes a resident `load next source window` callback.
   `ACTC_OVL2.BIN` uses it to page source windows after the current committed
   window is consumed, while keeping a 24-bit source mark and a per-window
   remaining counter. This proves declaration scans can continue after the
   current `1280` byte production source window, and overlay staging now stays
-  below the bank-0 metadata slabs instead of colliding with source staged at
+  below the reserved-bank metadata slabs instead of colliding with source staged at
   `$010000+`. The target-side executable-relative overlay load path is now
   covered by release/VICE proofs, so the default build enables
   `ACTC_USE_DECL_OVERLAY=1`.
@@ -105,11 +203,15 @@ The first artifacts are intentionally small and raw:
   collection by default. The wrap-edge cases that had blocked it are fixed in
   `ACTC_OVL2.BIN`.
 
-The overlay execution window is `$A000-$BFFF`, which means the ACTC resident
-driver must clear LORAM in `$0001` before calling overlay code and restore the
-previous memory configuration after the pass returns. This keeps the existing
-`$0900-$9FFF` tool window available while opening an 8 KiB pass-code window
-under BASIC ROM.
+Every ACTC pass has the same hard `$A000-$BFFF` execution window (8,192 bytes).
+The driver clears LORAM in `$0001` before calling overlay code and restores the
+previous memory configuration after the pass returns. UDOS owns live resident
+state at `$C000` and above, so no pass code or scratch may cross that boundary.
+Mutable pass state shares `$8000-$9DFF`; production and fallback ACTC builds are
+guarded to end below `$8000`. The linker reserves `$9E00-$9FFF` from pass BSS;
+ASMBLOCK emission uses `$9E00` for its page buffer, `$9F00` for its label index,
+and `$9F10+` for scratch. Tool ABI calls preserve that low-memory state while
+resident UDOS services execute.
 
 ## Initial Pass Split
 
@@ -118,7 +220,11 @@ under BASIC ROM.
 3. `actc_p2_body`: lower procedure bodies into REU-backed `body_ops`. Current
    production state: implemented in `ACTC_OVL6.BIN`.
 4. `actc_p3_imports`: detect runtime imports and unresolved externals. Current
-   production state: runtime-import detection is in `ACTC_OVL4.BIN`; unresolved
+   production state: runtime-import detection is in `ACTC_OVL4.BIN`; this pass
+   also assembles each ASMBLOCK or encodes each raw code block into a private
+   page in reserved REU bank `$FF`, within `$FF0000-$FF0EFF`. Import flags are
+   derived from parsed body operations, so assembly text and comments are
+   opaque to Action helper selection. Unresolved
    external discovery still happens during body lowering, behind a dedicated
    body-overlay resolver seam and isolated unresolved-external helper. The gated
    `ACTC_PREALLOCATE_BODY_EXTERNALS=1` proof preallocates body externals:
@@ -179,7 +285,37 @@ under BASIC ROM.
 5. `actc_p4_layout`: compute proc sizes, offsets, and literal offsets. Current
    production state: implemented in `ACTC_OVL3.BIN`.
 6. `actc_p5_emit`: stream `OBJ1` object output. Current production state:
-   implemented in `ACTC_OVL5.BIN`.
+   generic emission is implemented in `ACTC_OVL5.BIN`; single-procedure native
+   integer machine emission, including word FOR loops, FOR EXIT, and dynamic
+   arithmetic plain/post-test DO/EXIT, is isolated in `ACTC_OVL8.BIN`;
+   multi-procedure native local-call/control-flow plus single-procedure plain
+   DO, WHILE, dynamic WHILE arithmetic, DO/WHILE EXIT, and ASMBLOCK byte and
+   relocation emission is isolated in `ACTC_OVL9.BIN`;
+   native REAL bridge, conversion, binary arithmetic, unary helper, and
+   helper-prefixed REAL print emission are isolated in base-36 pass
+   `ACTC_OVLA.BIN`; REAL IF/ELSE/nested-IF and REAL `DO ... UNTIL` emission is
+   isolated in `ACTC_OVLB.BIN`; REAL `WHILE` emission is isolated in
+   `ACTC_OVLC.BIN`; runtime condition, runtime sequence, and nested-readback
+   machine emission are isolated in `ACTC_OVLD.BIN`, `ACTC_OVLE.BIN`, and
+   `ACTC_OVLF.BIN`; one-word byte-in-A and word-in-X/Y runtime calls nested in
+   integer control are isolated in `ACTC_OVLG.BIN`; units combining that control
+   with ASMBLOCK, `=*(...)`, or numeric absolute-address declarations are
+   isolated in `ACTC_OVLH.BIN`; compact fixed-address-only units first use
+   `ACTC_OVLJ.BIN`; the bounded two-REAL-parameter finite comparison/select
+   function first uses `ACTC_OVLK.BIN`.
+   Native passes return explicit not-applicable status before writing output so
+   the resident driver can try the next emitter without rolling back a partial
+   object.
+
+ABI v5 retains v4's fixed-address routine metadata and formatter callbacks and
+adds the resident binary32 `REAL CONST` evaluator, producing one contiguous
+231-byte context. Native emitters continue to share the resident decimal-word
+and uppercase-hex-byte formatters rather than duplicate those routines. Body
+collection and preallocation both include one shared token-driven positive-word
+parser source. The generated overlays each carry the cold parser code they
+execute, while resident ACTC retains only token ownership; this keeps the
+compiler below the UDOS resident floor without maintaining two parser
+implementations.
 
 ## Why This Matters
 

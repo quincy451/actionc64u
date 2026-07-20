@@ -12,8 +12,8 @@ arbitrary 256 KiB source cap.
 The current compiler only partially does this. It stages source into REU and can
 refill `source_buffer` through SourceReader-managed scans, so it can now compile a narrow
 line-oriented proof where the `PROC MAIN` name, a `PrintE` string literal, or
-long inline spaces before a `PrintIE` literal cross the first 20 KiB window
-boundary. Small-window proofs also verify the declaration-count overlay can skip
+long inline spaces before a `PrintIE` literal cross REU source offset `$005000`.
+Small-window proofs also verify the declaration-count overlay can skip
 a module header whose name crosses the window, collect a `PROC` export name
 split across the window, collect module, parameter, and local variable names
 split across the window, plus a moving-base `PrintE` string literal,
@@ -75,8 +75,10 @@ The current production ACTC build uses `ACTC_REU_SOURCE_CACHE=1`. It stages
 `SOURCE_LOOKAHEAD=255` bytes for bounded compatibility lookahead, and refills the
 window when the scanner reaches the window end. The production window is kept
 page-aligned to avoid per-byte boundary code in the resident tool window; larger
-or smaller harness builds can still override `ACTC_SOURCE_WINDOW`. This is not
-the final parser architecture yet. The production UDOS resident now exports the
+or smaller harness builds can still override `ACTC_SOURCE_WINDOW`, provided the
+linked resident image remains below the overlay scratch base at `$8000`. The
+linker enforces that invariant. This is not the final parser architecture yet.
+The production UDOS resident now exports the
 matching REU stage/read service entries, while the automated proof uses the host
 harness' simulated REU.
 
@@ -96,7 +98,11 @@ parser-visible byte-consume boundaries for both forms. `advance_scan_y` and
 `advance_scan_ptr` remain only as low-level implementation details used by
 consume helpers after a validated peek. That prevents long runs of spaces and the
 current long-expression proof from silently wrapping to the beginning of the
-same scan window. Boolean pre-scan wraps now intentionally route into the
+same scan window. Fixed-pattern pointer consumes now revalidate each byte
+through the pattern-character SourceReader helper before advancing, while
+preserving the caller's pattern-index scratch byte through SourceReader
+save/restore helpers. Boolean pre-scan wraps now
+intentionally route into the
 boolean parser instead of continuing from `Y=0` in the same window, and
 speculative expression pre-scans now mark and restore the active REU source
 window before returning to the real parse. Failed boolean keyword probes use the
@@ -115,66 +121,146 @@ arguments, expression comparisons, grouped expressions, decimal arithmetic,
 positive-word arithmetic, real conversion/comparison paths, conversion keyword
 open-paren parsing, resident declaration scans, body keyword scans, and
 pattern-location scans now all share the same narrow SourceReader read/consume
-primitives. Resident, body-collect overlay, and body-preallocate overlay
+primitives. Resident scan-pointer whitespace, blank-line, line-skip, and
+pattern-search advances now route through semantic SourceReader helpers instead
+of parser-side generic consumes. Shared project-manifest line skipping, line
+copying, and removal shifting also route through `project_reader_*` helpers
+instead of open-coded raw scan-pointer consumes. Resident, body-collect overlay, and body-preallocate overlay
 `THEN`/`DO` terminator probes now consume keyword characters through shared
 expected-character helpers. Keyword
 token pattern matching now routes each matched pattern
 character and post-keyword token-boundary check through SourceReader helpers
-that own the source peek, uppercase compare/classification, source consume, and
-pattern-index advance. The central string-literal helper now delegates each
-literal byte to a SourceReader helper that owns the peek, length check, store,
-source consume, and post-consume token-target restore, and delegates literal
-termination plus closing-quote consumption to a matching SourceReader finish
-helper. Both resident symbol-copy
-helpers now build tokens in a SourceReader-owned carry buffer before publishing
-to the legacy resolver scratch name, while
+that own pattern-index setup, keyword-probe/open scan offset setup, the source
+peek, uppercase compare/classification, source consume, and pattern-index advance. The central
+string-literal helper now delegates
+token-target setup to a SourceReader begin helper, delegates each literal byte
+to a SourceReader helper that owns the peek, length check, store, source consume,
+and post-consume token-target restore, and delegates literal termination plus
+closing-quote consumption to a matching SourceReader finish helper. Both
+resident symbol-copy
+helpers now delegate stream-offset setup to SourceReader begin helpers and build
+tokens in a SourceReader-owned carry buffer before publishing to the legacy
+resolver scratch name, while
 preserving the existing returned-`Y` scanner ABI. The resident module-header
 copy helper uses the same carry-buffer publish path for `declared_module_name`.
-Preallocation call-argument `(`, `,`, and `)` punctuation now routes through a
-generic SourceReader expected-character helper while leaving broader scan loops
-as byte consumers.
+Preallocation call-argument `(`, `,`, `)`, and string quote delimiters now route
+through a generic SourceReader expected-character helper while leaving broader
+scan loops as byte consumers; the resident plain-call argument separator/close
+path now selects `,` and `)` by attempting exact SourceReader consumes rather
+than by parser-owned compares. The plain and flat call-argument scanners also
+classify wrapper-owned comma/close delimiters through non-consuming SourceReader
+matches before their existing consume paths handle owned bytes. Runtime
+call-argument separator/close handling now uses the same exact consume-attempt
+pattern after `(` and after each emitted argument.
+Preallocation call-argument string content bytes now route through a SourceReader
+string-byte helper that rejects line ends and closing quotes before consuming.
+Preallocation plain-call argument fallback bytes now route through a SourceReader
+scan-byte helper that rejects argument delimiters before consuming.
+Preallocation line-call scan fallback bytes now route through a SourceReader
+scan-byte helper that rejects line ends and string delimiters before consuming.
+Preallocation flat call-argument scan fallback bytes now route through a
+SourceReader scan-byte helper that rejects flat argument terminators before
+consuming.
+Inline source spaces and tabs now route through a SourceReader whitespace
+consume helper instead of direct scanner-side generic byte consumes.
 Declared real/word assignment `=` preallocation uses the same helper so the
 delimiter consume remains bound to the SourceReader boundary.
-Resident module variable initializer `=`, `[`, and `]` delimiters now use the
-helper after their existing match peeks.
+Resident module variable initializer `=`, `[`, and `]` delimiters now consume
+complete punctuation tokens through the expected-token helper; the required
+`]` closer relies on the helper carry result rather than a parser-side
+peek/compare.
 Procedure body assignment `=`, optional second `=`, and local int `[ ]`
-delimiters use the helper after matching.
+delimiters use the helper after matching, with the required `]` closer using the
+helper as the only closer check.
 Resident preallocation conversion/operator `)` delimiters also use the exact
 helper rather than open-coded peek/cmp/consume sequences.
-Preallocation REAL unary print close parens and binary assignment/print
-operators also use the helper after the matched byte is selected.
-Preallocation condition comparison operators and boolean primary grouping now
-use the helper for matched `=`, `<`, `>`, `<>`, `<=`, `>=`, `(`, and `)` bytes.
-Preallocation print statement wrapper `(` and `)` delimiters also use the helper
-while their inner argument scanners remain byte-scan loops.
+Preallocation REAL unary print close parens now consume through SourceReader
+and fall back on its carry result. Preallocation and runtime REAL binary
+assignment/print operator probes now route through a SourceReader `+`/`-`/`*`/`/`
+match helper before the matched byte is consumed by the existing exact-character
+path; binary print verifies the wrapper-owned close paren through a
+non-consuming SourceReader match helper.
+Preallocation condition comparison operators use the helper for matched `=`,
+`<`, `>`, `<>`, `<=`, and `>=` bytes. Preallocation boolean primary grouping
+keeps the speculative `(` branch in parser code, but the closing `)` now
+consumes through SourceReader and falls back on its carry result.
+Preallocation print statement wrappers keep their speculative `(` branch in
+parser code, but their closing `)` delimiters now consume through SourceReader
+and fall back on its carry result while their inner argument scanners remain
+byte-scan loops.
 Signed word prefix preallocation now uses the exact helper for the literal `0`
 and `-` tokens.
 Runtime grouped value term `(` and `)` delimiters now use the same exact helper,
 keeping group punctuation ownership with SourceReader.
-Runtime boolean primary grouping `(` and `)` delimiters also use the helper
-after the group branch has matched.
-Runtime call-argument `(`, `,`, and `)` delimiters also route through the exact
-helper while leaving the argument scan and separator-choice peeks unchanged.
-Runtime value optional `=`, group-open `[`, and group-close `]` delimiters use
-the exact helper after their existing match peeks.
+Runtime boolean primary grouping keeps the speculative `(` branch in parser
+code, but the closing `)` now consumes through the helper and falls back on its
+carry result.
+Runtime call-argument `(`, `,`, and `)` delimiters also route through exact
+SourceReader consume attempts, leaving only the expression emitters as the
+argument scanners.
+Runtime value optional `=`, group-open `[`, and group-close `]` delimiters
+consume complete punctuation tokens through the expected-token helper.
 Runtime sum `+` and `-` operators use the same helper after the operator branch
 has selected the matched token.
 Small value parser optional `=`, group-open `[`, and group-close `]` delimiters
-also use the exact helper after their existing match peeks.
-Small boolean primary group `(` and `)` delimiters use the helper after the
-group branch has matched the token.
+also consume complete punctuation tokens through the expected-token helper.
+Small constant-sum terminator validation now classifies caller-owned `,`, `)`,
+and `]` delimiters through the non-consuming SourceReader match helper.
+Small boolean primary grouping follows the same shape: parser code still
+recognizes the speculative `(` branch, while SourceReader owns the closing `)`
+consume and fallback result.
 Small condition-clause comparison operators `=`, `<`, `>`, `<=`, `>=`, and `<>`
 route each matched operator byte through the helper.
+Common non-consuming `=`, `<`, and `>` probes that only decide whether a
+comparison follows now route through a SourceReader comparison-operator helper.
+Initial resident comparison dispatches in runtime/small-expression parsers now
+use that helper and classify the returned operator byte only after a match.
+Resident preallocation comparison dispatches use the same helper, and dispatches
+that already proved a comparison byte now branch to the remaining `>` case
+instead of rechecking for an impossible miss.
+Post-`<` optional `=`/`>` suffix probes in resident preallocation, runtime, and
+small-expression comparison parsers now route through a SourceReader suffix-match
+helper before the matched suffix is consumed by the existing operator-specific
+path.
+Resident line-end/EOF probes in statement terminator, return-expression, and
+small constant-sum paths now route through a SourceReader line-end match helper.
+Common non-consuming `(` probes that only select a grouped/call parse path now
+route through a SourceReader open-paren match helper that does not clobber the
+generic `compare_char` scratch byte.
+Common non-consuming `=` probes that only select assignment/value parse paths now
+route through the generic SourceReader exact-character match helper.
+Post-`>` optional `=` suffix probes in resident comparison parsers now use that
+same exact-character match helper before consuming the suffix.
+Required `]` closers in runtime and small value-expression groups now rely on
+the SourceReader exact-character consume result instead of a parser-side
+peek/compare before the consume.
 Small decimal-expression comparison operators use the same per-byte helper for
 the matching operator forms.
 Small decimal arithmetic operators `+`, `-`, `*`, and `/` use the helper after
 their operator branches have matched.
-Small decimal grouping punctuation `(` and `)` uses the helper after the group
-entry and close-paren checks have matched.
+Small decimal and positive-word sum parsers classify caller-owned `,`, `)`,
+`]`, `=`, `<`, and `>` terminators through a non-consuming SourceReader numeric
+sum stop helper before dispatching owned arithmetic operators.
+Small decimal grouping keeps the speculative `(` branch in parser code, but the
+closing `)` now consumes through SourceReader and falls back on its carry result.
+Small, plain-word, and positive-word decimal parsers now consume matched digit
+bytes through a SourceReader decimal-digit helper instead of generic parser-side
+Scan-Y consumes.
+Speculative top-level arithmetic and boolean scanner punctuation classifies
+caller-owned `,`, `]`, `)`, and `(` through non-consuming SourceReader matches,
+then consumes owned punctuation through the exact-character helper in the
+selected labels. Generic consumes remain only for the arbitrary-byte scan-loop
+bodies in those routines.
+Speculative top-level arithmetic and boolean arbitrary-byte scan-loop bodies now
+route through SourceReader scan-byte helpers, with the boolean helpers preserving
+the prior-symbol tracking used by keyword-boundary detection through a
+SourceReader classifier helper. Boolean scan initialization and punctuation
+consumes now reset that prior-symbol state through SourceReader helpers instead
+of parser-side direct state stores.
 Preallocation positive-word arithmetic operators `+`, `-`, `*`, and `/` use the
 same helper after their operator branches have matched.
-Preallocation positive-word grouping punctuation `(` and `)` uses the helper in
-both factor and optional grouped-sum parsing.
+Preallocation positive-word grouping follows the same close-delimiter ownership
+in both factor and optional grouped-sum parsing.
 Runtime `REAL(` opener matching uses uppercase expected-character helpers for
 the keyword bytes and the normal expected-character helper for the open paren.
 Runtime `REAL(var)` bridge close-paren matching uses the normal
@@ -184,24 +270,34 @@ the signed `0-` prefix bytes.
 Runtime REAL assignment binary operators `+`, `-`, `*`, and `/`, plus unary
 `FABS(...)`/`FSQRT(...)` close parens, use the same helper after their matched
 bytes have been selected.
+Runtime `PRINTR`/`PRINTRE` REAL print close parens consume through the same
+helper and fall back on its carry result.
+Runtime `PRINTI`/`PRINTIE` expression close parens also consume through the
+same helper and fall back on its carry result.
 Runtime explicit REAL assignment parsing also uses the helper for bridge and
 numeric close parens plus signed `0-` prefixes.
 Runtime REAL condition comparison operators `=`, `<`, `>`, `<>`, `<=`, and
 `>=` use the expected-character helper for each matched byte.
 Runtime integer condition comparison operators use the same helper for their
 matched `=`, `<`, `>`, `<>`, `<=`, and `>=` bytes.
-Procedure export parameter-list open parens and comma separators also consume
-through the expected-character helper after the parser has matched them.
+Procedure export parameter-list open parens, comma separators, and closing
+parens consume through exact SourceReader attempts.
 Shared keyword-open parsing now consumes the matched `(` through the same helper
 after keyword-pattern matching succeeds.
+The body-collect overlay's local keyword-open scanner now delegates pattern
+setup and per-byte pattern consumes to overlay-local SourceReader helpers, so
+the local reader offset and pattern-index scratch are not mutated by parser-side
+keyword code; its matched open-paren probe also uses the local exact-character
+match helper before the existing consume path.
 Parser-side symbol helpers now store and terminate token bytes through
 SourceReader token helpers rather than writing the token buffer directly, and
 resident streaming symbol-copy plus module-header copy loops now share one
 SourceReader token-byte helper that peeks, classifies, stores, consumes, and
-updates the scanner offset. Procedure export
-name copies now use a matching non-consuming SourceReader token-byte helper so
-the legacy returned-`Y` parameter-list ABI is preserved while token storage is
-centralized before publishing to the export table. The source-header
+updates the scanner offset. Procedure export name copies now use a matching
+non-consuming SourceReader token-byte helper so the legacy returned-`Y`
+parameter-list ABI is preserved while token storage is centralized, and a
+SourceReader finish helper now saves the returned source offset while
+terminating and publishing to the export table. The source-header
 overlay module-name comparator and declaration-count overlay var/export symbol
 copies use the same local token-helper shape. Declaration initializer body
 character checks also route through a local helper before falling back to
@@ -245,16 +341,28 @@ small-window source cache coverage, including procedure export names plus
 module, parameter, and local variable names copied by the declaration overlay.
 The declaration-count overlay now stages those identifiers in an overlay-local
 token buffer before publishing to the var/export table windows. Its inline-space
-scanner is the first declaration-count overlay path routed through local source
-peek/consume wrappers instead of raw pointer access, and declaration line-end
-validation plus var/export-name symbol reads now use the same local source peek
-path. Procedure parameter punctuation checks now also peek through that local
-wrapper while preserving explicit scan advancement. Declaration-tail delimiter
-checks use the same local peek path before initializer parsing. Declaration
-keyword character and delimiter reads also route through that peek wrapper while
-retaining the existing rewind behavior for failed probes. Declaration
-initializer expression scans now peek through the same wrapper before consuming
-characters. Declaration whitespace and line skipping now peek and consume
+scanner now consumes through a local SourceReader helper instead of open-coded
+peek/consume loops, its full whitespace skipper now delegates CR/LF-inclusive
+classification and consumption to a matching helper, and declaration line-end
+validation now uses a local line-end match helper. Declaration line skipping now
+delegates source-window availability, EOF, CR/LF detection, optional LF
+consumption, and byte advance to a local helper. Var/export-name symbol-copy
+loops now delegate each candidate token byte to local helpers that own source
+peeking, delimiter classification, symbol validation, token-window storage, and
+source consumption.
+Procedure parameter punctuation checks now use local exact-character
+match/consume helpers. Declaration-tail delimiter checks use the same
+exact-character helpers before initializer parsing. Declaration keyword
+character matching routes through the local peek/consume wrapper, and keyword
+delimiter matching now delegates the source peek plus delimiter classification
+to a local helper while retaining the existing rewind behavior for failed
+probes. The delimiter classification and failed keyword-match rewind are now
+centralized behind local declaration-overlay SourceReader helpers instead of
+being open-coded in the keyword dispatcher. Declaration initializer expression wrapper delimiters
+(`[`, `]`) plus line-end probes now route through the same local match/consume
+helpers, while arbitrary initializer body characters route through a local
+body-byte helper that owns source peek, capture, validation, and consume.
+Declaration whitespace and line skipping now peek and consume
 through the local wrappers, and mixed spaces, tabs, CR, and LF before module
 declarations are covered across multiple tiny source windows with no lookahead.
 Remaining raw declaration-overlay source reads are limited by test to the local
@@ -263,15 +371,53 @@ already-loaded byte and uses the local peek helper without forcing a new
 body-only source window into the declaration pass. The name-cache comparator
 uses an explicit cache-pointer alias over the saved source scan slot, so it is
 no longer treated as a source scan read. The source-header overlay now
-centralizes its raw source reads behind a refill-aware local peek helper and has
-small-window coverage for leading whitespace spanning multiple source windows,
-including mixed spaces, tabs, CR, and LF, the `MODULE` keyword crossing a window
-boundary, mixed space/tab module-name spacing spanning multiple source windows,
-and long module names spanning multiple tiny source windows with no lookahead.
+centralizes its raw source reads behind a refill-aware local peek helper.
+Leading-whitespace and inline module-spacing skips now delegate accepted-byte
+classification and consumption to local SourceReader helpers. Its
+module-keyword character consumes now route through a local SourceReader helper
+that owns the peek, uppercase compare, and consume sequence. Requested
+module-name character matching also routes through a local helper that owns the
+source peek, token validation, requested-name compare, and consume sequence while
+preserving the existing token-end distinction. The overlay has small-window
+coverage for leading whitespace spanning multiple source windows, including
+mixed spaces, tabs, CR, and LF, the `MODULE` keyword crossing a window boundary,
+mixed space/tab module-name spacing spanning multiple source windows, and long
+module names spanning multiple tiny source windows with no lookahead.
 The body-collect overlay now routes source reads through the resident
 SourceReader peek callback instead of reading the resident scan pointer
 directly, with mixed spaces, tabs, CR, and LF before body statements covered
-across multiple tiny source windows with no lookahead.
+across multiple tiny source windows with no lookahead. Its assignment,
+local-call, and runtime real-condition suffix delimiter probes now use a local
+non-consuming SourceReader match helper before existing exact consumes advance
+the source. Its binary REAL assignment and runtime REAL expression operator
+probes now also select `+`, `-`, `*`, and `/` through that helper before
+consuming the matched operator. Body-collect exact runtime REAL close-delimiter
+and signed-prefix probes now use the same non-consuming helper before their
+existing consumes. Runtime REAL condition operator dispatch now also probes
+`=`, `<`, and `>` through the helper before reaching the existing consume
+labels. Positive-word parser sum-loop terminators, sum operators, term
+operators, and grouped-expression punctuation now use the same helper for exact
+probes before existing consumes, while positive-word decimal digit reads and
+REAL assignment small-int dispatch now use a local non-consuming decimal-digit
+peek helper. Body-collect `THEN`/`DO` terminator checks now centralize EOF, LF,
+and CR probes behind a local non-consuming line-end matcher.
+The runtime expression print/value close-paren probe now also uses the
+non-consuming match helper. Statement dispatch and return-without-value line-end
+checks now use the local line-end matcher before falling through to assignment
+or runtime expression parsing.
+The body-preallocate overlay mirrors that real-condition suffix
+ownership for link-selected runtime import discovery: initial `=`, `<`, and
+`>` comparison dispatch plus optional `<`/`>` comparison suffix probes no longer
+read source bytes directly in parser code.
+Its top-level post-symbol call/assignment dispatch now uses the same
+non-consuming match helper before the existing exact delimiter consumes. Its
+binary REAL print and assignment operator probes also select `+`, `-`, `*`, and
+`/` through that helper before consuming the matched operator. Nested-call
+open-paren probes in body-preallocate call-argument scanners now use the same
+non-consuming helper before the existing scanner-specific follow-up. Their
+loop-level EOF, line-end, quote, open-paren, and close-paren classifiers also
+route through exact non-consuming matches before arbitrary-byte fallback
+consumes advance the source.
 Payload-layout and emit-object scan reads are over compiler body/string payload
 windows rather than source windows and remain centralized behind
 `payload_layout_peek_payload_y` and `emit_object_peek_payload_y`; tests guard
@@ -357,17 +503,19 @@ Current ALINK table status:
 
 - object/export/variable names and metadata live in REU-backed fixed-record
   tables behind small resident windows
+- selected machine-code body records live in REU bank `$04`, separate from the
+  closure and metadata tables in bank `$03`
 - direct-PRG relocation records live in REU behind one `RELOC_RECORD_BYTES`
   resident window
-- runtime-helper store queues live in REU behind one `RUNTIME_STORE_BYTES`
-  resident window
-- helper literal address queues live in REU behind one `LINKED_LITERAL_BYTES`
-  resident window
+- external closure names and placement metadata live in REU-backed tables
+- no runtime-helper store or literal-address queues remain; ACTC emits machine
+  records and ordinary relocations, and helper code arrives through selected
+  `RT_*.OBJ` modules
 
 ALINK candidates:
 
 - loaded object directory
-- external/pending symbol queues
+- reachable external closure queue and placement metadata
 - export lookup tables
 - object body-op streams
 - string and integer literal pools
@@ -437,8 +585,8 @@ ALINK.
    `SOURCE_LIMIT=1280`, and proves a `16646144` byte source compile with
    `PROC MAIN()` discovered after offset `16600000` through REU source staging.
 2. Add and prove the tool ABI REU source-cache service shape under the harness.
-   Current proof stages source beyond the first `20480` bytes into simulated REU
-   and pages later windows back into RAM with a 255-byte lookahead guard.
+   Current proof stages source beyond offset `20480` into simulated REU and
+   pages 1280-byte windows back into RAM with a 255-byte lookahead guard.
 3. Implement production resident-side REU staging, read, and write services.
    Current resident ABI exports `svc_file_stage_reu_sc0`, `svc_reu_read_sc0`,
    and `svc_reu_write_sc0`; `make -C udos vice-reu-services` now stress-proves
@@ -455,8 +603,9 @@ ALINK.
    Current production `ACTC.PRG` has this path with `STREAM_OUTPUT=1`,
    `CONTENT_BUFFER_SIZE=16`, and `OUTPUT_CHUNK_SIZE=128`.
 10. Move large ACTC and ALINK lookup payloads into REU-backed tables. Most ACTC
-    cold lookup payloads are now REU-backed; ALINK direct-PRG relocation and
-    runtime-helper queues are now REU-backed.
+    cold lookup payloads are now REU-backed; ALINK direct-PRG relocation,
+    machine-body, and object-closure tables are now REU-backed. The former
+    runtime-helper synthesis queues have been removed rather than relocated.
 11. Keep synthetic large-source proofs close to the 16 MiB-minus-reserved-REU
     ceiling as source-reader and metadata work changes.
 
@@ -477,20 +626,182 @@ zero-lookahead source-window boundary, builtin helper-name parsing at the same
 kind of boundary, builtin helper constants at the same kind of boundary,
 body-resident runtime fallback condition operators and conversion close
 punctuation through exact-character SourceReader consumes,
-group-speculation restore across the first 20 KiB boundary, and grouped-expression
+group-speculation restore across REU source offset `$005000`, and grouped-expression
 punctuation at a page-aligned
 zero-lookahead source-window boundary, plus semicolon comment skipping at and
 across page-aligned zero-lookahead boundaries and CR/LF line-ending consumption
-across the same boundary. The declaration-count overlay now
+across the same boundary. Decimal parsers and real-assignment digit dispatch now
+ask SourceReader for digit values instead of owning digit range classification
+in parser loops, and signed real literal sentinels now consume exact bytes
+through SourceReader instead of peeking and comparing in parser code. Explicit
+real/int conversion close delimiters now do the same exact-byte SourceReader
+consume, leaving fallback decisions on the helper carry result. The
+declaration-count overlay now
 captures initializer text while it streams validation so module initializer
 values are evaluated from contiguous text instead of stale pointers into an old
 source window. The compiler also proves objects beyond the old RAM output
 buffer and REU-backed compiler metadata tables, but it is not the final
 architecture for large Action programs.
-The next
-compiler-capacity breakthrough is the parser refactor described here: make the
-token-boundary safe `SourceReader` the parser's owner of token lookahead instead
-of a compatibility layer under legacy scan-pointer parser code.
-Remaining raw Scan-Y byte consumes in `ACTC` are now restricted by test to
-broad scanners, numeric parsers, whitespace/token helpers, and SourceReader
-helper internals.
+The first complete parser path now uses cached SourceReader token lookahead:
+positive-word expressions consume whole decimal and symbol tokens plus
+single- and double-byte comparison/operator tokens. Resident SourceReader owns
+the cache and cross-window scans, while body collection and preallocation share
+one overlay-owned token parser through ABI v2 token callbacks. This avoids both
+a resident-capacity regression and separate byte-oriented overlay parsers.
+A 256-byte, zero-lookahead proof splits decimal tokens, builtin-symbol tokens,
+operators, nested grouped expressions, and grouped signed expressions across
+the source-window boundary.
+The small byte-valued decimal factor parser now also consumes one complete
+SourceReader decimal token and rejects values with a nonzero high byte. Its
+body-callback proof begins `255` at offset 254 in a 256-byte, zero-lookahead
+window, so the token crosses the refill boundary while retaining the byte-range
+contract.
+The two resident byte-valued comparison paths now share one token-driven tail.
+It consumes all six comparison forms as complete tokens and preserves the
+operator and left operand on the machine stack while parsing the right operand,
+so nested grouped comparisons cannot corrupt outer parser state. A focused
+target-executed proof independently detects corruption of either saved value.
+The declaration-count overlay now applies the same stack-safe left-operand rule
+to captured initializer expressions; module initializers such as `2>(1=1)` and
+`0<(2=2)` retain their outer comparison state through nested factors.
+The resident byte-valued sum, term, and grouped-factor paths now dispatch and
+consume arithmetic punctuation as complete tokens. Sum and term accumulators
+are preserved on the machine stack across recursive grouped operands, fixing
+incorrect results such as `2+(3+4)`, `2*(3+4)`, and `8/(2+2)` while retaining
+the non-consuming `AND`/`OR` handoff to the boolean parser.
+The resident byte-valued boolean parser now consumes `AND`, `OR`, and `NOT` as
+complete symbol tokens and grouped punctuation as complete punctuation tokens.
+Its `AND` and `OR` paths preserve each left operand on the machine stack while
+recursively parsing the right operand, fixing flat and nested expressions such
+as `1 OR 0`, `1 OR (0 AND 0)`, and `0 AND (1 OR 1)`. A 256-byte,
+zero-lookahead proof starts `OR` at offset 255 so keyword recognition crosses a
+source-window boundary without a compatibility character scan.
+The resident runtime boolean parser now uses the same complete symbol tokens for
+`AND`, `OR`, and `NOT`, consumes grouped parentheses as complete punctuation
+tokens, and dispatches all six integer comparison forms from one complete
+comparison token. Existing 256-byte, zero-lookahead target proofs split each
+comparison form and both runtime group delimiters at offset 255. Consolidating
+the comparison suffix branches also recovered 26 resident bytes, leaving 271
+bytes below the UDOS floor in the production layout.
+The supported dynamic integer runtime sum operators, `+` and `-`, and grouped
+runtime terms now also use complete punctuation tokens. A variable-expression
+proof places each sum operator at offset 255 in a 256-byte, zero-lookahead
+window and verifies the right operand is read from the next page. The resulting
+production layout retains 252 bytes below the UDOS floor.
+The resident runtime REAL condition parser now dispatches `=`, `<`, `>`, `<=`,
+`>=`, and `<>` from one complete comparison token and consumes that token once.
+Its target proof starts every operator at offset 255 in a 256-byte,
+zero-lookahead window, verifies the exact existing `rt_f_cmp` body-op lowering,
+and checks that the next source page supplies either the two-byte suffix or the
+right operand. Removing the character/suffix dispatch recovered 76 resident
+bytes, so the production layout now retains 328 bytes below the UDOS floor.
+Runtime call-argument open, separator, empty-close, and final-close punctuation
+now use a shared SourceReader expected-token consume helper. Existing target
+proofs place `(`, `,`, and `)` independently at offset 255 in a 256-byte,
+zero-lookahead source window and preserve the exact local-call object bodies.
+The reusable helper costs 16 resident bytes, leaving 312 bytes below the UDOS
+floor while avoiding repeated token validation in each punctuation path.
+The shared `INT`/`REAL`/`FABS`/`FSQRT` keyword-open consumer now validates one
+complete symbol token and one complete `(` token rather than replaying a fixed
+pattern byte by byte. The resident runtime REAL fallback uses that helper and
+also consumes conversion close delimiters and the signed conversion `-` as
+complete punctuation tokens. Its 256-byte, zero-lookahead target proof places
+`REAL` at offset 254 and each delimiter independently at offset 255 while
+preserving the exact `rt_i_to_f` plus `rt_f_cmp` object stream. Consolidating
+the keyword consumer and removing the duplicate runtime spelling shrinks the
+resident layout by 26 bytes: production BSS now ends at `$49AB`, leaving 338
+free byte addresses before the `$4AFE` UDOS floor.
+The signed REAL conversion's leading sentinel now consumes exactly one decimal
+zero token. A target regression places that zero at offset 255, verifies the
+next page begins with `-`, and rejects a two-byte `00` token split over the same
+boundary. The regression also exposed and fixed two resident-fallback state
+bugs: conversion lowering now preserves the live source cursor before using
+`Y` as a literal high byte, and REAL comparison lowering preserves its control
+literal across RHS conversion arithmetic. The latter production-path fix uses
+10 resident bytes, so production BSS now ends at `$49B5`, leaving 328 free byte
+addresses before the UDOS floor.
+Optional small-value `=`, `[`, and `]` delimiters in module initializers,
+constant expressions, runtime values, and the resident `PrintI`/`PrintIE`
+fallback now consume complete punctuation tokens. The print fallback also
+centralizes its optional `]` and required `)` close tokens. A nine-case target
+matrix places each delimiter independently at offset 255 in a 256-byte,
+zero-lookahead window across module, constant-print, and variable-print paths
+while checking the next-page byte and exact object output. A separate
+production-overlay proof exercises the same failed constant probe and runtime
+fallback through `ACTC_OVL6`. Those tests exposed two state defects: a failed
+constant-expression probe now restores a dedicated SourceReader window mark
+and invalidates stale token lookahead before runtime fallback, and the legacy
+print fallback now accepts the same optional wrapper syntax as the shared
+runtime-value parser. Production BSS ends at `$49EA`, leaving 275 free byte
+addresses before the `$4AFE` UDOS floor.
+Dynamic integer `*` and `/` now use the same complete-token product parser as
+the existing runtime sum path and preserves normal product-before-sum
+precedence and grouping. The emit overlay validates the compact parser result,
+then writes ordinary native OBJ1 `m` code, nested `__idata`/`__iptr` exports,
+and generic named/import relocations. ALINK no longer analyzes or compiles this
+integer body shape; it resolves the resulting object and appends only the
+selected `rt_i_mul`, `rt_i_div`, and `rt_print_i` modules. The focused matrix
+covers precedence, assignment/store/readback, unsigned division, division by
+zero returning zero, malformed legacy bodies, and missing helpers. At that
+milestone production ACTC BSS ended at `$4ACD`, retaining 49 bytes below the
+`$4AFE` UDOS resident floor; the body-collect overlay retained 184 bytes and the
+emit overlay retained 1,006 bytes in their `$A000-$BFFF` windows.
+Later overlay-ABI growth brought the production BSS end to `$4AF6`, exactly the
+old eight-byte minimum margin. Production now omits seventeen scratch bytes
+owned exclusively by disabled resident body-preallocation, body-collection,
+layout, positive-word-parser, and object-emitter fallbacks. BSS therefore ends
+at `$4AE5`, leaving 25 bytes before the UDOS floor, and the enforced minimum is
+24 bytes. Explicit fallback builds retain their state; focused build coverage
+also keeps their long layout branches and shared hardware-symbol table valid.
+Overlay ABI v3 removed 28 legacy context bytes that no shipped pass reads, plus
+35 bytes of resident code that initialized three of those retired entry groups.
+ABI v4 added fixed-address routine metadata, and ABI v5 adds the resident
+binary32 `REAL CONST` evaluator callback. The current context is 231 contiguous
+bytes and also includes resident decimal-word and uppercase-hex-byte formatter
+callbacks shared by object emitters. Production CODE ends at `$674E`, and BSS
+ends at `$6BC1`. Current UDOS swaps the low resident during tool execution and
+preserves its callable island from `$9800`, leaving 11,327 bytes below that
+boundary.
+Capacity coverage derives the preserved floor from UDOS labels and structural ABI coverage
+rejects holes or any reintroduction of the retired context exports.
+Inline assembly remains outside resident memory: pass 4 writes each assembled
+block to one 256-byte page at reserved REU bank `$FF`, addresses
+`$FF0000-$FF0EFF`. Body/debug records occupy `$FF1000-$FF3FCF`, and fixed names
+and metadata occupy `$FFF000-$FFF27F`, so the source cache can use banks
+`$01-$FE` without collision. Pass 9/H reuses the `$8000` page buffer, `$8100`
+label index, and `$8110+` overlay-only scratch while converting those pages into
+ordinary machine and relocation records. The body stream carries only a private
+base-36 block selector, so source text does not expand `body_ops` and cannot
+create false runtime imports.
+Remaining raw Scan-Y byte consumes in `ACTC` are now restricted by test to token
+helpers and SourceReader helper internals. Remaining raw Scan-PTR byte consumes
+in `ACTC` are now restricted by test to token, string, pattern, and semantic
+SourceReader helper internals.
+
+One-argument byte-in-A and word-in-X/Y runtime calls inside compiler-owned
+integer control now run in base-36 pass G, `ACTC_OVLG.BIN`, instead of expanding
+resident ACTC or returning compact code to ALINK. The pass consumes one complete
+word expression, emits ABI-specific relocatable argument setup and a helper
+import, and declines wider or unknown helper ABIs. Its 6,645-byte image leaves
+1,547 bytes free under a 512-byte capacity reserve in the 8 KiB emitter
+window.
+
+Units that combine those runtime calls with ASMBLOCK, `=*(...)`, or numeric
+absolute-address declarations use base-36 pass H, `ACTC_OVLH.BIN`. Compact
+fixed-address-only units first use pass J; on a not-applicable result, pass H
+emits one ordinary machine OBJ with the required symbol relocations and
+link-selected runtime imports. Pass H's 8,064-byte image leaves exactly 128 bytes
+under its reserve in `$A000-$BFFF`; pass J's 7,901-byte image leaves 291 bytes
+under its 256-byte reserve. A direct ACTC/ALINK/VICE probe returns 42 through the word function
+ABI, stores trace value 41, and observes SID volume 8. A second probe calls
+KERNAL CHROUT at numeric address `$FFD2` without selecting a library object.
+
+The first bounded REAL control-flow function runs in base-36 pass K,
+`ACTC_OVLK.BIN`. It recognizes only the exact two-REAL-parameter finite
+comparison/select body, emits one ordinary machine OBJ with separate root and
+function body closures, and declines all other forms before opening output.
+Its 3,257-byte image leaves 4,935 bytes in `$A000-$BFFF`. The focused release
+probe links only integer conversion, comparison, and comparison's transitive
+special-value support; its direct PRG verifies 2.0/1.0 parameter copies and a
+1.0 result in VICE. General REAL expression/control lowering remains the next
+compiler dependency.

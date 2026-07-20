@@ -1,0 +1,7 @@
+OBJ1
+x rt_mb2 0 13
+b u0M
+u rt_mb
+m 20 00 00 29 02 F0 03 A9 01 60 A9 00 60
+r 1 u0
+n rt_mb2

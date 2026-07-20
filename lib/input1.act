@@ -5,6 +5,8 @@
 ; Presence caveat:
 ; - a passive C64 joystick cannot be reliably detected while idle
 ; - mouse presence is inferred from observed movement or button activity
+; - joystick button 2 uses the C64GS pin-9/POTX convention
+; - mouse buttons use the 1351 proportional-mode FIRE/UP convention
 
 MODULE INPUT1
 

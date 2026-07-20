@@ -11,8 +11,9 @@ def main() -> int:
 
     targets = {
         "actionc64u": root,
-        "cpm65-u64": workspace / "cpm65-u64",
-        "action.pdf": workspace / "action.pdf",
+        "udos": workspace / "udos",
+        "action.pdf": root / "docs" / "inspiration" / "action.pdf",
+        "lib6502": root / "third_party" / "lib6502" / "lib6502.c",
     }
 
     missing = []
@@ -25,8 +26,8 @@ def main() -> int:
 
     if missing:
         print(
-            "Missing required local paths. Verify you are running inside "
-            "/mnt/c/test/action with adjacent cpm65-u64 and action.pdf.",
+            "Missing required project paths. Verify the ActionC64U and UDOS "
+            "trees were copied together.",
             file=sys.stderr,
         )
         return 1

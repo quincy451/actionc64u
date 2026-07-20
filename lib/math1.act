@@ -3,8 +3,9 @@
 ; referenced RT_*.OBJ modules in the final PRG.
 ;
 ; Current shipped coverage is the core REAL32 proof surface: REAL(x), INT(x),
-; REAL arithmetic/comparison operators, FAbs, FSqrt, and PrintR/PrintRE. Wider
-; functions such as trig remain deferred until matching RT_*.OBJ modules exist.
+; REAL arithmetic/comparison operators, FAbs, FSqrt, FMin, FMax, and
+; PrintR/PrintRE. Wider functions such as trig remain deferred until matching
+; RT_*.OBJ modules exist.
 
 MODULE MATH1
 
@@ -12,3 +13,5 @@ PROC PrintR(REAL value)
 PROC PrintRE(REAL value)
 REAL FUNC FAbs(REAL value)
 REAL FUNC FSqrt(REAL value)
+REAL FUNC FMin(REAL left,right)
+REAL FUNC FMax(REAL left,right)

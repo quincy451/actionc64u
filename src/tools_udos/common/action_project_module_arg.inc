@@ -6,6 +6,14 @@ copy_module_arg_loop:
     beq copy_module_arg_done
     cmp #' '
     beq copy_module_arg_done
+    cmp #','
+    beq copy_module_arg_workflow_suffix
+    cmp #':'
+    beq copy_module_arg_workflow_suffix
+.ifdef ACTC_ACCEPT_EDITOR_RETURN_SUFFIX
+    cmp #';'
+    beq copy_module_arg_workflow_suffix
+.endif
     cmp #'.'
     beq copy_module_arg_extension
     cpx #24
@@ -36,7 +44,35 @@ copy_module_arg_extension_done:
     iny
     lda (src_ptr),y
     beq copy_module_arg_done
+    cmp #','
+    beq copy_module_arg_workflow_suffix
+    cmp #':'
+    beq copy_module_arg_workflow_suffix
+.ifdef ACTC_ACCEPT_EDITOR_RETURN_SUFFIX
+    cmp #';'
+    beq copy_module_arg_workflow_suffix
+.endif
     cmp #' '
+    bne copy_module_arg_fail
+    beq copy_module_arg_done
+copy_module_arg_workflow_suffix:
+.ifdef ACTC_CAPTURE_WORKFLOW_SUFFIX
+    cmp #';'
+    beq copy_module_arg_workflow_editor
+    cmp #','
+    beq copy_module_arg_workflow_link
+    lda #(ACTC_CHAIN_DEBUG | ACTC_CHAIN_RETURN_EDITOR)
+    bne copy_module_arg_workflow_store
+copy_module_arg_workflow_link:
+    lda #(ACTC_CHAIN_LINK | ACTC_CHAIN_RETURN_EDITOR)
+    bne copy_module_arg_workflow_store
+copy_module_arg_workflow_editor:
+    lda #ACTC_CHAIN_RETURN_EDITOR
+copy_module_arg_workflow_store:
+    sta actc_chain_mode
+.endif
+    iny
+    lda (src_ptr),y
     bne copy_module_arg_fail
 copy_module_arg_done:
     cpx #$00

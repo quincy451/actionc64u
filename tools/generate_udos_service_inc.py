@@ -25,6 +25,8 @@ FIXED_SERVICES = {
     "svc_file_stage_reu_sc0": 0xCF36,
     "svc_reu_read_sc0": 0xCF39,
     "svc_reu_write_sc0": 0xCF3C,
+    "svc_dir_begin_sc0": 0xCF3F,
+    "svc_program_chain_sc0": 0xCF42,
 }
 
 FIXED_DATA = {
@@ -34,6 +36,10 @@ FIXED_DATA = {
 
 LABEL_HELPERS = {
     "svc_open_program_read_path_preserved": "tool_abi_open_program_read_path_preserved",
+}
+
+LABEL_CONSTANTS = {
+    "udos_tool_abi_version": "ABI_VERSION",
 }
 
 FIXED_CONSTANTS = {
@@ -48,6 +54,9 @@ FIXED_CONSTANTS = {
     "tool_dir_status_nofile": 3,
     "tool_dir_status_not_empty": 4,
     "tool_dir_status_busy": 5,
+    "tool_dir_status_flat": 6,
+    "tool_dir_status_unmounted": 7,
+    "tool_dir_status_bad": 8,
 }
 
 
@@ -91,6 +100,11 @@ def main(argv: list[str] | None = None) -> int:
         if label_name not in labels:
             raise SystemExit(f"missing expected UDOS label: {label_name}")
         lines.append(f"{public_name} = ${labels[label_name]:04X}")
+    lines.append("")
+    for public_name, label_name in LABEL_CONSTANTS.items():
+        if label_name not in labels:
+            raise SystemExit(f"missing expected UDOS label: {label_name}")
+        lines.append(f"{public_name} = {labels[label_name]}")
     lines.append("")
     for name, value in FIXED_CONSTANTS.items():
         lines.append(f"{name} = {value}")

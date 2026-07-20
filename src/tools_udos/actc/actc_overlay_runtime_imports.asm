@@ -1,4 +1,6 @@
 .include "actc_overlay_abi.inc"
+.include "udos_services.inc"
+.include "actc_asmblock_layout.inc"
 
 .export actc_overlay_header
 .export actc_overlay_entry
@@ -27,6 +29,13 @@ actc_overlay_entry:
     sta (ACTC_OVERLAY_CONTEXT_ZP),y
 
     jsr detect_runtime_imports_overlay
+    bcc :+
+    jmp actc_overlay_fail
+:
+    jsr assemble_asmblocks_overlay
+    bcc :+
+    jmp actc_overlay_fail
+:
 
     ldy #ACTC_OVERLAY_CTX_STATUS
     lda #ACTC_OVERLAY_STATUS_OK
@@ -35,42 +44,83 @@ actc_overlay_entry:
     lda #ACTC_OVERLAY_STATUS_OK
     rts
 
+actc_overlay_fail:
+    ldy #ACTC_OVERLAY_CTX_STATUS
+    lda #ACTC_OVERLAY_STATUS_FAILED
+    sta (ACTC_OVERLAY_CONTEXT_ZP),y
+    sec
+    lda #ACTC_OVERLAY_STATUS_FAILED
+    rts
+
 detect_runtime_imports_overlay:
     lda #$00
     sta import_flags_local
+    sta import_proc_index_local
 
-    lda #<pattern_print
-    ldy #>pattern_print
-    jsr find_pattern_for_overlay
-    bcs :+
+detect_runtime_imports_overlay_proc_loop:
+    lda #ACTC_OVERLAY_CTX_EXPORT_COUNT_PTR_LO
+    jsr load_context_ptr_to_work_zp
+    ldy #$00
+    lda (ACTC_OVERLAY_WORK_ZP),y
+    cmp import_proc_index_local
+    beq detect_runtime_imports_overlay_publish
+
+    ldx import_proc_index_local
+    lda #ACTC_OVERLAY_CTX_SET_BODY_PTR_FN_LO
+    jsr call_context_function
+    jsr load_resident_body_ptr_to_work_zp
+    ldy #$00
+detect_runtime_imports_overlay_body_loop:
+    lda (ACTC_OVERLAY_WORK_ZP),y
+    beq detect_runtime_imports_overlay_next_proc
+    cmp #'s'
+    beq detect_runtime_imports_overlay_print
+    cmp #'e'
+    beq detect_runtime_imports_overlay_printe
+    cmp #'j'
+    beq detect_runtime_imports_overlay_printi
+    cmp #'y'
+    beq detect_runtime_imports_overlay_printi
+    cmp #'i'
+    beq detect_runtime_imports_overlay_printie
+    cmp #'z'
+    beq detect_runtime_imports_overlay_printie
+detect_runtime_imports_overlay_next_byte:
+    iny
+    cpy #$FF
+    bne detect_runtime_imports_overlay_body_loop
+    sec
+    rts
+
+detect_runtime_imports_overlay_print:
     lda import_flags_local
     ora #IMPORT_PRINT_STR
     sta import_flags_local
-:
-    lda #<pattern_printe
-    ldy #>pattern_printe
-    jsr find_pattern_for_overlay
-    bcs :+
+    jmp detect_runtime_imports_overlay_next_byte
+
+detect_runtime_imports_overlay_printe:
     lda import_flags_local
     ora #IMPORT_PRINT_LINE
     sta import_flags_local
-:
-    lda #<pattern_printi
-    ldy #>pattern_printi
-    jsr find_pattern_for_overlay
-    bcs :+
+    jmp detect_runtime_imports_overlay_next_byte
+
+detect_runtime_imports_overlay_printi:
     lda import_flags_local
     ora #IMPORT_FORMAT_INT|IMPORT_PRINT_STR
     sta import_flags_local
-:
-    lda #<pattern_printie
-    ldy #>pattern_printie
-    jsr find_pattern_for_overlay
-    bcs :+
+    jmp detect_runtime_imports_overlay_next_byte
+
+detect_runtime_imports_overlay_printie:
     lda import_flags_local
     ora #IMPORT_FORMAT_INT|IMPORT_PRINT_LINE
     sta import_flags_local
-:
+    jmp detect_runtime_imports_overlay_next_byte
+
+detect_runtime_imports_overlay_next_proc:
+    inc import_proc_index_local
+    jmp detect_runtime_imports_overlay_proc_loop
+
+detect_runtime_imports_overlay_publish:
     lda #ACTC_OVERLAY_CTX_IMPORT_FLAGS_PTR_LO
     jsr load_context_ptr_to_work_zp
     ldy #$00
@@ -79,19 +129,16 @@ detect_runtime_imports_overlay:
     clc
     rts
 
-find_pattern_for_overlay:
-    sta pattern_ptr_local
-    sty pattern_ptr_local+1
-    lda #ACTC_OVERLAY_CTX_CONST_PTR_SLOT_PTR_LO
+load_resident_body_ptr_to_work_zp:
+    lda #ACTC_OVERLAY_CTX_BODY_PTR_SLOT_PTR_LO
     jsr load_context_ptr_to_work_zp
-    ldy #$00
-    lda pattern_ptr_local
-    sta (ACTC_OVERLAY_WORK_ZP),y
-    iny
-    lda pattern_ptr_local+1
-    sta (ACTC_OVERLAY_WORK_ZP),y
-    lda #ACTC_OVERLAY_CTX_FIND_PATTERN_FN_LO
-    jsr call_context_function
+    ldy #$01
+    lda (ACTC_OVERLAY_WORK_ZP),y
+    tax
+    dey
+    lda (ACTC_OVERLAY_WORK_ZP),y
+    sta ACTC_OVERLAY_WORK_ZP
+    stx ACTC_OVERLAY_WORK_ZP+1
     rts
 
 load_context_ptr_to_work_zp:
@@ -121,21 +168,15 @@ call_context_function:
     pha
     rts
 
-pattern_print:
-    .asciiz "PRINT("
-pattern_printe:
-    .asciiz "PRINTE("
-pattern_printi:
-    .asciiz "PRINTI("
-pattern_printie:
-    .asciiz "PRINTIE("
 call_target_minus_one:
     .byte $00
 call_target_ptr:
     .word $0000
-pattern_ptr_local:
-    .word $0000
 import_flags_local:
     .byte $00
+import_proc_index_local:
+    .byte $00
+
+.include "actc_overlay_asmblock.inc"
 
 actc_overlay_end:

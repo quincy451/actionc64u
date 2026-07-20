@@ -1,0 +1,5 @@
+OBJ1
+x rt_f_abs 0 18
+b M
+m A0 00 B1 02 C0 03 D0 02 29 7F 91 06 C8 C0 04 D0 F1 60
+n rt_f_abs

@@ -4,13 +4,34 @@
 
 .segment "ZPTEMP": zeropage
 svc_retptr:
-    .res 2
+    .res 3
 
 .code
 
 start:
     ldx #svc_retptr
+    jsr svc_program_get_cmdline_len
+    lda svc_retptr
+    ora svc_retptr+1
+    beq begin_current
+    ldx #svc_retptr
+    jsr svc_program_get_cmdline_ptr
+    ldx #svc_retptr
+    jsr svc_dir_begin_sc0
+    lda svc_retptr+2
+    cmp #tool_dir_status_ok
+    beq begin_done
+    lda #<msg_bad_dir
+    ldy #>msg_bad_dir
+    jsr print_ptr
+    jsr svc_console_newline
+    jmp exit_ok
+
+begin_current:
+    ldx #svc_retptr
     jsr svc_dir_begin_current
+
+begin_done:
     lda svc_retptr
     ora svc_retptr+1
     bne have_entries
@@ -47,3 +68,6 @@ print_ptr:
 
 msg_empty:
     .asciiz "EMPTY"
+
+msg_bad_dir:
+    .asciiz "BAD DIR"

@@ -1,0 +1,7 @@
+ACTC_EMIT_NATIVE_ONLY = 1
+ACTC_EMIT_NATIVE_LOCAL_ONLY = 1
+ACTC_EMIT_NATIVE_LOCAL_RUNTIME_ONLY = 1
+ACTC_NATIVE_LOCAL_RUNTIME_ARGS = 1
+.include "actc_asmblock_layout.inc"
+ACTC_NATIVE_LOCAL_PARAM_BINDS = 1
+.include "actc_overlay_emit_object.asm"

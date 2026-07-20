@@ -11,6 +11,10 @@ Joystick helpers:
 - `JoyBtn1(port)` returns `1` when joystick button 1 is active, otherwise `0`.
 - `JoyBtn2(port)` returns `1` when joystick button 2 is active, otherwise `0`.
 
+`JOY_BUTTON2` follows the Commodore 64GS convention: the second fire button is
+connected to control-port pin 9 (POTX). The helper selects the requested
+control port through CIA1 before sampling the SID POTX register.
+
 Joystick bits:
 
 - `JOY_UP = $01`
@@ -30,6 +34,14 @@ Mouse helpers:
 - `MouseBtn()` returns the button bitfield.
 - `MouseBtn1()` returns `1` when mouse button 1 is active, otherwise `0`.
 - `MouseBtn2()` returns `1` when mouse button 2 is active, otherwise `0`.
+
+The mouse helpers implement Commodore 1351 proportional mode. Button 1 is the
+control-port FIRE line and button 2 is the UP line. `MousePoll` selects the
+requested control port, waits for the SID paddle conversion to settle, ignores
+the POT noise and don't-care bits, and accumulates signed modulo-64 movement.
+`MouseY` follows C64 screen coordinates, increasing downward.
+Port 1 and port 2 keep independent position and inferred-presence state; the
+no-argument accessors report the port selected by the most recent poll.
 
 Mouse bits:
 

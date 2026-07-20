@@ -1,2 +1,7 @@
 OBJ1
-{"entry_offset":0,"exports":[["rt.f_sub",0]],"imports":[],"module":"rt.f_sub","payload_hex":"72742e665f73756200","version":1}
+x rt_f_sub 0 6
+b u0M
+u rt_f_addsub_core
+m A9 80 20 00 00 60
+r 3 u0
+n rt_f_sub

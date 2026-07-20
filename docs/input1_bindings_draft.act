@@ -42,6 +42,5 @@ BYTE FUNC MouseBtn()
 BYTE FUNC MouseBtn1()
 BYTE FUNC MouseBtn2()
 
-; Two-button support follows the project C64 convention used by the first
-; helper modules: button 1 is the normal joystick fire line, and button 2 is
-; inferred from the selected POT line using a below-$80 active threshold.
+; Joystick button 2 follows the C64GS pin-9/POTX convention. In Commodore 1351
+; proportional mode mouse button 1 is FIRE and mouse button 2 is UP.

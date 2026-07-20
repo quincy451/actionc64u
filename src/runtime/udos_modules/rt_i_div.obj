@@ -1,0 +1,6 @@
+OBJ1
+x rt_i_div 0 65
+b M
+m 85 e0 86 e1 a0 00 b1 02 85 e2 c8 b1 02 85 e3 05 e2 d0 04 a9 00 aa 60 a9 00 85 e4 85 e5 a2 10 06 e0 26 e1 26 e4 26 e5 38 a5 e4 e5 e2 a8 a5 e5 e5 e3 90 06 85 e5 84 e4 e6 e0 ca d0 e3 a5 e0 a6 e1
+m 60
+n rt_i_div

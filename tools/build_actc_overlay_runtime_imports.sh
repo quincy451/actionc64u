@@ -13,6 +13,6 @@ MAP="$BUILD_DIR/actc_overlay_runtime_imports.map"
 
 mkdir -p "$BUILD_DIR"
 
-ca65 -g -o "$OBJ" "$SRC" -I "$SRC_DIR"
+ca65 -g -o "$OBJ" "$SRC" -I "$SRC_DIR" -I "$BUILD_DIR"
 ld65 -C "$CFG" -o "$BIN" "$OBJ" -Ln "$LABELS" -m "$MAP"
 printf '%s\n' "$BIN"

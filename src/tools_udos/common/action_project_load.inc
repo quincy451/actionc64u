@@ -61,7 +61,7 @@ skip_current_line_loop:
     beq skip_current_line_done
     cmp #10
     beq skip_current_line_done
-    jsr source_reader_consume_scan_ptr
+    jsr project_reader_consume_non_line_end_from_scan_ptr
     jmp skip_current_line_loop
 skip_current_line_done:
     rts
@@ -75,10 +75,59 @@ skip_line_breaks_loop:
     cmp #10
     bne skip_line_breaks_done
 skip_line_breaks_advance:
-    jsr source_reader_consume_scan_ptr
+    jsr project_reader_consume_line_break_from_scan_ptr
     jmp skip_line_breaks_loop
 skip_line_breaks_done:
     rts
+
+project_reader_consume_non_line_end_from_scan_ptr:
+    jsr source_reader_peek_scan_ptr
+    beq project_reader_consume_non_line_end_from_scan_ptr_fail
+    cmp #13
+    beq project_reader_consume_non_line_end_from_scan_ptr_fail
+    cmp #10
+    beq project_reader_consume_non_line_end_from_scan_ptr_fail
+    jsr source_reader_consume_scan_ptr
+    bcs project_reader_consume_non_line_end_from_scan_ptr_fail
+    clc
+    rts
+project_reader_consume_non_line_end_from_scan_ptr_fail:
+    sec
+    rts
+
+project_reader_consume_line_break_from_scan_ptr:
+    jsr source_reader_peek_scan_ptr
+    cmp #13
+    beq project_reader_consume_line_break_from_scan_ptr_consume
+    cmp #10
+    beq project_reader_consume_line_break_from_scan_ptr_consume
+    sec
+    rts
+project_reader_consume_line_break_from_scan_ptr_consume:
+    jsr source_reader_consume_scan_ptr
+    bcs project_reader_consume_line_break_from_scan_ptr_fail
+    clc
+    rts
+project_reader_consume_line_break_from_scan_ptr_fail:
+    sec
+    rts
+
+project_reader_consume_manifest_line_byte_from_scan_ptr:
+    jmp project_reader_consume_non_line_end_from_scan_ptr
+
+project_reader_consume_nonzero_from_scan_ptr:
+    jsr source_reader_peek_scan_ptr
+    beq project_reader_consume_nonzero_from_scan_ptr_fail
+    jsr source_reader_consume_scan_ptr
+    bcs project_reader_consume_nonzero_from_scan_ptr_fail
+    clc
+    rts
+project_reader_consume_nonzero_from_scan_ptr_fail:
+    sec
+    rts
+
+project_reader_consume_manifest_shift_byte_from_scan_ptr:
+    jmp project_reader_consume_nonzero_from_scan_ptr
 
 source_reader_peek_scan_ptr:
     ldy #$00

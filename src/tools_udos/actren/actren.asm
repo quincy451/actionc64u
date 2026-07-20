@@ -19,10 +19,8 @@ msg_bad_ren:
     .asciiz "BAD MOVE"
 msg_no_such_file:
     .asciiz "NO SUCH FILE"
-msg_copy_fail:
-    .asciiz "COPY FAIL"
-msg_del_fail:
-    .asciiz "DEL FAIL"
+msg_move_fail:
+    .asciiz "MOVE FAIL"
 
 main:
     ldx #svc_retptr
@@ -60,41 +58,15 @@ have_two_args:
     sta params+4
 
     ldx #params
-    jsr svc_file_copy_sc0
-
-    lda params+4
-    cmp #tool_file_status_ok
-    beq rename_delete_source
-    cmp #tool_file_status_nofile
-    beq rename_nofile
-    lda #<msg_copy_fail
-    ldy #>msg_copy_fail
-    jmp fail_with_ptr
-
-rename_delete_source:
-    ldx #svc_retptr
-    jsr svc_program_get_cmdline_ptr
-    lda svc_retptr
-    sta src_ptr
-    lda svc_retptr+1
-    sta src_ptr+1
-    jsr copy_first_arg
-
-    lda #tool_file_status_fail
-    sta params+4
-
-    lda #<source_buffer
-    sta params+2
-    lda #>source_buffer
-    sta params+3
-    ldx #params+2
-    jsr svc_file_delete_sc0
+    jsr svc_file_rename_sc0
 
     lda params+4
     cmp #tool_file_status_ok
     beq rename_ok
-    lda #<msg_del_fail
-    ldy #>msg_del_fail
+    cmp #tool_file_status_nofile
+    beq rename_nofile
+    lda #<msg_move_fail
+    ldy #>msg_move_fail
     jmp fail_with_ptr
 
 rename_nofile:
@@ -165,22 +137,6 @@ copy_two_args_fail:
     sta source_buffer
     sta dest_buffer
     sec
-    rts
-
-copy_first_arg:
-    ldy #$00
-copy_first_arg_loop:
-    lda (src_ptr),y
-    beq copy_first_arg_done
-    cmp #' '
-    beq copy_first_arg_done
-    sta source_buffer,y
-    iny
-    cpy #31
-    bcc copy_first_arg_loop
-copy_first_arg_done:
-    lda #$00
-    sta source_buffer,y
     rts
 
 print_ptr:

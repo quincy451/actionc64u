@@ -30,8 +30,15 @@ Object Code Records
 `OBJ1` supports machine-code and relocation records:
 
 - `m <hex bytes>`
-- `r <offset> u<index>`
-- `r <offset> x <symbol>`
+- `r <offset> u<index> [addend]`
+- `r <offset> x <symbol> [addend]`
+- `r <offset> l|lo u<index> [addend]` / `r <offset> l|lo x <symbol> [addend]`
+- `r <offset> h|hi u<index> [addend]` / `r <offset> h|hi x <symbol> [addend]`
+
+An import index is one canonical character: `0` through `9` encode indexes
+0 through 9 and `A` through `Z` encode indexes 10 through 35. Parsers accept
+lowercase letters for compatibility, but emitters write uppercase letters.
+Multi-character decimal spellings such as `u10` are invalid.
 
 For the first code-section slice, ALINK accepts a root export whose body marker
 is `b M`, validates the decoded `m` byte count against the export size, prefixes
@@ -39,23 +46,39 @@ the standard PRG load address, and writes those bytes directly into the final
 PRG.
 
 For the multi-module machine-code slice, a body marker ending in `M` may contain
-one or more import tokens such as `b u0M` or `b u0u1M`. ALINK places the root
-`m` bytes first, then places every resolved dependency object's `m` bytes in
-dependency-queue order. Consecutive `m` records in one object are treated as
-one concatenated machine-code byte stream, so emitters may chunk large machine
-payloads without changing export offsets. Each `r <offset> u<index>` record
-patches a 16-bit little-endian operand in the current object's concatenated `m`
-bytes to the placed address of the imported symbol; `r <offset> x <symbol>`
-patches the operand to the placed address of an already reachable import, a
-placed root-local export, or a placed local export inside the current selected
-object-code range. The operand may cross an `m` record boundary. Export offsets,
-export sizes, and relocation offsets are parsed as 16-bit values, so a single
-OBJ module may exceed one 256-byte page. Multiple relocation records and
-transitive object-code dependencies are supported for this slice. In selected
-object-code exports, named relocation targets also form dependency edges when
-the symbol is not local to the object, so the body marker does not need a
-duplicate `u<index>` token for that target. Data section layout beyond the
-concatenated `m` code stream is a later extension.
+one or more import tokens such as `b u0M`, `b u0u1M`, or `b uAM`. ALINK places
+the selected root export range first, then places each reachable dependency
+export range in dependency-queue order. Bytes outside those ranges are not
+copied. Consecutive `m` records in one object are treated as one concatenated
+machine-code byte stream, so emitters may chunk large machine payloads without
+changing export offsets. Each `r <offset> u<index>` record in a selected range
+patches a 16-bit little-endian operand to the placed address of the imported
+symbol; `r <offset> x <symbol>` applies the same word relocation to a reachable
+import, a placed root-local export, or a local export inside the current
+selected range. An `l`/`lo` or `h`/`hi` token before the target changes the
+record to a one-byte relocation that writes only the low or high byte of that
+same linked address. The compact and long selector spellings are equivalent,
+allowing native ACTC and Linux ACTC objects to be linked interchangeably. An
+optional signed decimal addend is applied after symbol resolution for word,
+low-byte, and high-byte records; ALINK rejects a final address outside
+`$0000-$FFFF`. A word operand may cross an `m` record boundary but may not cross a
+selected-export boundary; a byte relocation is valid at the final byte of an
+export. Relocation spans may not overlap, while adjacent byte relocations are
+valid. Export offsets, export sizes, and relocation offsets are parsed as 16-bit
+values, so a single OBJ module may exceed one 256-byte page. Multiple relocation
+records and transitive object-code dependencies are supported. Named
+relocation targets in selected ranges also form dependency edges when the symbol
+is not already selected, so the body marker does not need a duplicate import
+token for that target. Code and initialized data use the same concatenated `m`
+byte stream and are retained only when covered by a reachable export range.
+Declaration-only routine aliases require no special linker record: ACTC lowers
+their call operands to ordinary named `r <offset> x <symbol> [addend]`
+relocations, and the target export participates in the same reachability and
+placement rules as every other named relocation.
+Relocation records use an independent 128-entry REU-backed region; this capacity is
+not limited by the number of external symbols in the module. ALINK accepts records
+in any source order and selects them by increasing offset while streaming the
+selected machine-code range, without rescanning the REU table for every byte.
 
 For objects with multiple exports, ALINK treats dependency reachability as
 export-body-specific. Imports referenced only by an unused export are not loaded,

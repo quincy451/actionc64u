@@ -1,0 +1,11 @@
+ACTC_EMIT_NATIVE_ONLY = 1
+ACTC_EMIT_NATIVE_LOCAL_ONLY = 1
+ACTC_EMIT_NATIVE_FIXED_ONLY = 1
+.include "actc_overlay_abi.inc"
+.include "udos_services.inc"
+.include "actc_asmblock_layout.inc"
+ACTC_NATIVE_LOCAL_ASMBLOCK = 1
+ACTC_NATIVE_LOCAL_PARAM_BINDS = 1
+ACTC_NATIVE_LOCAL_MACHINE_ROUTINES = 1
+ACTC_NATIVE_LOCAL_FIXED_ROUTINES = 1
+.include "actc_overlay_emit_object.asm"

@@ -1,5 +1,72 @@
 .include "actc_overlay_abi.inc"
 
+.ifndef ACTC_EMIT_NATIVE_ONLY
+ACTC_EMIT_NATIVE_ONLY = 0
+.endif
+.ifndef ACTC_EMIT_NATIVE_LOCAL_ONLY
+ACTC_EMIT_NATIVE_LOCAL_ONLY = 0
+.endif
+.ifndef ACTC_EMIT_NATIVE_REAL_ONLY
+ACTC_EMIT_NATIVE_REAL_ONLY = 0
+.endif
+.ifndef ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY
+ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY = 0
+.endif
+.ifndef ACTC_EMIT_NATIVE_REAL_WHILE_ONLY
+ACTC_EMIT_NATIVE_REAL_WHILE_ONLY = 0
+.endif
+.ifndef ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY
+ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY = 0
+.endif
+.ifndef ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ONLY
+ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ONLY = 0
+.endif
+.ifndef ACTC_EMIT_NATIVE_RUNTIME_NESTED_ONLY
+ACTC_EMIT_NATIVE_RUNTIME_NESTED_ONLY = 0
+.endif
+.ifndef ACTC_EMIT_NATIVE_LOCAL_RUNTIME_ONLY
+ACTC_EMIT_NATIVE_LOCAL_RUNTIME_ONLY = 0
+.endif
+.ifndef ACTC_EMIT_NATIVE_LOCAL_MIXED_ONLY
+ACTC_EMIT_NATIVE_LOCAL_MIXED_ONLY = 0
+.endif
+.ifndef ACTC_EMIT_NATIVE_FIXED_ONLY
+ACTC_EMIT_NATIVE_FIXED_ONLY = 0
+.endif
+.ifndef ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
+ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY = 0
+.endif
+
+ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE = ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ONLY + ACTC_EMIT_NATIVE_RUNTIME_NESTED_ONLY
+
+.if ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
+ACTC_EMIT_OVERLAY_PASS = ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_FUNCTION_OBJECT
+.elseif ACTC_EMIT_NATIVE_FIXED_ONLY
+ACTC_EMIT_OVERLAY_PASS = ACTC_OVERLAY_PASS_EMIT_NATIVE_FIXED_OBJECT
+.elseif ACTC_EMIT_NATIVE_LOCAL_MIXED_ONLY
+ACTC_EMIT_OVERLAY_PASS = ACTC_OVERLAY_PASS_EMIT_NATIVE_LOCAL_MIXED_OBJECT
+.elseif ACTC_EMIT_NATIVE_LOCAL_RUNTIME_ONLY
+ACTC_EMIT_OVERLAY_PASS = ACTC_OVERLAY_PASS_EMIT_NATIVE_LOCAL_RUNTIME_OBJECT
+.elseif ACTC_EMIT_NATIVE_RUNTIME_NESTED_ONLY
+ACTC_EMIT_OVERLAY_PASS = ACTC_OVERLAY_PASS_EMIT_NATIVE_RUNTIME_NESTED_OBJECT
+.elseif ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ONLY
+ACTC_EMIT_OVERLAY_PASS = ACTC_OVERLAY_PASS_EMIT_NATIVE_RUNTIME_SEQUENCE_OBJECT
+.elseif ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY
+ACTC_EMIT_OVERLAY_PASS = ACTC_OVERLAY_PASS_EMIT_NATIVE_RUNTIME_CONDITION_OBJECT
+.elseif ACTC_EMIT_NATIVE_REAL_WHILE_ONLY
+ACTC_EMIT_OVERLAY_PASS = ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_WHILE_OBJECT
+.elseif ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY
+ACTC_EMIT_OVERLAY_PASS = ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_CONTROL_OBJECT
+.elseif ACTC_EMIT_NATIVE_REAL_ONLY
+ACTC_EMIT_OVERLAY_PASS = ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_OBJECT
+.elseif ACTC_EMIT_NATIVE_LOCAL_ONLY
+ACTC_EMIT_OVERLAY_PASS = ACTC_OVERLAY_PASS_EMIT_NATIVE_LOCAL_OBJECT
+.elseif ACTC_EMIT_NATIVE_ONLY
+ACTC_EMIT_OVERLAY_PASS = ACTC_OVERLAY_PASS_EMIT_NATIVE_OBJECT
+.else
+ACTC_EMIT_OVERLAY_PASS = ACTC_OVERLAY_PASS_EMIT_OBJECT
+.endif
+
 .export actc_overlay_header
 .export actc_overlay_entry
 .export actc_overlay_end
@@ -9,7 +76,7 @@
 actc_overlay_header:
     .byte 'A','C','O','V'
     .byte ACTC_OVERLAY_ABI_VERSION
-    .byte ACTC_OVERLAY_PASS_EMIT_OBJECT
+    .byte ACTC_EMIT_OVERLAY_PASS
     .word ACTC_OVERLAY_EXEC_BASE
     .word actc_overlay_entry
     .word actc_overlay_end - actc_overlay_header
@@ -19,8 +86,73 @@ actc_overlay_entry:
     stx ACTC_OVERLAY_CONTEXT_ZP
     sty ACTC_OVERLAY_CONTEXT_ZP+1
     ldy #ACTC_OVERLAY_CTX_PASS_ID
-    lda #ACTC_OVERLAY_PASS_EMIT_OBJECT
+    lda #ACTC_EMIT_OVERLAY_PASS
     sta (ACTC_OVERLAY_CONTEXT_ZP),y
+
+.if ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
+    jsr native_real_function_detect
+    bcs :+
+    ldy #ACTC_OVERLAY_CTX_STATUS
+    lda #ACTC_OVERLAY_STATUS_NOT_APPLICABLE
+    sta (ACTC_OVERLAY_CONTEXT_ZP),y
+    clc
+    rts
+:
+.elseif ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE
+    jsr native_runtime_sequence_detect
+    bcs :+
+    ldy #ACTC_OVERLAY_CTX_STATUS
+    lda #ACTC_OVERLAY_STATUS_NOT_APPLICABLE
+    sta (ACTC_OVERLAY_CONTEXT_ZP),y
+    clc
+    rts
+:
+.elseif ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY
+    jsr native_runtime_condition_detect
+    bcs :+
+    ldy #ACTC_OVERLAY_CTX_STATUS
+    lda #ACTC_OVERLAY_STATUS_NOT_APPLICABLE
+    sta (ACTC_OVERLAY_CONTEXT_ZP),y
+    clc
+    rts
+:
+.elseif ACTC_EMIT_NATIVE_REAL_WHILE_ONLY
+    jsr native_real_while_detect
+    bcs :+
+    ldy #ACTC_OVERLAY_CTX_STATUS
+    lda #ACTC_OVERLAY_STATUS_NOT_APPLICABLE
+    sta (ACTC_OVERLAY_CONTEXT_ZP),y
+    clc
+    rts
+:
+.elseif ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY
+    jsr native_real_control_detect
+    bcs :+
+    ldy #ACTC_OVERLAY_CTX_STATUS
+    lda #ACTC_OVERLAY_STATUS_NOT_APPLICABLE
+    sta (ACTC_OVERLAY_CONTEXT_ZP),y
+    clc
+    rts
+:
+.elseif ACTC_EMIT_NATIVE_REAL_ONLY
+    jsr native_real_detect
+    bcs :+
+    ldy #ACTC_OVERLAY_CTX_STATUS
+    lda #ACTC_OVERLAY_STATUS_NOT_APPLICABLE
+    sta (ACTC_OVERLAY_CONTEXT_ZP),y
+    clc
+    rts
+:
+.elseif ACTC_EMIT_NATIVE_ONLY
+    jsr is_main_native_integer_machine_object
+    bcs :+
+    ldy #ACTC_OVERLAY_CTX_STATUS
+    lda #ACTC_OVERLAY_STATUS_NOT_APPLICABLE
+    sta (ACTC_OVERLAY_CONTEXT_ZP),y
+    clc
+    rts
+:
+.endif
 
     jsr build_object_content_overlay
     bcs actc_overlay_fail
@@ -73,6 +205,7 @@ build_object_content_overlay:
     jsr load_context_ptr_to_work_zp
     ldy #$00
     lda (ACTC_OVERLAY_WORK_ZP),y
+    and #$0F
     jsr emit_small_decimal
     jsr emit_newline
 
@@ -192,7 +325,7 @@ emit_debug_body_op_list_proc_loop:
     cmp entry_index_data
     bne :+
     jmp emit_debug_body_op_list_done
-:   
+:
     ldx entry_index_data
     lda #ACTC_OVERLAY_CTX_BODY_DEBUG_COUNT_PTR_LO
     jsr load_indexed_byte_from_context_ptr
@@ -203,7 +336,23 @@ emit_debug_body_op_list_op_loop:
     lda body_debug_count_local
     cmp body_debug_index_data
     beq emit_debug_body_op_list_next_proc
+.if ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
+    lda #'L'
+.elseif ACTC_EMIT_NATIVE_ONLY
+    lda #'L'
+.elseif ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE
+    lda #'L'
+.elseif ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY
+    lda #'L'
+.elseif ACTC_EMIT_NATIVE_REAL_WHILE_ONLY
+    lda #'L'
+.elseif ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY
+    lda #'L'
+.elseif ACTC_EMIT_NATIVE_REAL_ONLY
+    lda #'L'
+.else
     lda #'l'
+.endif
     jsr emit_char_overlay
     lda #' '
     jsr emit_char_overlay
@@ -211,8 +360,25 @@ emit_debug_body_op_list_op_loop:
     jsr emit_small_decimal
     lda #' '
     jsr emit_char_overlay
+.if ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
+    jsr native_real_function_emit_debug_offset
+.elseif ACTC_EMIT_NATIVE_ONLY
+    jsr native_int_load_debug_offset
+    jsr emit_word_decimal
+.elseif ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE
+    jsr native_runtime_sequence_emit_debug_offset
+.elseif ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY
+    jsr native_runtime_condition_emit_debug_offset
+.elseif ACTC_EMIT_NATIVE_REAL_WHILE_ONLY
+    jsr native_real_while_emit_debug_offset
+.elseif ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY
+    jsr native_real_control_emit_debug_offset
+.elseif ACTC_EMIT_NATIVE_REAL_ONLY
+    jsr native_real_emit_debug_offset
+.else
     lda body_debug_index_data
     jsr emit_small_decimal
+.endif
     lda #' '
     jsr emit_char_overlay
     lda #'0'
@@ -333,6 +499,7 @@ emit_debug_proc_var_list_loop:
     jsr load_context_ptr_to_work_zp
     ldy #$00
     lda (ACTC_OVERLAY_WORK_ZP),y
+    and #ACTC_PROC_META_PARAM_COUNT_MASK
     sta body_debug_count_local
     iny
     lda (ACTC_OVERLAY_WORK_ZP),y
@@ -447,6 +614,21 @@ emit_debug_var_type_for_x:
     rts
 
 emit_export_list:
+.if ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
+    jmp native_real_function_emit_export_list
+.elseif ACTC_EMIT_NATIVE_ONLY
+    jmp emit_native_integer_export_list
+.elseif ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE
+    jmp native_runtime_sequence_emit_export_list
+.elseif ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY
+    jmp native_runtime_condition_emit_export_list
+.elseif ACTC_EMIT_NATIVE_REAL_WHILE_ONLY
+    jmp native_real_while_emit_export_list
+.elseif ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY
+    jmp native_real_control_emit_export_list
+.elseif ACTC_EMIT_NATIVE_REAL_ONLY
+    jmp native_real_emit_export_list
+.else
     jsr is_main_local_call_sequence_machine_object
     bcc emit_export_list_not_local_call_sequence
     jmp emit_machine_local_call_sequence_export_list
@@ -527,17 +709,7 @@ emit_machine_external_call_sequence_export_list:
     lda #ACTC_OVERLAY_CTX_SET_BODY_PTR_FN_LO
     jsr call_indexed_context_function
     jsr load_resident_body_ptr_to_scan_zp
-    jsr emit_count_external_call_sequence_body
-    lda #16
-    ldx body_debug_count_local
-emit_machine_external_call_sequence_size_loop:
-    cpx #$00
-    beq emit_machine_external_call_sequence_size_done
-    clc
-    adc #$03
-    dex
-    bne emit_machine_external_call_sequence_size_loop
-emit_machine_external_call_sequence_size_done:
+    jsr compute_external_call_sequence_machine_size
     ldx #$00
     ldy #$00
     sty word_value_lo
@@ -620,6 +792,9 @@ emit_machine_local_call_sequence_export_done:
     clc
     rts
 
+.endif
+
+.if ACTC_EMIT_NATIVE_ONLY = 0
 emit_machine_export_line:
     sta compare_char_local
     stx saved_x_local
@@ -643,8 +818,26 @@ emit_machine_export_line:
     ldy #$00
     jsr emit_word_decimal
     jmp emit_newline
+.endif
 
 emit_body_ops_list:
+.if ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
+    jmp native_real_function_emit_body_marker_list
+.elseif ACTC_EMIT_NATIVE_ONLY
+    jsr emit_native_integer_body_marker_list
+    clc
+    rts
+.elseif ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE
+    jmp native_runtime_sequence_emit_body_marker_list
+.elseif ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY
+    jmp native_runtime_condition_emit_body_marker_list
+.elseif ACTC_EMIT_NATIVE_REAL_WHILE_ONLY
+    jmp native_real_while_emit_body_marker_list
+.elseif ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY
+    jmp native_real_control_emit_body_marker_list
+.elseif ACTC_EMIT_NATIVE_REAL_ONLY
+    jmp native_real_emit_body_marker_list
+.else
     jsr is_main_local_call_sequence_machine_object
     bcc emit_body_ops_list_not_local_call_sequence
     jsr emit_machine_local_call_sequence_body_marker_list
@@ -712,8 +905,25 @@ emit_body_ops_list_newline:
 emit_body_ops_list_done:
     clc
     rts
+.endif
 
 emit_machine_code_list:
+.if ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
+    jmp native_real_function_emit_machine_code_list
+.elseif ACTC_EMIT_NATIVE_ONLY
+    jsr emit_native_integer_machine_code_list
+    jmp emit_machine_code_list_done
+.elseif ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE
+    jmp native_runtime_sequence_emit_machine_code_list
+.elseif ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY
+    jmp native_runtime_condition_emit_machine_code_list
+.elseif ACTC_EMIT_NATIVE_REAL_WHILE_ONLY
+    jmp native_real_while_emit_machine_code_list
+.elseif ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY
+    jmp native_real_control_emit_machine_code_list
+.elseif ACTC_EMIT_NATIVE_REAL_ONLY
+    jmp native_real_emit_machine_code_list
+.else
     jsr is_empty_main_machine_object
     bcc emit_machine_code_list_check_local_call
     lda #<empty_main_machine_record
@@ -738,10 +948,12 @@ emit_machine_code_list_check_external_call_sequence:
     bcc emit_machine_code_list_done
     jsr emit_machine_external_call_sequence_code_list
     jmp emit_machine_code_list_done
+.endif
 emit_machine_code_list_done:
     clc
     rts
 
+.if (ACTC_EMIT_NATIVE_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_WHILE_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE = 0) .and (ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY = 0)
 emit_machine_external_call_sequence_code_list:
     lda #'m'
     jsr emit_char_overlay
@@ -758,8 +970,17 @@ emit_machine_external_call_sequence_code_loop:
     beq emit_machine_external_call_sequence_code_epilogue
     cmp #'u'
     bne emit_machine_external_call_sequence_code_done
-    jsr emit_machine_external_jsr_placeholder_bytes
+    lda body_debug_index_data
+    pha
     inc body_debug_index_data
+    ldy body_debug_index_data
+    jsr emit_object_peek_payload_y
+    sta proc_var_index_local
+    pla
+    beq emit_machine_external_call_sequence_code_emit_jsr
+    jsr emit_machine_external_call_sequence_maybe_word_setup
+emit_machine_external_call_sequence_code_emit_jsr:
+    jsr emit_machine_external_jsr_placeholder_bytes
     inc body_debug_index_data
     jmp emit_machine_external_call_sequence_code_loop
 emit_machine_external_call_sequence_code_epilogue:
@@ -816,6 +1037,11 @@ emit_machine_external_call_sequence_reloc_loop:
     ldy body_debug_index_data
     jsr emit_object_peek_payload_y
     sta proc_var_index_local
+    lda body_debug_index_data
+    cmp #$01
+    beq emit_machine_external_call_sequence_reloc_write
+    jsr emit_machine_external_call_sequence_maybe_word_reloc_advance
+emit_machine_external_call_sequence_reloc_write:
     lda #'r'
     jsr emit_char_overlay
     lda #' '
@@ -830,6 +1056,70 @@ emit_machine_external_call_sequence_reloc_loop:
     lda proc_var_index_local
     jsr emit_char_overlay
     jsr emit_newline
+    jsr emit_advance_external_reloc_body_offset_by_three
+    inc body_debug_index_data
+    jmp emit_machine_external_call_sequence_reloc_loop
+emit_machine_external_call_sequence_reloc_done:
+    rts
+
+compute_external_call_sequence_machine_size:
+    lda #16
+    sta word_value_lo
+    lda #$00
+    sta body_debug_index_data
+compute_external_call_sequence_machine_size_loop:
+    ldy body_debug_index_data
+    jsr emit_object_peek_payload_y
+    cmp #'u'
+    bne compute_external_call_sequence_machine_size_done
+    lda body_debug_index_data
+    pha
+    inc body_debug_index_data
+    ldy body_debug_index_data
+    jsr emit_object_peek_payload_y
+    sta proc_var_index_local
+    pla
+    beq compute_external_call_sequence_machine_size_after_setup
+    jsr emit_external_call_sequence_current_is_sid_cutoff
+    bcc compute_external_call_sequence_machine_size_after_setup
+    clc
+    lda word_value_lo
+    adc #$03
+    sta word_value_lo
+compute_external_call_sequence_machine_size_after_setup:
+    clc
+    lda word_value_lo
+    adc #$03
+    sta word_value_lo
+    inc body_debug_index_data
+    jmp compute_external_call_sequence_machine_size_loop
+compute_external_call_sequence_machine_size_done:
+    lda word_value_lo
+    rts
+
+emit_machine_external_call_sequence_maybe_word_setup:
+    jsr emit_external_call_sequence_current_is_sid_cutoff
+    bcc emit_machine_external_call_sequence_maybe_word_setup_done
+    lda #<a_to_xy_word_setup_bytes
+    sta ACTC_OVERLAY_SCAN_ZP
+    lda #>a_to_xy_word_setup_bytes
+    sta ACTC_OVERLAY_SCAN_ZP+1
+    jsr emit_scan_zp_string
+    ldx #$00
+    lda #ACTC_OVERLAY_CTX_SET_BODY_PTR_FN_LO
+    jsr call_indexed_context_function
+    jsr load_resident_body_ptr_to_scan_zp
+emit_machine_external_call_sequence_maybe_word_setup_done:
+    rts
+
+emit_machine_external_call_sequence_maybe_word_reloc_advance:
+    jsr emit_external_call_sequence_current_is_sid_cutoff
+    bcc emit_machine_external_call_sequence_maybe_word_reloc_advance_done
+    jsr emit_advance_external_reloc_body_offset_by_three
+emit_machine_external_call_sequence_maybe_word_reloc_advance_done:
+    rts
+
+emit_advance_external_reloc_body_offset_by_three:
     clc
     lda proc_var_base_local
     adc #$03
@@ -837,9 +1127,45 @@ emit_machine_external_call_sequence_reloc_loop:
     bcc :+
     inc proc_var_scope_local
 :
-    inc body_debug_index_data
-    jmp emit_machine_external_call_sequence_reloc_loop
-emit_machine_external_call_sequence_reloc_done:
+    rts
+
+emit_external_call_sequence_current_is_sid_cutoff:
+    lda #$00
+    sta compare_char_local
+    lda proc_var_index_local
+    jsr external_import_selector_to_index
+    bcc emit_external_call_sequence_current_is_sid_cutoff_restore_body
+    tax
+    lda #ACTC_OVERLAY_CTX_SET_EXTERNAL_PTR_FN_LO
+    jsr call_indexed_context_function
+    jsr load_resident_export_ptr_to_scan_zp
+    lda #<runtime_symbol_rt_sid_cutoff_emit
+    sta ACTC_OVERLAY_WORK_ZP
+    lda #>runtime_symbol_rt_sid_cutoff_emit
+    sta ACTC_OVERLAY_WORK_ZP+1
+    ldy #$00
+emit_external_call_sequence_current_is_sid_cutoff_loop:
+    lda (ACTC_OVERLAY_WORK_ZP),y
+    cmp (ACTC_OVERLAY_SCAN_ZP),y
+    bne emit_external_call_sequence_current_is_sid_cutoff_restore_body
+    lda (ACTC_OVERLAY_WORK_ZP),y
+    beq emit_external_call_sequence_current_is_sid_cutoff_yes
+    iny
+    bne emit_external_call_sequence_current_is_sid_cutoff_loop
+emit_external_call_sequence_current_is_sid_cutoff_yes:
+    lda #$01
+    sta compare_char_local
+emit_external_call_sequence_current_is_sid_cutoff_restore_body:
+    ldx #$00
+    lda #ACTC_OVERLAY_CTX_SET_BODY_PTR_FN_LO
+    jsr call_indexed_context_function
+    jsr load_resident_body_ptr_to_scan_zp
+    lda compare_char_local
+    beq emit_external_call_sequence_current_is_sid_cutoff_no
+    sec
+    rts
+emit_external_call_sequence_current_is_sid_cutoff_no:
+    clc
     rts
 
 emit_machine_local_external_call_sequence_code_list:
@@ -1399,6 +1725,7 @@ emit_machine_local_external_call_sequence_body_marker_machine:
     jsr emit_char_overlay
     jsr emit_newline
     rts
+.endif
 
 emit_external_list:
     lda #$00
@@ -1504,12 +1831,14 @@ emit_var_list_loop:
     jsr call_indexed_context_function
     lda #ACTC_OVERLAY_CTX_VAR_META_WINDOW_PTR_LO
     jsr load_context_ptr_to_work_zp
-    ldy #$01
-    lda (ACTC_OVERLAY_WORK_ZP),y
-    bne emit_var_list_bad
     ldy #$00
     lda (ACTC_OVERLAY_WORK_ZP),y
-    jsr emit_small_decimal
+    pha
+    iny
+    lda (ACTC_OVERLAY_WORK_ZP),y
+    tay
+    pla
+    jsr emit_word_decimal
     lda #ACTC_OVERLAY_CTX_VAR_META_WINDOW_PTR_LO
     jsr load_context_ptr_to_work_zp
     ldy #$02
@@ -1525,15 +1854,6 @@ emit_var_list_newline:
     jsr emit_newline
     inc entry_index_data
     jmp emit_var_list_loop
-emit_var_list_bad:
-    ldy #ACTC_OVERLAY_CTX_DIAG_PTR_LO
-    lda #<msg_bad_var
-    sta (ACTC_OVERLAY_CONTEXT_ZP),y
-    ldy #ACTC_OVERLAY_CTX_DIAG_PTR_HI
-    lda #>msg_bad_var
-    sta (ACTC_OVERLAY_CONTEXT_ZP),y
-    sec
-    rts
 emit_var_list_done:
     clc
     rts
@@ -1566,6 +1886,7 @@ emit_lower_scan_zp_string_loop:
 emit_lower_scan_zp_string_done:
     rts
 
+.if (ACTC_EMIT_NATIVE_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_WHILE_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE = 0) .and (ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY = 0)
 is_empty_main_machine_object:
     lda #ACTC_OVERLAY_CTX_EXPORT_COUNT_PTR_LO
     jsr load_count_from_context
@@ -1614,6 +1935,7 @@ is_empty_main_machine_object_yes:
 is_empty_main_machine_object_no:
     clc
     rts
+.endif
 
 scan_zp_is_main_symbol:
     ldy #$00
@@ -1645,6 +1967,7 @@ scan_zp_is_main_symbol_no:
     clc
     rts
 
+.if (ACTC_EMIT_NATIVE_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_WHILE_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE = 0) .and (ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY = 0)
 scan_zp_is_return_body:
     ldy #$00
     jsr emit_object_peek_payload_y
@@ -1738,6 +2061,7 @@ scan_zp_is_external_call_sequence_return_body_no:
     clc
     rts
 
+.endif
 external_import_selector_to_index:
     ; Object body selectors are one-byte base36 import IDs: 0-9, A-Z.
     cmp #'0'
@@ -1761,6 +2085,7 @@ external_import_selector_to_index_no:
     clc
     rts
 
+.if (ACTC_EMIT_NATIVE_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_WHILE_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE = 0) .and (ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY = 0)
 emit_count_external_call_sequence_body:
     ldy #$00
     sty body_debug_count_local
@@ -2014,6 +2339,7 @@ emit_count_local_external_call_sequence_body_call:
     jmp emit_count_local_external_call_sequence_body_loop
 emit_count_local_external_call_sequence_body_done:
     rts
+.endif
 
 emit_machine_body_marker_line:
     lda #'b'
@@ -2060,187 +2386,61 @@ emit_object_selector_overlay_digit:
     adc #'0'
     jmp emit_char_overlay
 
+.if ACTC_EMIT_NATIVE_REAL_ONLY
+.include "actc_overlay_emit_native_real.inc"
+.endif
+
+.if ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
+.include "actc_overlay_emit_native_real_function.inc"
+.endif
+
+.if ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY
+.include "actc_overlay_emit_native_real_control.inc"
+.endif
+
+.if ACTC_EMIT_NATIVE_REAL_WHILE_ONLY
+.include "actc_overlay_emit_native_real_while.inc"
+.endif
+
+.if ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY
+.include "actc_overlay_emit_native_runtime_condition.inc"
+.endif
+
+.if ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE
+.include "actc_overlay_emit_native_runtime_sequence.inc"
+.endif
+
+.if ACTC_EMIT_NATIVE_ONLY
+.if ACTC_EMIT_NATIVE_LOCAL_ONLY
+.include "actc_overlay_emit_native_local_integer.inc"
+.else
+.include "actc_overlay_emit_native_integer.inc"
+.endif
+.endif
+
 emit_newline:
     lda #10
     jmp emit_char_overlay
 
 emit_hex_byte_overlay:
-    sta proc_var_scope_local
-    lsr a
-    lsr a
-    lsr a
-    lsr a
-    jsr emit_hex_nibble_overlay
-    lda proc_var_scope_local
-    and #$0F
-    jmp emit_hex_nibble_overlay
-
-emit_hex_nibble_overlay:
-    cmp #$0A
-    bcc emit_hex_nibble_overlay_digit
-    clc
-    adc #('A'-10)
-    jmp emit_char_overlay
-emit_hex_nibble_overlay_digit:
-    clc
-    adc #'0'
-    jmp emit_char_overlay
+    sta emitted_char_local
+    lda #ACTC_OVERLAY_CTX_APPEND_HEX_BYTE_UPPER_FN_LO
+    jsr load_context_function_ptr
+    lda emitted_char_local
+    jmp call_loaded_target_with_a
 
 emit_small_decimal:
-    ldx #$00
-emit_small_decimal_hundreds_loop:
-    cmp #100
-    bcc emit_small_decimal_tens_prep
-    sec
-    sbc #100
-    inx
-    bne emit_small_decimal_hundreds_loop
-emit_small_decimal_tens_prep:
-    stx compare_char_local
-    ldx #$00
-emit_small_decimal_tens_loop:
-    cmp #10
-    bcc emit_small_decimal_tens_done
-    sec
-    sbc #10
-    inx
-    bne emit_small_decimal_tens_loop
-emit_small_decimal_tens_done:
-    pha
-    txa
-    pha
-    lda compare_char_local
-    beq emit_small_decimal_emit_tens
-    clc
-    adc #'0'
-    jsr emit_char_overlay
-emit_small_decimal_emit_tens:
-    pla
-    bne :+
-    lda compare_char_local
-    beq emit_small_decimal_ones_pop
-    lda #$00
-:
-    clc
-    adc #'0'
-    jsr emit_char_overlay
-emit_small_decimal_ones_pop:
-    pla
-    clc
-    adc #'0'
-    jmp emit_char_overlay
+    ldy #$00
+    jmp emit_word_decimal
 
 emit_word_decimal:
     sta word_value_lo
     sty word_value_hi
-    lda #$00
-    sta digit_count_local
-    ldx #$00
-emit_word_decimal_10000_loop:
-    lda word_value_hi
-    cmp #$27
-    bcc emit_word_decimal_10000_done
-    bne emit_word_decimal_10000_sub
+    lda #ACTC_OVERLAY_CTX_APPEND_WORD_DECIMAL_FN_LO
+    jsr load_context_function_ptr
     lda word_value_lo
-    cmp #$10
-    bcc emit_word_decimal_10000_done
-emit_word_decimal_10000_sub:
-    lda word_value_lo
-    sec
-    sbc #$10
-    sta word_value_lo
-    lda word_value_hi
-    sbc #$27
-    sta word_value_hi
-    inx
-    bne emit_word_decimal_10000_loop
-emit_word_decimal_10000_done:
-    txa
-    jsr emit_word_decimal_digit_if_needed
-    ldx #$00
-emit_word_decimal_1000_loop:
-    lda word_value_hi
-    cmp #$03
-    bcc emit_word_decimal_1000_done
-    bne emit_word_decimal_1000_sub
-    lda word_value_lo
-    cmp #$E8
-    bcc emit_word_decimal_1000_done
-emit_word_decimal_1000_sub:
-    lda word_value_lo
-    sec
-    sbc #$E8
-    sta word_value_lo
-    lda word_value_hi
-    sbc #$03
-    sta word_value_hi
-    inx
-    bne emit_word_decimal_1000_loop
-emit_word_decimal_1000_done:
-    txa
-    jsr emit_word_decimal_digit_if_needed
-    ldx #$00
-emit_word_decimal_100_loop:
-    lda word_value_hi
-    bne emit_word_decimal_100_sub
-    lda word_value_lo
-    cmp #100
-    bcc emit_word_decimal_100_done
-emit_word_decimal_100_sub:
-    lda word_value_lo
-    sec
-    sbc #100
-    sta word_value_lo
-    lda word_value_hi
-    sbc #$00
-    sta word_value_hi
-    inx
-    bne emit_word_decimal_100_loop
-emit_word_decimal_100_done:
-    txa
-    jsr emit_word_decimal_digit_if_needed
-    ldx #$00
-emit_word_decimal_10_loop:
-    lda word_value_hi
-    bne emit_word_decimal_10_sub
-    lda word_value_lo
-    cmp #10
-    bcc emit_word_decimal_10_done
-emit_word_decimal_10_sub:
-    lda word_value_lo
-    sec
-    sbc #10
-    sta word_value_lo
-    lda word_value_hi
-    sbc #$00
-    sta word_value_hi
-    inx
-    bne emit_word_decimal_10_loop
-emit_word_decimal_10_done:
-    txa
-    jsr emit_word_decimal_digit_if_needed
-    lda word_value_lo
-    clc
-    adc #'0'
-    jmp emit_char_overlay
-
-emit_word_decimal_digit_if_needed:
-    pha
-    txa
-    bne emit_word_decimal_digit_emit
-    lda digit_count_local
-    beq emit_word_decimal_digit_skip
-emit_word_decimal_digit_emit:
-    pla
-    clc
-    adc #'0'
-    jsr emit_char_overlay
-    lda #$01
-    sta digit_count_local
-    rts
-emit_word_decimal_digit_skip:
-    pla
-    rts
+    ldy word_value_hi
+    jmp call_loaded_target_with_a
 
 lowercase_ascii_overlay:
     cmp #'A'
@@ -2376,49 +2576,52 @@ emit_object_peek_payload_y:
     lda (ACTC_OVERLAY_SCAN_ZP),y
     rts
 
-msg_bad_literal:
-    .asciiz "BAD LITERAL"
-msg_bad_var:
-    .asciiz "BAD VAR"
+.if (ACTC_EMIT_NATIVE_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_WHILE_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE = 0) .and (ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY = 0)
 empty_main_machine_record:
     .asciiz "m A9 A5 8D D0 03 A9 00 85 02 85 03 A2 02 4C 0F CF"
 external_call_sequence_epilogue_bytes:
     .asciiz " A9 A5 8D D0 03 A9 00 85 02 85 03 A2 02 4C 0F CF"
-call_target_minus_one:
-    .byte $00
-call_target_ptr:
-    .word $0000
-call_arg_a:
-    .byte $00
-entry_index_data:
-    .byte $00
-compare_char_local:
-    .byte $00
-digit_count_local:
-    .byte $00
-word_value_lo:
-    .byte $00
-word_value_hi:
-    .byte $00
-body_debug_count_local:
-    .byte $00
-body_debug_index_data:
-    .byte $00
-proc_var_base_local:
-    .byte $00
-proc_var_scope_local:
-    .byte $00
-proc_var_index_local:
-    .byte $00
-saved_a_local:
-    .byte $00
-saved_x_local:
-    .byte $00
-saved_y_local:
-    .byte $00
-emitted_char_local:
-    .byte $00
-body_marker_visit_mask:
-    .byte $00
+a_to_xy_word_setup_bytes:
+    .asciiz " AA A0 00"
+runtime_symbol_rt_sid_cutoff_emit:
+    .asciiz "RT_SID_CUTOFF"
+.endif
 
 actc_overlay_end:
+
+.segment "BSS"
+
+call_target_minus_one:
+    .res 1
+call_target_ptr:
+    .res 2
+call_arg_a:
+    .res 1
+entry_index_data:
+    .res 1
+compare_char_local:
+    .res 1
+word_value_lo:
+    .res 1
+word_value_hi:
+    .res 1
+body_debug_count_local:
+    .res 1
+body_debug_index_data:
+    .res 1
+proc_var_base_local:
+    .res 1
+proc_var_scope_local:
+    .res 1
+proc_var_index_local:
+    .res 1
+saved_a_local:
+    .res 1
+saved_x_local:
+    .res 1
+saved_y_local:
+    .res 1
+emitted_char_local:
+    .res 1
+body_marker_visit_mask:
+    .res 1

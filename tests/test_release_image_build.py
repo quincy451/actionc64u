@@ -35,17 +35,109 @@ class TestReleaseImageBuild(unittest.TestCase):
         required_entries = [
             "udosboot",
             "udoscore",
-            "actc.prg",
-            "actsave.prg",
             "alink.prg",
-            "actmon.prg",
-            "actinfo.prg",
-            "actcopy.prg",
         ]
-        required_entries.extend(f"actc_ovl{index}.bin" for index in range(8))
 
         for required in required_entries:
             self.assertIn(required, listing, msg=listing)
+
+        self.assertNotIn("actsave.prg", listing)
+        for workspace_only_tool in [
+            "actc.prg",
+            "actc_ovl0.bin",
+            "actc_ovl1.bin",
+            "actc_ovl2.bin",
+            "actc_ovl3.bin",
+            "actc_ovl4.bin",
+            "actc_ovl5.bin",
+            "actc_ovl6.bin",
+            "actc_ovl7.bin",
+            "actc_ovl8.bin",
+            "actc_ovl9.bin",
+            "actc_ovla.bin",
+            "actc_ovlb.bin",
+            "actc_ovlc.bin",
+            "actc_ovld.bin",
+            "actc_ovle.bin",
+            "actc_ovlf.bin",
+            "actc_ovlg.bin",
+            "actc_ovlh.bin",
+            "actdel.prg",
+            "actdir.prg",
+            "tree.ovl",
+            "xcopy.ovl",
+            "deltree.ovl",
+            "act2save.prg",
+            "actmon.prg",
+            "actfile.prg",
+            "actinfo.prg",
+            "actedit.prg",
+            "actedit_ovl1.bin",
+            "actdbg.prg",
+            "actdbg_ovl1.bin",
+            "actdbg_ovl2.bin",
+            "actmkdir.prg",
+            "actmove.prg",
+            "actnew.prg",
+            "actrmdir.prg",
+            "actsrc.prg",
+            "actwrite.prg",
+        ]:
+            self.assertNotIn(workspace_only_tool, listing)
+
+        action_root = (
+            self.root.parent / "udos" / "build" / "udos-release-fs" / "IMAGES" / "ACTION.DNP"
+        )
+        for complete_workspace_entry in [
+            "ACTC.PRG",
+            "ACTC_OVL0.BIN",
+            "ACTC_OVL1.BIN",
+            "ACTC_OVL2.BIN",
+            "ACTC_OVL3.BIN",
+            "ACTC_OVL4.BIN",
+            "ACTC_OVL5.BIN",
+            "ACTC_OVL6.BIN",
+            "ACTC_OVL7.BIN",
+            "ACTC_OVL8.BIN",
+            "ACTC_OVL9.BIN",
+            "ACTC_OVLA.BIN",
+            "ACTMON.PRG",
+            "ACTFILE.PRG",
+            "ACTINFO.PRG",
+            "ACTEDIT.PRG",
+            "ACTEDIT_OVL1.BIN",
+            "ACTDBG.PRG",
+            "ACTDBG_OVL1.BIN",
+            "ACTDBG_OVL2.BIN",
+            "ACTCOPY.PRG",
+            "ACTDEL.PRG",
+            "ACTDIR.PRG",
+            "TREE.OVL",
+            "XCOPY.OVL",
+            "DELTREE.OVL",
+            "ACTC_OVLB.BIN",
+            "ACTC_OVLC.BIN",
+            "ACTC_OVLD.BIN",
+            "ACTC_OVLE.BIN",
+            "ACTC_OVLF.BIN",
+            "ACTC_OVLG.BIN",
+            "ACTC_OVLH.BIN",
+            "ACTC_OVLI.BIN",
+            "ACTC_OVLJ.BIN",
+            "ACTC_OVLK.BIN",
+        ]:
+            self.assertTrue((action_root / complete_workspace_entry).is_file())
+
+        self.assertEqual((action_root / "ACTEDIT_OVL1.BIN").read_bytes()[:5], b"AEOV\x02")
+        self.assertEqual((action_root / "ACTDBG_OVL1.BIN").read_bytes()[:4], b"DGOV")
+        self.assertEqual((action_root / "ACTDBG_OVL2.BIN").read_bytes()[:4], b"DGOV")
+        self.assertNotIn("actcopy.prg", listing)
+
+        act2save = action_root / "ACT2SAVE.PRG"
+        actsave = action_root / "ACTSAVE.PRG"
+        self.assertTrue(act2save.is_file())
+        self.assertTrue(actsave.is_file())
+        self.assertEqual(actsave.read_bytes(), act2save.read_bytes())
 
 
 if __name__ == "__main__":

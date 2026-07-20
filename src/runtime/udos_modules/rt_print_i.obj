@@ -1,0 +1,10 @@
+OBJ1
+x rt_print_i 0 334
+b M
+m 85 e0 86 e1 8a 10 20 a9 2d 85 e5 a9 00 85 e6 85 e4 a9 e5 85 e3 a2 e3 20 03 cf 38 a9 00 e5 e0 85 e0 a9 00 e5 e1 85 e1 a9 00 85 e2 a2 00 a5 e1 c9 27 90 18 d0 06 a5 e0 c9 10 90 10 38 a5 e0 e9 10
+m 85 e0 a5 e1 e9 27 85 e1 e8 d0 e2 e0 00 d0 04 a5 e2 f0 1b 8a 18 69 30 48 a9 01 85 e2 68 85 e5 a9 00 85 e6 85 e4 a9 e5 85 e3 a2 e3 20 03 cf a2 00 a5 e1 c9 03 90 18 d0 06 a5 e0 c9 e8 90 10 38 a5
+m e0 e9 e8 85 e0 a5 e1 e9 03 85 e1 e8 d0 e2 e0 00 d0 04 a5 e2 f0 1b 8a 18 69 30 48 a9 01 85 e2 68 85 e5 a9 00 85 e6 85 e4 a9 e5 85 e3 a2 e3 20 03 cf a2 00 a5 e1 c9 00 90 18 d0 06 a5 e0 c9 64 90
+m 10 38 a5 e0 e9 64 85 e0 a5 e1 e9 00 85 e1 e8 d0 e2 e0 00 d0 04 a5 e2 f0 1b 8a 18 69 30 48 a9 01 85 e2 68 85 e5 a9 00 85 e6 85 e4 a9 e5 85 e3 a2 e3 20 03 cf a2 00 a5 e1 c9 00 90 18 d0 06 a5 e0
+m c9 0a 90 10 38 a5 e0 e9 0a 85 e0 a5 e1 e9 00 85 e1 e8 d0 e2 e0 00 d0 04 a5 e2 f0 1b 8a 18 69 30 48 a9 01 85 e2 68 85 e5 a9 00 85 e6 85 e4 a9 e5 85 e3 a2 e3 20 03 cf a5 e0 18 69 30 85 e5 a9 00
+m 85 e6 85 e4 a9 e5 85 e3 a2 e3 20 03 cf 60
+n rt_print_i

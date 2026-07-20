@@ -17,10 +17,14 @@ codex --help
 If you manage Node.js with `nvm`, install the package inside the same WSL shell
 environment you plan to use for this repo.
 
-## Local Adjacent Repos Expected
+## Workspace Paths Expected
 
-- `../cpm65-u64`
-- `../action.pdf`
+- `../udos`
+- `docs/inspiration/action.pdf`
+- `third_party/lib6502`
+
+The host 6502 execution harness uses the vendored `lib6502` copy. No retired
+compiler or operating-system tree is required by the maintained build.
 
 Validate these paths with:
 

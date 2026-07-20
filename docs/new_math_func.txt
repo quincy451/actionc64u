@@ -1,0 +1,143 @@
+ActionC64U MATH1 additions for the native C64U fork
+====================================================
+
+Portable source of record: idun_action/lib/math1.act
+Native binding reference: lib/math1.act
+Target: C64 6502 generated program; no UDOS calls or resident service required.
+Numeric base: IEEE-754 binary32 REAL, round-to-nearest/ties-to-even core runtime.
+
+Native UDOS status: six low-level declarations are available: FAbs, FSqrt,
+FMin, FMax, PrintR, and PrintRE. FMin/FMax use independently selected OBJ
+helpers with the complete portable NaN and signed-zero policy, but their native
+source lowering is intentionally bounded to named REAL operands. The
+Idun/Alpine fork implements the complete source library: 8 public constants,
+43 public routines, and 1 private helper, producing 51 public help features.
+Native delivery still requires general REAL function parameters, locals,
+expressions, calls, and returns before those portable bodies can replace the
+current declaration-only interface. See docs/idun_feature_parity.md.
+
+The constants and routines below are public after INCLUDE "MATH1".  The
+transcendental routines are portable Action implementations over the binary32
+add/subtract/multiply/divide, conversion, absolute-value, and square-root
+runtime.  They do not use the BASIC ROM floating-point package.
+
+Constants
+---------
+
+REAL CONST MATH_PI
+REAL CONST MATH_TWO_PI
+REAL CONST MATH_HALF_PI
+REAL CONST MATH_QUARTER_PI
+REAL CONST MATH_E
+REAL CONST MATH_LN2
+REAL CONST MATH_LN10
+REAL CONST MATH_SQRT2
+
+Core and utility functions
+--------------------------
+
+PROC PrintR(REAL value)
+PROC PrintRE(REAL value)
+REAL FUNC FAbs(REAL value)
+REAL FUNC FSqrt(REAL value)
+REAL FUNC FSign(REAL value)
+REAL FUNC FMin(REAL left,right)
+REAL FUNC FMax(REAL left,right)
+REAL FUNC FClamp(REAL value,lower,upper)
+REAL FUNC FTrunc(REAL value)
+REAL FUNC FFloor(REAL value)
+REAL FUNC FCeil(REAL value)
+REAL FUNC FRound(REAL value)
+REAL FUNC FFrac(REAL value)
+REAL FUNC FMod(REAL value,divisor)
+
+Exponential and logarithmic functions
+-------------------------------------
+
+REAL FUNC FExp(REAL value)
+REAL FUNC FLn(REAL value)
+REAL FUNC FLog2(REAL value)
+REAL FUNC FLog10(REAL value)
+REAL FUNC FPow(REAL base,exponent)
+REAL FUNC FHypot(REAL x,y)
+
+Circular trigonometric functions (radians)
+------------------------------------------
+
+REAL FUNC FSin(REAL radians)
+REAL FUNC FCos(REAL radians)
+REAL FUNC FTan(REAL radians)
+REAL FUNC FASin(REAL value)
+REAL FUNC FACos(REAL value)
+REAL FUNC FATan(REAL value)
+REAL FUNC FATan2(REAL y,x)
+REAL FUNC FSec(REAL radians)
+REAL FUNC FCsc(REAL radians)
+REAL FUNC FCot(REAL radians)
+REAL FUNC FASec(REAL value)
+REAL FUNC FACsc(REAL value)
+REAL FUNC FACot(REAL value)
+REAL FUNC FVersin(REAL radians)
+REAL FUNC FHaversin(REAL radians)
+
+Hyperbolic functions
+--------------------
+
+REAL FUNC FSinh(REAL value)
+REAL FUNC FCosh(REAL value)
+REAL FUNC FTanh(REAL value)
+REAL FUNC FASinh(REAL value)
+REAL FUNC FACosh(REAL value)
+REAL FUNC FATanh(REAL value)
+
+Angle conversion
+----------------
+
+REAL FUNC DegToRad(REAL degrees)
+REAL FUNC RadToDeg(REAL radians)
+
+IEEE and domain behavior
+------------------------
+
+- NaN propagates through ordinary calculations and invalid domains return NaN.
+- FLn(0) returns negative infinity; FLn(negative) returns NaN.
+- FExp overflows to positive infinity and underflows toward positive zero.
+- FASin/FACos require -1 through 1.
+- FACosh requires a value at least 1.
+- FATanh accepts -1 through 1; endpoints return signed infinity.
+- FPow accepts a negative base only when the exponent is an exact integer.
+- Division-based functions naturally return infinity or NaN at poles according
+  to the binary32 runtime.
+- Core IEEE arithmetic is correctly rounded.  Transcendental results use
+  range reduction plus finite polynomial/series approximations and are not
+  promised to be correctly rounded in the last bit.
+
+Porting checklist for the native C64U tree
+-----------------------------------------
+
+1. Port lib/math1.act as source, retaining the public signatures above.
+2. Supply the same link-selected binary32 primitives for PrintR, PrintRE,
+   FAbs, FSqrt, add, subtract, multiply, divide, compare, INT conversion, and
+   REAL conversion.
+3. Keep _MathWrapPi private; help/catalog builders intentionally ignore names
+   beginning with an underscore.
+4. Add the constants and all public signatures to ACTEDIT/ACTHELP library help.
+5. Run known-value target tests for positive and negative FATan, all FATan2
+   quadrants, FSin/FCos/FTan, logs, powers, and hyperbolic functions.  The Idun
+   fork's VICE regression executes sixteen representative results on a 6502.
+
+Small example
+-------------
+
+INCLUDE "MATH1"
+
+MODULE MAIN
+
+PROC MAIN()
+    REAL angle,x,y
+    angle=DegToRad(45.0)
+    x=FCos(angle)
+    y=FSin(angle)
+    PrintR(FHypot(x,y))
+    RETURN
+ENDPROC

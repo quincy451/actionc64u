@@ -57,8 +57,9 @@ def export_docs(root: Path, docs_dir: Path) -> None:
             "Default workflow:\n\n"
             "1. Keep Action source under SRC/.\n"
             "2. Run ACTC.PRG <module> to build OBJ/<module>.OBJ.\n"
-            "3. Run ALINK.PRG <module> to link BIN/<module>.PRG.\n"
+            "3. Run ALINK.PRG <module> to link BIN/<module>.PRG and .DBG.\n"
             "4. Run the linked PRG directly from BIN/.\n"
+            "5. For source debugging, run ACTDBG.PRG <module>.\n"
         ),
         "LANGUAGE.TXT": (
             "# ActionC64U Source Notes\n\n"
@@ -80,6 +81,9 @@ def export_docs(root: Path, docs_dir: Path) -> None:
     dbf1_doc = root / "docs" / "dbf1.md"
     if dbf1_doc.is_file():
         docs["DBF1.TXT"] = dbf1_doc.read_text(encoding="utf-8")
+    debugger_doc = root / "docs" / "source_debugger_roadmap.md"
+    if debugger_doc.is_file():
+        docs["DEBUGGER.TXT"] = debugger_doc.read_text(encoding="utf-8")
     for name, text in docs.items():
         if name == "README.TXT":
             out = text.strip() + "\n"
@@ -117,9 +121,28 @@ def export_udos_tools(root: Path, image_root: Path, bin_dir: Path) -> None:
         ("build_actc_overlay_emit_object.sh", "ACTC_OVL5.BIN"),
         ("build_actc_overlay_body_collect.sh", "ACTC_OVL6.BIN"),
         ("build_actc_overlay_body_preallocate.sh", "ACTC_OVL7.BIN"),
+        ("build_actc_overlay_emit_native_object.sh", "ACTC_OVL8.BIN"),
+        ("build_actc_overlay_emit_native_local_object.sh", "ACTC_OVL9.BIN"),
+        ("build_actc_overlay_emit_native_real_object.sh", "ACTC_OVLA.BIN"),
+        ("build_actc_overlay_emit_native_real_control_object.sh", "ACTC_OVLB.BIN"),
+        ("build_actc_overlay_emit_native_real_while_object.sh", "ACTC_OVLC.BIN"),
+        ("build_actc_overlay_emit_native_runtime_condition_object.sh", "ACTC_OVLD.BIN"),
+        ("build_actc_overlay_emit_native_runtime_sequence_object.sh", "ACTC_OVLE.BIN"),
+        ("build_actc_overlay_emit_native_runtime_nested_object.sh", "ACTC_OVLF.BIN"),
+        ("build_actc_overlay_emit_native_local_runtime_object.sh", "ACTC_OVLG.BIN"),
+        ("build_actc_overlay_emit_native_local_mixed_object.sh", "ACTC_OVLH.BIN"),
+        ("build_actc_overlay_preprocess.sh", "ACTC_OVLI.BIN"),
+        ("build_actc_overlay_emit_native_fixed_object.sh", "ACTC_OVLJ.BIN"),
+        ("build_actc_overlay_emit_native_real_function_object.sh", "ACTC_OVLK.BIN"),
         ("build_alink_udos.sh", "ALINK.PRG"),
+        ("build_actdbg_udos.sh", "ACTDBG.PRG"),
+        ("build_actdbg_overlay_optional_ui.sh", "ACTDBG_OVL1.BIN"),
+        ("build_actdbg_overlay_exec.sh", "ACTDBG_OVL2.BIN"),
         ("build_actchk_udos.sh", "ACTCHK.PRG"),
         ("build_actdir_udos.sh", "ACTDIR.PRG"),
+        ("build_acttree_udos.sh", "TREE.OVL"),
+        ("build_xcopy_udos.sh", "XCOPY.OVL"),
+        ("build_deltree_udos.sh", "DELTREE.OVL"),
         ("build_actmon_udos.sh", "ACTMON.PRG"),
         ("build_actfile_udos.sh", "ACTFILE.PRG"),
         ("build_actinfo_udos.sh", "ACTINFO.PRG"),
@@ -129,6 +152,7 @@ def export_udos_tools(root: Path, image_root: Path, bin_dir: Path) -> None:
         ("build_actcopy_udos.sh", "ACTCOPY.PRG"),
         ("build_actdel_udos.sh", "ACTDEL.PRG"),
         ("build_actedit_udos.sh", "ACTEDIT.PRG"),
+        ("build_actedit_overlay_mutation.sh", "ACTEDIT_OVL1.BIN"),
         ("build_actmkdir_udos.sh", "ACTMKDIR.PRG"),
         ("build_actren_udos.sh", "ACTMOVE.PRG"),
         ("build_actrmdir_udos.sh", "ACTRMDIR.PRG"),

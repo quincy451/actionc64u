@@ -1,4 +1,5 @@
 .include "udos_services.inc"
+.include "actedit_overlay_abi.inc"
 
 .export start
 .export actedit_test_mode
@@ -30,14 +31,31 @@
 .export actedit_test_key22
 .export actedit_test_key23
 .export actedit_source_path
+.export actedit_module_name
 .export actedit_current_line_lo
 .export actedit_current_line_hi
 .export actedit_left_col
 .export actedit_cursor_col
 .export actedit_dirty
+.export actedit_source_stage_len_bank
+.export actedit_source_line_count_lo
+.export actedit_source_line_count_hi
+.export actedit_source_line_index_ready
+.export actedit_logical_line_count_lo
+.export actedit_logical_line_count_hi
+.export actedit_logical_line_index_ready
+.export actedit_piece_rebuild_count
+.export actedit_direct_patch_count
+.export actedit_direct_insert_count
+.export actedit_direct_remove_count
+.export actedit_direct_insert_update_count
+.export actedit_logical_index_suffix_count
+.export actedit_mutation_overlay_load_count
+.export actedit_mutation_overlay_fail_count
 
 SCNKEY = $FF9F
 GETIN = $FFE4
+CHROUT = $FFD2
 
 KEY_F1 = $85
 KEY_F2 = $89
@@ -58,10 +76,14 @@ KEY_RIGHT = $1D
 KEY_UP = $91
 KEY_LEFT = $9D
 KEY_F8 = $8C
-KEY_G = $47
-KEY_R = $52
-KEY_U = $55
-KEY_Y = $59
+KEY_A = $01
+KEY_B = $02
+KEY_D = $04
+KEY_G = $07
+KEY_O = $0F
+KEY_R = $12
+KEY_U = $15
+KEY_Y = $19
 
 SCREEN_RAM = $0400
 SCREEN_COLS = 40
@@ -74,11 +96,20 @@ LINE_BUFFER_LIMIT = 159
 ACTEDIT_FILE_WINDOW_LIMIT = 255
 ACTEDIT_SOURCE_REU_BASE_LO = $00
 ACTEDIT_SOURCE_REU_BASE_HI = $00
-ACTEDIT_SOURCE_REU_BASE_BANK = $02
+ACTEDIT_SOURCE_REU_BASE_BANK = $07
+ACTEDIT_REU_RESERVED_BANK = $FD
+ACTEDIT_LINE_INDEX_ENTRY_BYTES = 3
+ACTEDIT_LINE_INDEX_WINDOW_LIMIT = 255
+ACTEDIT_LOGICAL_INDEX_ENTRY_BYTES = 3
+ACTEDIT_LOGICAL_INDEX_WINDOW_LIMIT = 255
+ACTEDIT_LOGICAL_INDEX_REU_BASE_LO = $00
+ACTEDIT_LOGICAL_INDEX_REU_BASE_HI = $00
+ACTEDIT_LOGICAL_INDEX_REU_BASE_BANK = $00
+ACTEDIT_LOGICAL_INDEX_REU_END_BANK = $03
 OUTPUT_CHUNK_SIZE = 128
-PATCH_MAX = 8
-INSERT_MAX = 8
-DELETE_MAX = 8
+PATCH_MAX = 64
+INSERT_MAX = 64
+DELETE_MAX = 64
 TEXT_COL_FIRST = 2
 TEXT_COLS = 38
 TEST_KEY_LIMIT = 24
@@ -89,7 +120,7 @@ LINE_KIND_INSERT = 1
 PIECE_KIND_SOURCE = 0
 PIECE_KIND_PATCH = 1
 PIECE_KIND_INSERT = 2
-PIECE_MAX = 48
+PIECE_MAX = 255
 UNDO_STATE_SIZE = 19
 PATCH_TABLE_BYTES = PATCH_MAX*5
 INSERT_TABLE_BYTES = INSERT_MAX*6
@@ -107,7 +138,7 @@ ACTEDIT_DESCRIPTOR_WINDOW_BYTES = INSERT_TABLE_BYTES
 ACTEDIT_TEXT_REU_BASE_LO = $00
 ACTEDIT_TEXT_REU_BASE_HI = $00
 ACTEDIT_TEXT_REU_BASE_BANK = $06
-UNDO_JOURNAL_DEPTH = 8
+UNDO_JOURNAL_DEPTH = 32
 UNDO_ENTRY_BYTES = UNDO_STATE_SIZE + (LINE_BUFFER_LIMIT+1) + PATCH_TABLE_BYTES + INSERT_TABLE_BYTES + DELETE_TABLE_BYTES
 ACTEDIT_UNDO_REU_BASE_LO = $00
 ACTEDIT_UNDO_REU_BASE_HI = $00
@@ -117,6 +148,9 @@ ACTEDIT_REDO_REU_BASE_HI = $00
 ACTEDIT_REDO_REU_BASE_BANK = $04
 JOURNAL_KIND_UNDO = $00
 JOURNAL_KIND_REDO = $01
+ACTEDIT_WORKFLOW_COMPILE = $00
+ACTEDIT_WORKFLOW_LINK = $01
+ACTEDIT_WORKFLOW_DEBUG = $02
 
 .segment "ZPTEMP": zeropage
 svc_retptr:
@@ -139,6 +173,12 @@ line_length_ptr:
     .res 2
 status_ptr:
     .res 2
+line_work_ptr_bank:
+    .res 1
+line_length_ptr_bank:
+    .res 1
+status_ptr_bank:
+    .res 1
 
 .code
 
@@ -168,7 +208,14 @@ have_args:
     jmp fail_with_ptr
 
 have_arg_text:
+    jsr parse_start_location_suffix
+    bcc :+
+    lda #<msg_bad_location
+    ldy #>msg_bad_location
+    jmp fail_with_ptr
+:
     jsr build_source_path
+    jsr derive_module_name
     jsr load_source_file
     bcc source_ok
     lda #<msg_no_source
@@ -181,17 +228,35 @@ source_ok:
     lda #<msg_no_source
     ldy #>msg_no_source
     jmp fail_with_ptr
-:   
-    lda #$01
-    sta actedit_current_line_lo
+:
     lda #$00
-    sta actedit_current_line_hi
     sta actedit_top_line_hi
     sta actedit_left_col
     sta actedit_cursor_col
     lda #$01
     sta actedit_top_line_lo
+    sta actedit_current_line_lo
+    lda #$00
+    sta actedit_current_line_hi
+    lda actedit_start_line_valid
+    beq source_position_ready
+    lda actedit_start_line_lo
+    sta line_number_lo
+    lda actedit_start_line_hi
+    sta line_number_hi
+    jsr source_line_exists_for_line_number
+    bcc :+
+    lda #<msg_no_line
+    ldy #>msg_no_line
+    jmp fail_with_ptr
+:
+    lda line_number_lo
+    sta actedit_current_line_lo
+    lda line_number_hi
+    sta actedit_current_line_hi
+source_position_ready:
     jsr load_current_line_for_edit
+    jsr ensure_cursor_visible
     jsr render_screen
 
 input_loop:
@@ -250,6 +315,18 @@ input_loop:
 :   cmp #KEY_F8
     bne :+
     jmp page_down_key
+:   cmp #KEY_B
+    bne :+
+    jmp build_key
+:   cmp #KEY_D
+    bne :+
+    jmp debug_key
+:   cmp #KEY_O
+    bne :+
+    jmp compile_key
+:   cmp #KEY_A
+    bne :+
+    jmp replace_all_key
 :   cmp #KEY_G
     bne :+
     jmp goto_line_key
@@ -308,7 +385,7 @@ move_right_key:
     jsr move_cursor_right
     bcc :+
     jmp input_loop
-:   
+:
     jsr ensure_cursor_column_visible
     jsr render_screen
     jmp input_loop
@@ -341,7 +418,7 @@ delete_left_key_single:
     jsr delete_left_at_cursor
     bcc :+
     jmp input_loop
-:   
+:
     jsr ensure_cursor_column_visible
     jsr render_screen
     jmp input_loop
@@ -417,6 +494,34 @@ save_key:
     bcc :+
     jmp input_loop
 :   
+    jsr render_screen
+    jmp input_loop
+
+compile_key:
+    lda #ACTEDIT_WORKFLOW_COMPILE
+    beq workflow_key
+
+build_key:
+    lda #ACTEDIT_WORKFLOW_LINK
+    bne workflow_key
+
+debug_key:
+    lda #ACTEDIT_WORKFLOW_DEBUG
+workflow_key:
+    sta actedit_workflow_mode
+    jsr save_current_file
+    bcs workflow_key_fail
+    jsr build_workflow_command
+    bcs workflow_key_fail
+    lda #<arg_buffer
+    sta svc_retptr
+    lda #>arg_buffer
+    sta svc_retptr+1
+    ldx #svc_retptr
+    jsr svc_program_chain_sc0
+    bcs workflow_key_fail
+    jmp exit_ok
+workflow_key_fail:
     jsr render_screen
     jmp input_loop
 
@@ -496,6 +601,22 @@ replace_next_key:
 :   jsr render_screen
     jmp input_loop
 
+replace_all_key:
+    jsr prompt_replace_text
+    bcs replace_all_key_render
+    jsr snapshot_undo_state_for_mutation
+    bcs replace_all_key_render
+    jsr replace_all_from_context
+    bcc replace_all_key_done
+    jsr restore_undo_state
+    jmp replace_all_key_render
+replace_all_key_done:
+    jsr ensure_cursor_visible
+    jsr ensure_cursor_column_visible
+replace_all_key_render:
+    jsr render_screen
+    jmp input_loop
+
 undo_key:
     jsr snapshot_redo_state
     bcc :+
@@ -523,6 +644,11 @@ redo_key:
     jmp input_loop
 
 exit_ok:
+    lda actedit_test_mode
+    bne :+
+    lda #KEY_CLRHOME
+    jsr CHROUT
+:
     lda #$00
     sta svc_retptr
     sta svc_retptr+1
@@ -536,8 +662,13 @@ clear_state:
     sta actedit_source_stage_len_bank
     sta actedit_file_window_start_lo
     sta actedit_file_window_start_hi
+    sta actedit_file_window_start_bank
     sta actedit_file_window_end_lo
     sta actedit_file_window_end_hi
+    sta actedit_file_window_end_bank
+    sta line_work_ptr_bank
+    sta line_length_ptr_bank
+    sta status_ptr_bank
     sta actedit_current_line_hi
     sta actedit_top_line_hi
     sta actedit_left_col
@@ -584,8 +715,38 @@ clear_state:
     sta actedit_loaded_source_line_hi
     sta actedit_source_line_count_lo
     sta actedit_source_line_count_hi
+    sta actedit_source_line_index_base_lo
+    sta actedit_source_line_index_base_hi
+    sta actedit_source_line_index_base_bank
+    sta actedit_source_line_index_next_lo
+    sta actedit_source_line_index_next_hi
+    sta actedit_source_line_index_next_bank
+    sta actedit_source_line_index_window_len
+    sta actedit_source_line_index_ready
+    sta actedit_logical_line_count_lo
+    sta actedit_logical_line_count_hi
+    sta actedit_logical_line_index_next_lo
+    sta actedit_logical_line_index_next_hi
+    sta actedit_logical_line_index_next_bank
+    sta actedit_logical_line_index_window_len
+    sta actedit_logical_line_index_ready
+    sta actedit_start_line_valid
+    sta actedit_start_line_lo
+    sta actedit_start_line_hi
     sta actedit_piece_count
     sta actedit_piece_loaded
+    sta actedit_piece_rebuild_count
+    sta actedit_direct_patch_count
+    sta actedit_direct_insert_count
+    sta actedit_direct_remove_count
+    sta actedit_direct_insert_update_count
+    sta actedit_logical_index_suffix_count
+    sta actedit_direct_patch_ready
+    sta actedit_direct_insert_ready
+    sta actedit_direct_remove_ready
+    sta actedit_mutation_overlay_state
+    sta actedit_mutation_overlay_load_count
+    sta actedit_mutation_overlay_fail_count
     sta actedit_test_key_index
     lda #$01
     sta actedit_piece_dirty
@@ -635,7 +796,7 @@ snapshot_selected_state:
     jsr write_undo_region
     bcc :+
     jmp snapshot_undo_state_fail
-:   
+:
     jsr advance_word_tmp_by_line_number
     lda #<actedit_current_line_buffer
     sta text_ptr
@@ -648,7 +809,7 @@ snapshot_selected_state:
     jsr write_undo_region
     bcc :+
     jmp snapshot_undo_state_fail
-:   
+:
     jsr advance_word_tmp_by_line_number
     jsr load_patch_meta_window
     bcc :+
@@ -664,7 +825,7 @@ snapshot_selected_state:
     jsr write_undo_region
     bcc :+
     jmp snapshot_undo_state_fail
-:   
+:
     jsr advance_word_tmp_by_line_number
     jsr load_insert_meta_window
     bcc :+
@@ -680,7 +841,7 @@ snapshot_selected_state:
     jsr write_undo_region
     bcc :+
     jmp snapshot_undo_state_fail
-:   
+:
     jsr advance_word_tmp_by_line_number
     jsr load_delete_meta_window
     bcc :+
@@ -696,7 +857,7 @@ snapshot_selected_state:
     jsr write_undo_region
     bcc :+
     jmp snapshot_undo_state_fail
-:   
+:
     jsr advance_word_tmp_by_line_number
     jsr advance_selected_head_and_count
     clc
@@ -1143,6 +1304,114 @@ copy_first_arg_done:
     sta arg_buffer,x
     rts
 
+parse_start_location_suffix:
+    lda #$00
+    sta actedit_start_line_valid
+    ldx #$00
+parse_start_location_find_end:
+    lda arg_buffer,x
+    beq parse_start_location_have_end
+    inx
+    cpx #PATH_LIMIT
+    bcc parse_start_location_find_end
+parse_start_location_have_end:
+    stx actedit_arg_len
+    cpx #$00
+    beq parse_start_location_none
+parse_start_location_find_separator:
+    dex
+    lda arg_buffer,x
+    cmp #':'
+    beq parse_start_location_candidate
+    cpx #$00
+    bne parse_start_location_find_separator
+parse_start_location_none:
+    clc
+    rts
+
+parse_start_location_candidate:
+    stx actedit_location_separator
+    cpx #$00
+    bne :+
+    jmp parse_start_location_invalid
+:
+    inx
+    cpx actedit_arg_len
+    bcs parse_start_location_none
+parse_start_location_validate_digits:
+    lda arg_buffer,x
+    cmp #'0'
+    bcc parse_start_location_none
+    cmp #'9'+1
+    bcs parse_start_location_none
+    inx
+    cpx actedit_arg_len
+    bcc parse_start_location_validate_digits
+
+    lda #$00
+    sta actedit_start_line_lo
+    sta actedit_start_line_hi
+    ldx actedit_location_separator
+    inx
+parse_start_location_digit_loop:
+    lda actedit_start_line_hi
+    cmp #>6553
+    bcc parse_start_location_multiply
+    bne parse_start_location_invalid
+    lda actedit_start_line_lo
+    cmp #<6553
+    bcc parse_start_location_multiply
+    bne parse_start_location_invalid
+    lda arg_buffer,x
+    cmp #'5'+1
+    bcs parse_start_location_invalid
+parse_start_location_multiply:
+    lda actedit_start_line_lo
+    sta word_tmp
+    lda actedit_start_line_hi
+    sta word_tmp+1
+    asl actedit_start_line_lo
+    rol actedit_start_line_hi
+    asl word_tmp
+    rol word_tmp+1
+    asl word_tmp
+    rol word_tmp+1
+    asl word_tmp
+    rol word_tmp+1
+    clc
+    lda actedit_start_line_lo
+    adc word_tmp
+    sta actedit_start_line_lo
+    lda actedit_start_line_hi
+    adc word_tmp+1
+    sta actedit_start_line_hi
+    lda arg_buffer,x
+    sec
+    sbc #'0'
+    clc
+    adc actedit_start_line_lo
+    sta actedit_start_line_lo
+    bcc :+
+    inc actedit_start_line_hi
+:
+    inx
+    cpx actedit_arg_len
+    bcc parse_start_location_digit_loop
+    lda actedit_start_line_lo
+    ora actedit_start_line_hi
+    beq parse_start_location_invalid
+    ldx actedit_location_separator
+    lda #$00
+    sta arg_buffer,x
+    lda #$01
+    sta actedit_start_line_valid
+    clc
+    rts
+
+parse_start_location_invalid:
+    sec
+    rts
+
 build_source_path:
     ldx #$00
 build_source_path_probe:
@@ -1179,12 +1448,21 @@ build_source_path_module:
 build_source_path_module_loop:
     lda arg_buffer,x
     beq build_source_path_module_suffix
+    cmp #$01
+    bcc build_source_path_module_check_ascii
+    cmp #$1B
+    bcs build_source_path_module_check_ascii
+    clc
+    adc #$60
+    bne build_source_path_module_store
+build_source_path_module_check_ascii:
     cmp #'A'
-    bcc :+
+    bcc build_source_path_module_store
     cmp #'Z'+1
-    bcs :+
+    bcs build_source_path_module_store
     ora #$20
-:   sta actedit_source_path+4,x
+build_source_path_module_store:
+    sta actedit_source_path+4,x
     inx
     cpx #120
     bcc build_source_path_module_loop
@@ -1204,6 +1482,111 @@ build_source_path_module_suffix:
     lda #$00
     sta actedit_source_path+4,x
 build_source_path_done:
+    rts
+
+derive_module_name:
+    lda #$00
+    sta actedit_module_name
+    sta actedit_prompt_len
+    ldy #$00
+derive_module_name_scan:
+    lda actedit_source_path,y
+    beq derive_module_name_copy_begin
+    cmp #'/'
+    bne derive_module_name_scan_next
+    iny
+    sty actedit_prompt_len
+    dey
+derive_module_name_scan_next:
+    iny
+    cpy #PATH_LIMIT
+    bcc derive_module_name_scan
+    jmp derive_module_name_fail
+derive_module_name_copy_begin:
+    ldy actedit_prompt_len
+    ldx #$00
+derive_module_name_copy:
+    lda actedit_source_path,y
+    beq derive_module_name_done
+    cmp #'.'
+    beq derive_module_name_done
+    cpx #24
+    bcs derive_module_name_fail
+    cmp #$01
+    bcc derive_module_name_ascii
+    cmp #$1B
+    bcs derive_module_name_ascii
+    clc
+    adc #$40
+derive_module_name_ascii:
+    cmp #'a'
+    bcc derive_module_name_store
+    cmp #'z'+1
+    bcs derive_module_name_store
+    and #$DF
+derive_module_name_store:
+    sta actedit_module_name,x
+    inx
+    iny
+    bne derive_module_name_copy
+derive_module_name_done:
+    cpx #$00
+    beq derive_module_name_fail
+    lda #$00
+    sta actedit_module_name,x
+    sta actedit_prompt_len
+    clc
+    rts
+derive_module_name_fail:
+    lda #$00
+    sta actedit_module_name
+    sta actedit_prompt_len
+    sec
+    rts
+
+build_workflow_command:
+    lda actedit_module_name
+    beq build_workflow_command_fail
+    ldy #$00
+build_workflow_command_prefix:
+    lda workflow_actc_prefix,y
+    beq build_workflow_command_module_begin
+    sta arg_buffer,y
+    iny
+    bne build_workflow_command_prefix
+build_workflow_command_module_begin:
+    ldx #$00
+build_workflow_command_module:
+    lda actedit_module_name,x
+    beq build_workflow_command_suffix
+    sta arg_buffer,y
+    iny
+    inx
+    bne build_workflow_command_module
+build_workflow_command_suffix:
+    lda actedit_workflow_mode
+    beq build_workflow_command_compile
+    cmp #ACTEDIT_WORKFLOW_LINK
+    bne build_workflow_command_debug
+    lda #','
+    bne build_workflow_command_store_suffix
+build_workflow_command_compile:
+    lda #';'
+    bne build_workflow_command_store_suffix
+build_workflow_command_debug:
+    lda #':'
+build_workflow_command_store_suffix:
+    sta arg_buffer,y
+    iny
+build_workflow_command_done:
+    lda #$00
+    sta arg_buffer,y
+    cpy #$00
+    beq build_workflow_command_fail
+    clc
+    rts
+build_workflow_command_fail:
+    sec
     rts
 
 load_source_file:
@@ -1233,16 +1616,42 @@ load_source_file:
     sta actedit_source_stage_len_hi
     lda file_params+8
     sta actedit_source_stage_len_bank
-    lda actedit_source_stage_len_bank
-    bne load_source_fail
+    jsr initialize_source_line_index
+    bcs load_source_fail
     lda #$00
     sta actedit_file_window_start_lo
     sta actedit_file_window_start_hi
+    sta actedit_file_window_start_bank
     sta actedit_file_window_end_lo
     sta actedit_file_window_end_hi
+    sta actedit_file_window_end_bank
     clc
     rts
 load_source_fail:
+    sec
+    rts
+
+initialize_source_line_index:
+    lda actedit_source_stage_len_lo
+    sta actedit_source_line_index_base_lo
+    sta actedit_source_line_index_next_lo
+    lda actedit_source_stage_len_hi
+    sta actedit_source_line_index_base_hi
+    sta actedit_source_line_index_next_hi
+    clc
+    lda actedit_source_stage_len_bank
+    adc #ACTEDIT_SOURCE_REU_BASE_BANK
+    bcs initialize_source_line_index_fail
+    cmp #ACTEDIT_REU_RESERVED_BANK
+    bcs initialize_source_line_index_fail
+    sta actedit_source_line_index_base_bank
+    sta actedit_source_line_index_next_bank
+    lda #$00
+    sta actedit_source_line_index_window_len
+    sta actedit_source_line_index_ready
+    clc
+    rts
+initialize_source_line_index_fail:
     sec
     rts
 
@@ -1677,20 +2086,109 @@ count_staged_source_lines:
     lda #$00
     sta status_ptr
     sta status_ptr+1
+    sta status_ptr_bank
     sta actedit_source_line_count_lo
     sta actedit_source_line_count_hi
 count_staged_source_lines_loop:
     jsr source_read_byte_at_status_ptr
     bcs count_staged_source_lines_done
     beq count_staged_source_lines_done
+    jsr append_source_line_index_entry
+    bcs count_staged_source_lines_fail
     inc actedit_source_line_count_lo
-    bne :+
+    bne count_staged_source_lines_advance
     inc actedit_source_line_count_hi
-:   jsr advance_ptr_to_next_line
+    beq count_staged_source_lines_fail
+count_staged_source_lines_advance:
+    jsr advance_ptr_to_next_line
     jmp count_staged_source_lines_loop
 count_staged_source_lines_done:
+    jsr flush_source_line_index_window
+    bcs count_staged_source_lines_fail
+    lda #$01
+    sta actedit_source_line_index_ready
     jsr mark_piece_table_dirty
     clc
+    rts
+count_staged_source_lines_fail:
+    lda #$00
+    sta actedit_source_line_index_ready
+    sec
+    rts
+
+append_source_line_index_entry:
+    ldy actedit_source_line_index_window_len
+    lda status_ptr
+    sta actedit_source_line_index_window,y
+    iny
+    lda status_ptr+1
+    sta actedit_source_line_index_window,y
+    iny
+    lda status_ptr_bank
+    sta actedit_source_line_index_window,y
+    iny
+    sty actedit_source_line_index_window_len
+    cpy #ACTEDIT_LINE_INDEX_WINDOW_LIMIT
+    beq flush_source_line_index_window
+    clc
+    rts
+
+flush_source_line_index_window:
+    lda actedit_source_line_index_window_len
+    beq flush_source_line_index_window_done
+    lda actedit_source_line_index_next_bank
+    cmp #ACTEDIT_REU_RESERVED_BANK
+    bcs flush_source_line_index_window_fail
+    clc
+    lda actedit_source_line_index_next_lo
+    adc actedit_source_line_index_window_len
+    sta word_tmp
+    lda actedit_source_line_index_next_hi
+    adc #$00
+    sta word_tmp+1
+    lda actedit_source_line_index_next_bank
+    adc #$00
+    sta actedit_source_line_index_end_bank
+    cmp #ACTEDIT_REU_RESERVED_BANK
+    bcc flush_source_line_index_window_write
+    bne flush_source_line_index_window_fail
+    lda word_tmp
+    ora word_tmp+1
+    bne flush_source_line_index_window_fail
+flush_source_line_index_window_write:
+    lda actedit_source_line_index_next_lo
+    sta file_params+0
+    lda actedit_source_line_index_next_hi
+    sta file_params+1
+    lda actedit_source_line_index_next_bank
+    sta file_params+2
+    lda #<actedit_source_line_index_window
+    sta file_params+3
+    lda #>actedit_source_line_index_window
+    sta file_params+4
+    lda actedit_source_line_index_window_len
+    sta file_params+5
+    lda #$00
+    sta file_params+6
+    sta file_params+7
+    ldx #file_params
+    jsr svc_reu_write_sc0
+    lda file_params+7
+    cmp #tool_file_status_ok
+    bne flush_source_line_index_window_fail
+    lda word_tmp
+    sta actedit_source_line_index_next_lo
+    lda word_tmp+1
+    sta actedit_source_line_index_next_hi
+    lda actedit_source_line_index_end_bank
+    sta actedit_source_line_index_next_bank
+    lda #$00
+    sta actedit_source_line_index_window_len
+flush_source_line_index_window_done:
+    clc
+    rts
+flush_source_line_index_window_fail:
+    sec
     rts
 
 load_line_number_into_line_buffer:
@@ -1707,44 +2205,10 @@ load_line_number_into_line_buffer:
     bcc :+
     jmp load_line_number_scan_eof
 :   
-    lda requested_line_lo
-    sta work_line_lo
-    lda requested_line_hi
-    sta work_line_hi
-    ldx #$00
-load_line_piece_find_loop:
-    cpx actedit_piece_count
+    jsr load_logical_line_index_entry
     bcc :+
     jmp load_line_number_scan_eof
-:   
-    lda work_line_hi
-    cmp piece_window_count_hi,x
-    bcc load_line_piece_found
-    bne load_line_piece_next
-    lda work_line_lo
-    cmp piece_window_count_lo,x
-    bcc load_line_piece_found
-    beq load_line_piece_found
-load_line_piece_next:
-    sec
-    lda work_line_lo
-    sbc piece_window_count_lo,x
-    sta work_line_lo
-    lda work_line_hi
-    sbc piece_window_count_hi,x
-    sta work_line_hi
-    inx
-    jmp load_line_piece_find_loop
-
-load_line_piece_found:
-    stx actedit_piece_found_index
-    sec
-    lda work_line_lo
-    sbc #$01
-    sta word_tmp
-    lda work_line_hi
-    sbc #$00
-    sta word_tmp+1
+:   ldx actedit_piece_found_index
     lda piece_window_kind,x
     cmp #PIECE_KIND_INSERT
     beq load_line_from_insert_piece
@@ -1815,17 +2279,101 @@ load_line_number_done:
     clc
     rts
 
+load_logical_line_index_entry:
+    lda actedit_logical_line_index_ready
+    bne :+
+    jmp load_logical_line_index_fail
+:
+    lda requested_line_lo
+    ora requested_line_hi
+    bne :+
+    jmp load_logical_line_index_fail
+:
+    lda requested_line_hi
+    cmp actedit_logical_line_count_hi
+    bcc load_logical_line_index_in_range
+    beq load_logical_line_index_check_low
+    jmp load_logical_line_index_fail
+load_logical_line_index_check_low:
+    lda requested_line_lo
+    cmp actedit_logical_line_count_lo
+    bcc load_logical_line_index_in_range
+    beq load_logical_line_index_in_range
+    jmp load_logical_line_index_fail
+load_logical_line_index_in_range:
+    sec
+    lda requested_line_lo
+    sbc #$01
+    sta word_tmp
+    lda requested_line_hi
+    sbc #$00
+    sta word_tmp+1
+    lda word_tmp
+    sta status_ptr
+    lda word_tmp+1
+    sta status_ptr+1
+    lda #$00
+    sta status_ptr_bank
+    asl status_ptr
+    rol status_ptr+1
+    rol status_ptr_bank
+    clc
+    lda status_ptr
+    adc word_tmp
+    sta file_params+0
+    lda status_ptr+1
+    adc word_tmp+1
+    sta file_params+1
+    lda status_ptr_bank
+    adc #ACTEDIT_LOGICAL_INDEX_REU_BASE_BANK
+    bcs load_logical_line_index_fail
+    cmp #ACTEDIT_LOGICAL_INDEX_REU_END_BANK
+    bcs load_logical_line_index_fail
+    sta file_params+2
+    lda #<actedit_source_line_index_window
+    sta file_params+3
+    lda #>actedit_source_line_index_window
+    sta file_params+4
+    lda #ACTEDIT_LOGICAL_INDEX_ENTRY_BYTES
+    sta file_params+5
+    lda #$00
+    sta file_params+6
+    sta file_params+7
+    ldx #file_params
+    jsr svc_reu_read_sc0
+    lda file_params+7
+    cmp #tool_file_status_ok
+    bne load_logical_line_index_fail
+    lda actedit_source_line_index_window+0
+    cmp actedit_piece_count
+    bcs load_logical_line_index_fail
+    sta actedit_piece_found_index
+    lda actedit_source_line_index_window+1
+    sta word_tmp
+    lda actedit_source_line_index_window+2
+    sta word_tmp+1
+    clc
+    rts
+load_logical_line_index_fail:
+    sec
+    rts
+
 rebuild_piece_table_if_dirty:
     lda actedit_piece_dirty
     bne rebuild_piece_table_rebuild
     lda actedit_piece_loaded
     bne rebuild_piece_table_ready
     jsr load_piece_table_window
-    rts
+    bcs rebuild_piece_table_fail
 rebuild_piece_table_ready:
+    lda actedit_logical_line_index_ready
+    bne rebuild_piece_table_done
+    jmp rebuild_logical_line_index
+rebuild_piece_table_done:
     clc
     rts
 rebuild_piece_table_rebuild:
+    inc actedit_piece_rebuild_count
     lda #$00
     sta actedit_piece_count
     lda #$01
@@ -1838,6 +2386,8 @@ rebuild_piece_table_loop:
     jsr scan_source_line_within_source_count
     bcc rebuild_piece_table_have_source
     jsr save_piece_table_window
+    bcs rebuild_piece_table_fail
+    jsr rebuild_logical_line_index
     bcs rebuild_piece_table_fail
     lda #$00
     sta actedit_piece_dirty
@@ -1866,6 +2416,137 @@ rebuild_piece_table_next_source:
     inc scan_source_line_hi
     jmp rebuild_piece_table_loop
 rebuild_piece_table_fail:
+    sec
+    rts
+
+rebuild_logical_line_index:
+    lda #$00
+    sta actedit_logical_line_count_lo
+    sta actedit_logical_line_count_hi
+    sta actedit_logical_line_index_next_lo
+    sta actedit_logical_line_index_next_hi
+    sta actedit_logical_line_index_window_len
+    sta actedit_logical_line_index_ready
+    lda #ACTEDIT_LOGICAL_INDEX_REU_BASE_BANK
+    sta actedit_logical_line_index_next_bank
+    lda #$00
+    sta actedit_piece_found_index
+rebuild_logical_line_index_piece_loop:
+    ldx actedit_piece_found_index
+    cpx actedit_piece_count
+    bcs rebuild_logical_line_index_finish
+    lda #$00
+    sta scan_logical_line_lo
+    sta scan_logical_line_hi
+rebuild_logical_line_index_line_loop:
+    ldx actedit_piece_found_index
+    lda scan_logical_line_hi
+    cmp piece_window_count_hi,x
+    bcc rebuild_logical_line_index_append
+    bne rebuild_logical_line_index_next_piece
+    lda scan_logical_line_lo
+    cmp piece_window_count_lo,x
+    bcs rebuild_logical_line_index_next_piece
+rebuild_logical_line_index_append:
+    jsr append_logical_line_index_entry
+    bcs rebuild_logical_line_index_fail
+    inc scan_logical_line_lo
+    bne rebuild_logical_line_index_line_loop
+    inc scan_logical_line_hi
+    jmp rebuild_logical_line_index_line_loop
+rebuild_logical_line_index_next_piece:
+    inc actedit_piece_found_index
+    jmp rebuild_logical_line_index_piece_loop
+rebuild_logical_line_index_finish:
+    jsr flush_logical_line_index_window
+    bcs rebuild_logical_line_index_fail
+    lda #$01
+    sta actedit_logical_line_index_ready
+    clc
+    rts
+rebuild_logical_line_index_fail:
+    lda #$00
+    sta actedit_logical_line_index_ready
+    sec
+    rts
+
+append_logical_line_index_entry:
+    ldy actedit_logical_line_index_window_len
+    lda actedit_piece_found_index
+    sta actedit_source_line_index_window,y
+    iny
+    lda scan_logical_line_lo
+    sta actedit_source_line_index_window,y
+    iny
+    lda scan_logical_line_hi
+    sta actedit_source_line_index_window,y
+    iny
+    sty actedit_logical_line_index_window_len
+    inc actedit_logical_line_count_lo
+    bne append_logical_line_index_check_flush
+    inc actedit_logical_line_count_hi
+    beq append_logical_line_index_fail
+append_logical_line_index_check_flush:
+    cpy #ACTEDIT_LOGICAL_INDEX_WINDOW_LIMIT
+    beq flush_logical_line_index_window
+    clc
+    rts
+append_logical_line_index_fail:
+    sec
+    rts
+
+flush_logical_line_index_window:
+    lda actedit_logical_line_index_window_len
+    beq flush_logical_line_index_window_done
+    clc
+    lda actedit_logical_line_index_next_lo
+    adc actedit_logical_line_index_window_len
+    sta word_tmp
+    lda actedit_logical_line_index_next_hi
+    adc #$00
+    sta word_tmp+1
+    lda actedit_logical_line_index_next_bank
+    adc #$00
+    sta actedit_logical_line_index_end_bank
+    cmp #ACTEDIT_LOGICAL_INDEX_REU_END_BANK
+    bcc flush_logical_line_index_window_write
+    bne flush_logical_line_index_window_fail
+    lda word_tmp
+    ora word_tmp+1
+    bne flush_logical_line_index_window_fail
+flush_logical_line_index_window_write:
+    lda actedit_logical_line_index_next_lo
+    sta file_params+0
+    lda actedit_logical_line_index_next_hi
+    sta file_params+1
+    lda actedit_logical_line_index_next_bank
+    sta file_params+2
+    lda #<actedit_source_line_index_window
+    sta file_params+3
+    lda #>actedit_source_line_index_window
+    sta file_params+4
+    lda actedit_logical_line_index_window_len
+    sta file_params+5
+    lda #$00
+    sta file_params+6
+    sta file_params+7
+    ldx #file_params
+    jsr svc_reu_write_sc0
+    lda file_params+7
+    cmp #tool_file_status_ok
+    bne flush_logical_line_index_window_fail
+    lda word_tmp
+    sta actedit_logical_line_index_next_lo
+    lda word_tmp+1
+    sta actedit_logical_line_index_next_hi
+    lda actedit_logical_line_index_end_bank
+    sta actedit_logical_line_index_next_bank
+    lda #$00
+    sta actedit_logical_line_index_window_len
+flush_logical_line_index_window_done:
+    clc
+    rts
+flush_logical_line_index_window_fail:
     sec
     rts
 
@@ -2012,6 +2693,10 @@ append_source_piece_fail:
 
 load_original_source_line_number_into_line_buffer:
     jsr find_line_start_for_requested_line
+    bcc :+
+    sec
+    rts
+:
     jsr source_read_byte_at_status_ptr
     bcc :+
     sec
@@ -2021,61 +2706,12 @@ load_original_source_line_number_into_line_buffer:
     sta line_work_ptr
     lda status_ptr+1
     sta line_work_ptr+1
+    lda status_ptr_bank
+    sta line_work_ptr_bank
     jsr copy_source_line_to_buffer_from_line_work_ptr
     clc
     rts
 load_original_source_line_fail:
-    sec
-    rts
-
-scan_logical_matches_requested:
-    lda scan_logical_line_lo
-    cmp requested_line_lo
-    bne scan_logical_matches_requested_fail
-    lda scan_logical_line_hi
-    cmp requested_line_hi
-    bne scan_logical_matches_requested_fail
-    clc
-    rts
-scan_logical_matches_requested_fail:
-    sec
-    rts
-
-inc_scan_logical_line:
-    inc scan_logical_line_lo
-    bne :+
-    inc scan_logical_line_hi
-:   rts
-
-try_load_inserted_line_for_scan_source:
-    lda #$00
-    sta actedit_insert_search_order
-try_load_inserted_line_loop:
-    jsr find_next_insert_slot_for_scan_source_after_order
-    bcs try_load_inserted_line_fail
-    jsr scan_logical_matches_requested
-    bcc try_load_inserted_line_hit
-    jsr inc_scan_logical_line
-    lda actedit_insert_found_order
-    clc
-    adc #$01
-    sta actedit_insert_search_order
-    jmp try_load_inserted_line_loop
-try_load_inserted_line_hit:
-    ldx actedit_insert_found_slot
-    jsr copy_insert_slot_x_to_line_buffer
-    bcs try_load_inserted_line_fail
-    lda #LINE_KIND_INSERT
-    sta actedit_loaded_line_kind
-    lda actedit_insert_found_slot
-    sta actedit_loaded_insert_slot
-    lda scan_source_line_lo
-    sta actedit_loaded_source_line_lo
-    lda scan_source_line_hi
-    sta actedit_loaded_source_line_hi
-    clc
-    rts
-try_load_inserted_line_fail:
     sec
     rts
 
@@ -2731,6 +3367,7 @@ replace_current_line_suffix_done:
 remove_logical_line_number_in_line_number:
     jsr load_line_number_into_line_buffer
     bcs remove_logical_line_fail
+    jsr prepare_direct_remove_loaded_line
     lda actedit_loaded_line_kind
     cmp #LINE_KIND_INSERT
     beq remove_logical_insert_line
@@ -2744,6 +3381,7 @@ remove_logical_line_number_in_line_number:
     sta line_number_hi
     jsr add_delete_slot_for_line_number
     bcs remove_logical_line_fail
+    jsr apply_direct_remove_line
     lda work_line_lo
     sta line_number_lo
     lda work_line_hi
@@ -2763,7 +3401,7 @@ remove_logical_insert_line:
     jsr save_insert_meta_window
     bcc :+
     jmp remove_logical_line_fail
-:   
+:   jsr apply_direct_remove_line
     clc
     rts
 remove_logical_line_fail:
@@ -2928,13 +3566,17 @@ split_current_insert_line:
     adc #$01
     sta actedit_insert_search_order
 split_current_have_anchor:
-    jsr shift_insert_orders_for_line_number_from_search_order
     jsr find_free_insert_slot
     bcc :+
     jmp split_current_line_fail
 :   
     txa
     sta actedit_insert_found_slot
+    lda actedit_current_line_kind
+    cmp #LINE_KIND_INSERT
+    bne :+
+    jsr prepare_direct_split_insert
+:
     lda line_number_lo
     sta actedit_pending_insert_anchor_lo
     lda line_number_hi
@@ -2964,6 +3606,16 @@ split_current_copy_right_done:
     sta actedit_mark_active
     jsr commit_current_line_patch_if_dirty
     bcs split_current_line_fail
+    lda actedit_current_line_kind
+    cmp #LINE_KIND_INSERT
+    beq :+
+    jsr prepare_direct_split_insert
+:
+    lda actedit_pending_insert_anchor_lo
+    sta line_number_lo
+    lda actedit_pending_insert_anchor_hi
+    sta line_number_hi
+    jsr shift_insert_orders_for_line_number_from_search_order
     jsr load_insert_meta_window
     bcc :+
     jmp split_current_line_fail
@@ -2992,6 +3644,7 @@ split_current_copy_right_done:
     tax
     jsr copy_line_buffer_to_insert_x
     bcs split_current_line_fail
+    jsr apply_direct_split_insert_slot_x
     inc actedit_current_line_lo
     bne :+
     inc actedit_current_line_hi
@@ -3012,6 +3665,7 @@ join_with_previous_line:
     bcs join_with_previous_line_have_prev
     jmp join_with_previous_line_fail
 join_with_previous_line_have_prev:
+    jsr prepare_direct_remove_current_line
     jsr copy_current_line_to_prompt_buffer
     lda actedit_current_line_kind
     sta actedit_saved_line_kind
@@ -3063,6 +3717,7 @@ join_with_previous_line_append_done:
     sta line_number_hi
     jsr add_delete_slot_for_line_number
     bcs join_with_previous_line_fail
+    jsr apply_direct_remove_line
     clc
     rts
 join_with_previous_line_drop_insert:
@@ -3078,7 +3733,7 @@ join_with_previous_line_drop_insert:
     jsr save_insert_meta_window
     bcc :+
     jmp join_with_previous_line_fail
-:   
+:   jsr apply_direct_remove_line
     clc
     rts
 join_with_previous_line_fail:
@@ -3337,6 +3992,99 @@ replace_next_fail:
     sec
     rts
 
+replace_all_from_context:
+    jsr commit_current_line_patch_if_dirty
+    bcc :+
+    jmp replace_all_fail
+:
+    jsr build_search_text_from_context
+    bcc :+
+    jmp replace_all_fail
+:
+    jsr compute_visible_line_count
+    bcc :+
+    jmp replace_all_fail
+:
+    lda word_tmp
+    sta actedit_replace_limit_lo
+    lda word_tmp+1
+    sta actedit_replace_limit_hi
+    lda #$01
+    sta actedit_replace_line_lo
+    lda #$00
+    sta actedit_replace_line_hi
+    sta actedit_search_found
+
+replace_all_line_loop:
+    lda actedit_replace_limit_hi
+    cmp actedit_replace_line_hi
+    bcc replace_all_done
+    bne replace_all_scan_line
+    lda actedit_replace_limit_lo
+    cmp actedit_replace_line_lo
+    bcc replace_all_done
+replace_all_scan_line:
+    lda actedit_replace_line_lo
+    sta line_number_lo
+    lda actedit_replace_line_hi
+    sta line_number_hi
+    jsr load_line_number_into_line_buffer
+    bcs replace_all_fail
+    lda #$00
+    sta actedit_search_start_col
+    jsr measure_line_buffer_length
+    jsr find_first_search_in_line_buffer_range
+    bcs replace_all_next_line
+
+    lda #$01
+    sta actedit_search_found
+    lda actedit_replace_line_lo
+    sta actedit_current_line_lo
+    lda actedit_replace_line_hi
+    sta actedit_current_line_hi
+    jsr load_current_line_for_edit
+replace_all_match_loop:
+    lda actedit_search_match_col
+    sta actedit_cursor_col
+    jsr replace_current_search_match_with_prompt
+    bcs replace_all_fail
+    jsr copy_current_line_to_search_line_buffer
+    lda actedit_cursor_col
+    sta actedit_search_start_col
+    lda actedit_current_line_len
+    sta actedit_search_limit_col
+    jsr find_first_search_in_line_buffer_range
+    bcc replace_all_match_loop
+    jsr commit_current_line_patch_if_dirty
+    bcs replace_all_fail
+
+replace_all_next_line:
+    inc actedit_replace_line_lo
+    bne replace_all_line_loop
+    inc actedit_replace_line_hi
+    jmp replace_all_line_loop
+
+replace_all_done:
+    lda actedit_search_found
+    beq replace_all_fail
+    clc
+    rts
+replace_all_fail:
+    sec
+    rts
+
+copy_current_line_to_search_line_buffer:
+    ldy #$00
+copy_current_line_to_search_line_buffer_loop:
+    lda actedit_current_line_buffer,y
+    sta line_buffer,y
+    beq copy_current_line_to_search_line_buffer_done
+    iny
+    cpy #LINE_BUFFER_LIMIT
+    bcc copy_current_line_to_search_line_buffer_loop
+copy_current_line_to_search_line_buffer_done:
+    rts
+
 replace_current_search_match_with_prompt:
     lda actedit_current_line_len
     sec
@@ -3356,9 +4104,17 @@ replace_current_search_match_with_prompt:
 replace_insert_prompt_loop:
     cpx actedit_prompt_len
     bcs replace_current_search_match_done
+    txa
+    pha
     lda actedit_prompt_buffer,x
     jsr insert_char_at_cursor
-    bcs replace_current_search_match_fail
+    bcc :+
+    pla
+    tax
+    jmp replace_current_search_match_fail
+:
+    pla
+    tax
     inx
     bne replace_insert_prompt_loop
 replace_current_search_match_done:
@@ -3620,21 +4376,33 @@ is_token_char_hit:
 
 source_line_exists_for_line_number:
     lda line_number_lo
-    ora line_number_hi
+    sta actedit_exists_line_lo
+    lda line_number_hi
+    sta actedit_exists_line_hi
+    lda actedit_exists_line_lo
+    ora actedit_exists_line_hi
     beq source_line_exists_fail
     jsr compute_visible_line_count
     bcs source_line_exists_fail
     lda word_tmp+1
-    cmp line_number_hi
+    cmp actedit_exists_line_hi
     bcc source_line_exists_fail
     bne source_line_exists_ok
     lda word_tmp
-    cmp line_number_lo
+    cmp actedit_exists_line_lo
     bcc source_line_exists_fail
 source_line_exists_ok:
+    lda actedit_exists_line_lo
+    sta line_number_lo
+    lda actedit_exists_line_hi
+    sta line_number_hi
     clc
     rts
 source_line_exists_fail:
+    lda actedit_exists_line_lo
+    sta line_number_lo
+    lda actedit_exists_line_hi
+    sta line_number_hi
     sec
     rts
 
@@ -3643,23 +4411,10 @@ compute_visible_line_count:
     bcc :+
     sec
     rts
-:   lda #$00
+:   lda actedit_logical_line_count_lo
     sta word_tmp
+    lda actedit_logical_line_count_hi
     sta word_tmp+1
-    ldx #$00
-compute_visible_piece_loop:
-    cpx actedit_piece_count
-    bcs compute_visible_piece_done
-    clc
-    lda word_tmp
-    adc piece_window_count_lo,x
-    sta word_tmp
-    lda word_tmp+1
-    adc piece_window_count_hi,x
-    sta word_tmp+1
-    inx
-    jmp compute_visible_piece_loop
-compute_visible_piece_done:
     clc
     rts
 
@@ -3793,31 +4548,90 @@ line_buffer_match_fail:
     rts
 
 find_line_start_for_requested_line:
-    lda #$00
-    sta status_ptr
-    sta status_ptr+1
-    lda #$01
-    sta work_line_lo
-    lda #$00
-    sta work_line_hi
-find_line_loop:
-    lda work_line_lo
-    cmp line_number_lo
-    bne find_line_step
-    lda work_line_hi
-    cmp line_number_hi
-    beq find_line_done
-find_line_step:
-    jsr source_read_byte_at_status_ptr
-    bcc :+
-    jmp find_line_done
-:   beq find_line_done
-    jsr advance_ptr_to_next_line
-    inc work_line_lo
+    lda actedit_source_line_index_ready
     bne :+
-    inc work_line_hi
-:   jmp find_line_loop
-find_line_done:
+    jmp find_line_start_fail
+:
+    lda line_number_lo
+    ora line_number_hi
+    bne :+
+    jmp find_line_start_fail
+:
+    lda line_number_hi
+    cmp actedit_source_line_count_hi
+    bcc find_line_start_in_range
+    beq find_line_start_check_low
+    jmp find_line_start_fail
+find_line_start_check_low:
+    lda line_number_lo
+    cmp actedit_source_line_count_lo
+    bcc find_line_start_in_range
+    beq find_line_start_in_range
+    jmp find_line_start_fail
+find_line_start_in_range:
+    sec
+    lda line_number_lo
+    sbc #$01
+    sta word_tmp
+    lda line_number_hi
+    sbc #$00
+    sta word_tmp+1
+    lda word_tmp
+    sta status_ptr
+    lda word_tmp+1
+    sta status_ptr+1
+    lda #$00
+    sta status_ptr_bank
+    asl status_ptr
+    rol status_ptr+1
+    rol status_ptr_bank
+    clc
+    lda status_ptr
+    adc word_tmp
+    sta status_ptr
+    lda status_ptr+1
+    adc word_tmp+1
+    sta status_ptr+1
+    lda status_ptr_bank
+    adc #$00
+    sta status_ptr_bank
+    clc
+    lda actedit_source_line_index_base_lo
+    adc status_ptr
+    sta file_params+0
+    lda actedit_source_line_index_base_hi
+    adc status_ptr+1
+    sta file_params+1
+    lda actedit_source_line_index_base_bank
+    adc status_ptr_bank
+    bcs find_line_start_fail
+    cmp #ACTEDIT_REU_RESERVED_BANK
+    bcs find_line_start_fail
+    sta file_params+2
+    lda #<actedit_source_line_index_window
+    sta file_params+3
+    lda #>actedit_source_line_index_window
+    sta file_params+4
+    lda #ACTEDIT_LINE_INDEX_ENTRY_BYTES
+    sta file_params+5
+    lda #$00
+    sta file_params+6
+    sta file_params+7
+    ldx #file_params
+    jsr svc_reu_read_sc0
+    lda file_params+7
+    cmp #tool_file_status_ok
+    bne find_line_start_fail
+    lda actedit_source_line_index_window+0
+    sta status_ptr
+    lda actedit_source_line_index_window+1
+    sta status_ptr+1
+    lda actedit_source_line_index_window+2
+    sta status_ptr_bank
+    clc
+    rts
+find_line_start_fail:
+    sec
     rts
 
 advance_source_line_ptr:
@@ -3825,11 +4639,15 @@ advance_source_line_ptr:
     sta status_ptr
     lda line_work_ptr+1
     sta status_ptr+1
+    lda line_work_ptr_bank
+    sta status_ptr_bank
     jsr advance_ptr_to_next_line
     lda status_ptr
     sta line_work_ptr
     lda status_ptr+1
     sta line_work_ptr+1
+    lda status_ptr_bank
+    sta line_work_ptr_bank
     rts
 
 advance_ptr_to_next_line:
@@ -3865,6 +4683,8 @@ copy_source_line_to_buffer_from_line_work_ptr:
     sta line_length_ptr
     lda line_work_ptr+1
     sta line_length_ptr+1
+    lda line_work_ptr_bank
+    sta line_length_ptr_bank
     ldx #$00
 copy_source_line_loop:
     jsr source_read_byte_at_line_length_ptr
@@ -3883,6 +4703,8 @@ copy_source_line_skip_store:
     inc line_length_ptr
     bne copy_source_line_loop
     inc line_length_ptr+1
+    bne copy_source_line_loop
+    inc line_length_ptr_bank
     jmp copy_source_line_loop
 copy_source_line_done:
     lda #$00
@@ -3890,9 +4712,9 @@ copy_source_line_done:
     rts
 
 load_patch_meta_window:
-    lda #ACTEDIT_PATCH_META_REU_OFFSET
+    lda #<ACTEDIT_PATCH_META_REU_OFFSET
     sta file_params+0
-    lda #$00
+    lda #>ACTEDIT_PATCH_META_REU_OFFSET
     sta file_params+1
     lda #ACTEDIT_META_REU_BASE_BANK
     sta file_params+2
@@ -3917,9 +4739,9 @@ load_patch_meta_window:
     rts
 
 save_patch_meta_window:
-    lda #ACTEDIT_PATCH_META_REU_OFFSET
+    lda #<ACTEDIT_PATCH_META_REU_OFFSET
     sta file_params+0
-    lda #$00
+    lda #>ACTEDIT_PATCH_META_REU_OFFSET
     sta file_params+1
     lda #ACTEDIT_META_REU_BASE_BANK
     sta file_params+2
@@ -3945,9 +4767,9 @@ save_patch_meta_window:
     rts
 
 load_insert_meta_window:
-    lda #ACTEDIT_INSERT_META_REU_OFFSET
+    lda #<ACTEDIT_INSERT_META_REU_OFFSET
     sta file_params+0
-    lda #$00
+    lda #>ACTEDIT_INSERT_META_REU_OFFSET
     sta file_params+1
     lda #ACTEDIT_META_REU_BASE_BANK
     sta file_params+2
@@ -3972,9 +4794,9 @@ load_insert_meta_window:
     rts
 
 save_insert_meta_window:
-    lda #ACTEDIT_INSERT_META_REU_OFFSET
+    lda #<ACTEDIT_INSERT_META_REU_OFFSET
     sta file_params+0
-    lda #$00
+    lda #>ACTEDIT_INSERT_META_REU_OFFSET
     sta file_params+1
     lda #ACTEDIT_META_REU_BASE_BANK
     sta file_params+2
@@ -4000,9 +4822,9 @@ save_insert_meta_window:
     rts
 
 load_delete_meta_window:
-    lda #ACTEDIT_DELETE_META_REU_OFFSET
+    lda #<ACTEDIT_DELETE_META_REU_OFFSET
     sta file_params+0
-    lda #$00
+    lda #>ACTEDIT_DELETE_META_REU_OFFSET
     sta file_params+1
     lda #ACTEDIT_META_REU_BASE_BANK
     sta file_params+2
@@ -4027,9 +4849,9 @@ load_delete_meta_window:
     rts
 
 save_delete_meta_window:
-    lda #ACTEDIT_DELETE_META_REU_OFFSET
+    lda #<ACTEDIT_DELETE_META_REU_OFFSET
     sta file_params+0
-    lda #$00
+    lda #>ACTEDIT_DELETE_META_REU_OFFSET
     sta file_params+1
     lda #ACTEDIT_META_REU_BASE_BANK
     sta file_params+2
@@ -4059,12 +4881,13 @@ mark_piece_table_dirty:
     sta actedit_piece_dirty
     lda #$00
     sta actedit_piece_loaded
+    sta actedit_logical_line_index_ready
     rts
 
 load_piece_table_window:
-    lda #ACTEDIT_PIECE_COUNT_REU_OFFSET
+    lda #<ACTEDIT_PIECE_COUNT_REU_OFFSET
     sta file_params+0
-    lda #$00
+    lda #>ACTEDIT_PIECE_COUNT_REU_OFFSET
     sta file_params+1
     lda #ACTEDIT_META_REU_BASE_BANK
     sta file_params+2
@@ -4085,9 +4908,9 @@ load_piece_table_window:
     beq :+
     sec
     rts
-:   lda #ACTEDIT_PIECE_WINDOW_REU_OFFSET
+:   lda #<ACTEDIT_PIECE_WINDOW_REU_OFFSET
     sta file_params+0
-    lda #$00
+    lda #>ACTEDIT_PIECE_WINDOW_REU_OFFSET
     sta file_params+1
     lda #ACTEDIT_META_REU_BASE_BANK
     sta file_params+2
@@ -4114,9 +4937,9 @@ load_piece_table_window:
     rts
 
 save_piece_table_window:
-    lda #ACTEDIT_PIECE_COUNT_REU_OFFSET
+    lda #<ACTEDIT_PIECE_COUNT_REU_OFFSET
     sta file_params+0
-    lda #$00
+    lda #>ACTEDIT_PIECE_COUNT_REU_OFFSET
     sta file_params+1
     lda #ACTEDIT_META_REU_BASE_BANK
     sta file_params+2
@@ -4137,9 +4960,9 @@ save_piece_table_window:
     beq :+
     sec
     rts
-:   lda #ACTEDIT_PIECE_WINDOW_REU_OFFSET
+:   lda #<ACTEDIT_PIECE_WINDOW_REU_OFFSET
     sta file_params+0
-    lda #$00
+    lda #>ACTEDIT_PIECE_WINDOW_REU_OFFSET
     sta file_params+1
     lda #ACTEDIT_META_REU_BASE_BANK
     sta file_params+2
@@ -4341,6 +5164,29 @@ save_insert_text_slot_x_from_window:
     tax
     rts
 
+save_current_insert_text_slot_x_from_window:
+    lda actedit_piece_dirty
+    bne save_current_insert_text_slot_generic
+    lda actedit_piece_loaded
+    beq save_current_insert_text_slot_generic
+    lda actedit_logical_line_index_ready
+    beq save_current_insert_text_slot_generic
+    jsr save_insert_text_slot_x_from_window
+    bcs save_current_insert_text_slot_fail
+    lda #$00
+    sta actedit_piece_dirty
+    lda #$01
+    sta actedit_piece_loaded
+    sta actedit_logical_line_index_ready
+    inc actedit_direct_insert_update_count
+    clc
+    rts
+save_current_insert_text_slot_generic:
+    jmp save_insert_text_slot_x_from_window
+save_current_insert_text_slot_fail:
+    sec
+    rts
+
 clear_edit_text_window:
     ldy #$00
     lda #$00
@@ -4458,7 +5304,7 @@ copy_current_line_buffer_to_insert_loop:
 copy_current_line_buffer_to_insert_done:
     lda #$00
     sta actedit_edit_text_window,y
-    jmp save_insert_text_slot_x_from_window
+    jmp save_current_insert_text_slot_x_from_window
 
 shift_insert_orders_for_line_number_from_search_order:
     jsr load_insert_meta_window
@@ -4651,6 +5497,226 @@ copy_current_line_to_patch_done:
     sta actedit_edit_text_window,y
     jmp save_patch_text_slot_x_from_window
 
+prepare_direct_patch_piece:
+    lda #$00
+    sta actedit_direct_patch_ready
+    lda #ACTEDIT_OVERLAY_CMD_PREPARE_PATCH
+    jsr actedit_mutation_overlay_run_command
+    rts
+
+apply_direct_patch_piece_slot_x:
+    stx actedit_direct_patch_slot
+    lda actedit_direct_patch_ready
+    beq apply_direct_patch_piece_done
+    lda #ACTEDIT_OVERLAY_CMD_APPLY_PATCH
+    jsr actedit_mutation_overlay_run_command
+    bcc apply_direct_patch_piece_done
+    jsr mark_piece_table_dirty
+    lda #$00
+    sta actedit_direct_patch_ready
+apply_direct_patch_piece_done:
+    rts
+
+prepare_direct_split_insert:
+    lda #$00
+    sta actedit_direct_insert_ready
+    lda #ACTEDIT_OVERLAY_CMD_PREPARE_SPLIT_INSERT
+    jsr actedit_mutation_overlay_run_command
+    rts
+
+apply_direct_split_insert_slot_x:
+    stx actedit_direct_insert_slot
+    lda actedit_direct_insert_ready
+    beq apply_direct_split_insert_done
+    lda #ACTEDIT_OVERLAY_CMD_APPLY_SPLIT_INSERT
+    jsr actedit_mutation_overlay_run_command
+    bcc apply_direct_split_insert_done
+    jsr mark_piece_table_dirty
+    lda #$00
+    sta actedit_direct_insert_ready
+apply_direct_split_insert_done:
+    rts
+
+prepare_direct_remove_current_line:
+    lda actedit_current_line_lo
+    sta requested_line_lo
+    lda actedit_current_line_hi
+    sta requested_line_hi
+    lda actedit_current_line_kind
+    sta actedit_direct_remove_line_kind
+    lda actedit_current_source_line_lo
+    sta actedit_direct_patch_source_lo
+    lda actedit_current_source_line_hi
+    sta actedit_direct_patch_source_hi
+    lda actedit_current_line_insert_slot
+    sta actedit_direct_insert_slot
+    jmp prepare_direct_remove_line
+
+prepare_direct_remove_loaded_line:
+    lda line_number_lo
+    sta requested_line_lo
+    lda line_number_hi
+    sta requested_line_hi
+    lda actedit_loaded_line_kind
+    sta actedit_direct_remove_line_kind
+    lda actedit_loaded_source_line_lo
+    sta actedit_direct_patch_source_lo
+    lda actedit_loaded_source_line_hi
+    sta actedit_direct_patch_source_hi
+    lda actedit_loaded_insert_slot
+    sta actedit_direct_insert_slot
+prepare_direct_remove_line:
+    lda #$00
+    sta actedit_direct_remove_ready
+    lda #ACTEDIT_OVERLAY_CMD_PREPARE_REMOVE
+    jsr actedit_mutation_overlay_run_command
+    rts
+
+apply_direct_remove_line:
+    lda actedit_direct_remove_ready
+    beq apply_direct_remove_line_done
+    lda #ACTEDIT_OVERLAY_CMD_APPLY_REMOVE
+    jsr actedit_mutation_overlay_run_command
+    bcc apply_direct_remove_line_done
+    jsr mark_piece_table_dirty
+    lda #$00
+    sta actedit_direct_remove_ready
+apply_direct_remove_line_done:
+    rts
+
+actedit_mutation_overlay_run_command:
+    sta actedit_mutation_overlay_command
+    lda actedit_mutation_overlay_state
+    cmp #ACTEDIT_OVERLAY_STATE_FAILED
+    beq actedit_mutation_overlay_run_fail
+    cmp #ACTEDIT_OVERLAY_STATE_READY
+    beq actedit_mutation_overlay_call
+    jsr actedit_mutation_overlay_load
+    bcs actedit_mutation_overlay_run_fail
+actedit_mutation_overlay_call:
+    lda C64_MEMCFG
+    sta actedit_mutation_overlay_saved_memcfg
+    and #C64_MEMCFG_BASIC_OFF_MASK
+    sta C64_MEMCFG
+    jsr ACTEDIT_OVERLAY_ENTRY
+    php
+    lda actedit_mutation_overlay_saved_memcfg
+    sta C64_MEMCFG
+    plp
+    bcc actedit_mutation_overlay_run_ok
+    jsr actedit_mutation_overlay_mark_failed
+actedit_mutation_overlay_run_fail:
+    sec
+    rts
+actedit_mutation_overlay_run_ok:
+    clc
+    rts
+
+actedit_mutation_overlay_load:
+    lda #<actedit_mutation_overlay_path
+    sta file_params+0
+    lda #>actedit_mutation_overlay_path
+    sta file_params+1
+    lda #<ACTEDIT_OVERLAY_EXEC_BASE
+    sta file_params+2
+    lda #>ACTEDIT_OVERLAY_EXEC_BASE
+    sta file_params+3
+    lda #<ACTEDIT_OVERLAY_EXEC_SIZE
+    sta file_params+4
+    lda #>ACTEDIT_OVERLAY_EXEC_SIZE
+    sta file_params+5
+    lda #$00
+    sta file_params+6
+    sta file_params+7
+    sta file_params+8
+    ldx #file_params
+    jsr svc_file_load_sc0
+    lda file_params+6
+    cmp #tool_file_status_ok
+    bne actedit_mutation_overlay_load_fail
+    lda file_params+8
+    bne actedit_mutation_overlay_load_length_ok
+    lda file_params+7
+    cmp #ACTEDIT_OVERLAY_HEADER_SIZE
+    bcc actedit_mutation_overlay_load_fail
+actedit_mutation_overlay_load_length_ok:
+    lda file_params+7
+    sta actedit_mutation_overlay_loaded_len
+    lda file_params+8
+    sta actedit_mutation_overlay_loaded_len+1
+    lda C64_MEMCFG
+    sta actedit_mutation_overlay_saved_memcfg
+    and #C64_MEMCFG_BASIC_OFF_MASK
+    sta C64_MEMCFG
+    jsr actedit_mutation_overlay_validate_visible
+    php
+    lda actedit_mutation_overlay_saved_memcfg
+    sta C64_MEMCFG
+    plp
+    bcs actedit_mutation_overlay_load_fail
+    lda #ACTEDIT_OVERLAY_STATE_READY
+    sta actedit_mutation_overlay_state
+    inc actedit_mutation_overlay_load_count
+    clc
+    rts
+actedit_mutation_overlay_load_fail:
+    jsr actedit_mutation_overlay_mark_failed
+    sec
+    rts
+
+actedit_mutation_overlay_validate_visible:
+    lda ACTEDIT_OVERLAY_EXEC_BASE+0
+    cmp #'A'
+    bne actedit_mutation_overlay_validate_fail
+    lda ACTEDIT_OVERLAY_EXEC_BASE+1
+    cmp #'E'
+    bne actedit_mutation_overlay_validate_fail
+    lda ACTEDIT_OVERLAY_EXEC_BASE+2
+    cmp #'O'
+    bne actedit_mutation_overlay_validate_fail
+    lda ACTEDIT_OVERLAY_EXEC_BASE+3
+    cmp #'V'
+    bne actedit_mutation_overlay_validate_fail
+    lda ACTEDIT_OVERLAY_EXEC_BASE+4
+    cmp #ACTEDIT_OVERLAY_ABI_VERSION
+    bne actedit_mutation_overlay_validate_fail
+    lda ACTEDIT_OVERLAY_EXEC_BASE+5
+    cmp #<ACTEDIT_OVERLAY_EXEC_BASE
+    bne actedit_mutation_overlay_validate_fail
+    lda ACTEDIT_OVERLAY_EXEC_BASE+6
+    cmp #>ACTEDIT_OVERLAY_EXEC_BASE
+    bne actedit_mutation_overlay_validate_fail
+    lda ACTEDIT_OVERLAY_EXEC_BASE+7
+    cmp #<ACTEDIT_OVERLAY_ENTRY
+    bne actedit_mutation_overlay_validate_fail
+    lda ACTEDIT_OVERLAY_EXEC_BASE+8
+    cmp #>ACTEDIT_OVERLAY_ENTRY
+    bne actedit_mutation_overlay_validate_fail
+    lda ACTEDIT_OVERLAY_EXEC_BASE+9
+    cmp actedit_mutation_overlay_loaded_len
+    bne actedit_mutation_overlay_validate_fail
+    lda ACTEDIT_OVERLAY_EXEC_BASE+10
+    cmp actedit_mutation_overlay_loaded_len+1
+    bne actedit_mutation_overlay_validate_fail
+    lda ACTEDIT_OVERLAY_EXEC_BASE+11
+    ora ACTEDIT_OVERLAY_EXEC_BASE+12
+    bne actedit_mutation_overlay_validate_fail
+    clc
+    rts
+actedit_mutation_overlay_validate_fail:
+    sec
+    rts
+
+actedit_mutation_overlay_mark_failed:
+    lda actedit_mutation_overlay_state
+    cmp #ACTEDIT_OVERLAY_STATE_FAILED
+    beq actedit_mutation_overlay_mark_failed_done
+    lda #ACTEDIT_OVERLAY_STATE_FAILED
+    sta actedit_mutation_overlay_state
+    inc actedit_mutation_overlay_fail_count
+actedit_mutation_overlay_mark_failed_done:
+    rts
+
 commit_current_line_patch_if_dirty:
     lda actedit_current_line_dirty
     beq commit_current_line_patch_done
@@ -4667,6 +5733,7 @@ commit_current_line_patch_if_dirty:
     clc
     rts
 commit_current_line_patch_source:
+    jsr prepare_direct_patch_piece
     lda actedit_current_source_line_lo
     sta line_number_lo
     lda actedit_current_source_line_hi
@@ -4675,6 +5742,7 @@ commit_current_line_patch_source:
     bcs commit_current_line_patch_fail
     jsr copy_current_line_buffer_to_patch_x
     bcs commit_current_line_patch_fail
+    jsr apply_direct_patch_piece_slot_x
     lda #$00
     sta actedit_current_line_dirty
 commit_current_line_patch_done:
@@ -4839,17 +5907,28 @@ source_read_byte_at_status_ptr:
     sta line_length_ptr
     lda status_ptr+1
     sta line_length_ptr+1
+    lda status_ptr_bank
+    sta line_length_ptr_bank
     jmp source_read_byte_at_line_length_ptr
 
 source_read_byte_at_line_length_ptr:
+    lda line_length_ptr_bank
+    cmp actedit_file_window_start_bank
+    bcc refill_source_file_window
+    bne source_read_byte_check_window_end
     lda line_length_ptr+1
     cmp actedit_file_window_start_hi
     bcc refill_source_file_window
-    bne :+
+    bne source_read_byte_check_window_end
     lda line_length_ptr
     cmp actedit_file_window_start_lo
     bcc refill_source_file_window
-:   lda line_length_ptr+1
+source_read_byte_check_window_end:
+    lda line_length_ptr_bank
+    cmp actedit_file_window_end_bank
+    bcc source_read_byte_from_window
+    bne refill_source_file_window
+    lda line_length_ptr+1
     cmp actedit_file_window_end_hi
     bcc source_read_byte_from_window
     bne refill_source_file_window
@@ -4879,33 +5958,34 @@ refill_source_file_window_from_line_length_ptr:
     lda actedit_source_stage_len_hi
     sbc line_length_ptr+1
     sta word_tmp+1
+    lda actedit_source_stage_len_bank
+    sbc line_length_ptr_bank
     bcc refill_source_file_window_fail
-    lda word_tmp
-    ora word_tmp+1
-    beq refill_source_file_window_fail
-    clc
-    lda #ACTEDIT_SOURCE_REU_BASE_LO
-    adc line_length_ptr
-    sta file_params+0
-    lda #ACTEDIT_SOURCE_REU_BASE_HI
-    adc line_length_ptr+1
-    sta file_params+1
-    lda #ACTEDIT_SOURCE_REU_BASE_BANK
-    adc #$00
-    sta file_params+2
-    lda #<actedit_file_window
-    sta file_params+3
-    lda #>actedit_file_window
-    sta file_params+4
+    bne refill_source_file_window_limit
     lda word_tmp+1
     bne refill_source_file_window_limit
     lda word_tmp
+    beq refill_source_file_window_fail
     cmp #ACTEDIT_FILE_WINDOW_LIMIT
+    bcs refill_source_file_window_limit
     bcc refill_source_file_window_remaining
 refill_source_file_window_limit:
     lda #ACTEDIT_FILE_WINDOW_LIMIT
 refill_source_file_window_remaining:
     sta file_params+5
+    lda line_length_ptr
+    sta file_params+0
+    lda line_length_ptr+1
+    sta file_params+1
+    clc
+    lda #ACTEDIT_SOURCE_REU_BASE_BANK
+    adc line_length_ptr_bank
+    bcs refill_source_file_window_fail
+    sta file_params+2
+    lda #<actedit_file_window
+    sta file_params+3
+    lda #>actedit_file_window
+    sta file_params+4
     lda #$00
     sta file_params+6
     sta file_params+7
@@ -4922,6 +6002,8 @@ refill_source_file_window_remaining:
     sta actedit_file_window_start_lo
     lda line_length_ptr+1
     sta actedit_file_window_start_hi
+    lda line_length_ptr_bank
+    sta actedit_file_window_start_bank
     clc
     lda line_length_ptr
     adc file_params+5
@@ -4929,6 +6011,9 @@ refill_source_file_window_remaining:
     lda line_length_ptr+1
     adc #$00
     sta actedit_file_window_end_hi
+    lda line_length_ptr_bank
+    adc #$00
+    sta actedit_file_window_end_bank
     clc
     rts
 refill_source_file_window_fail:
@@ -5024,8 +6109,6 @@ draw_const_string_loop:
     ldy #$00
     lda (text_ptr),y
     beq draw_const_string_done
-    cmp #$0D
-    beq draw_const_string_done
     ldy current_col
     cpy #SCREEN_COLS
     bcs draw_const_string_done
@@ -5078,6 +6161,8 @@ inc_status_ptr:
     inc status_ptr
     bne :+
     inc status_ptr+1
+    bne :+
+    inc status_ptr_bank
 :   rts
 
 fail_with_ptr:
@@ -5097,19 +6182,27 @@ print_ptr:
     jmp svc_console_write_sc0
 
 msg_usage:
-    .asciiz "ACTEDIT NAME OR SRC/NAME.ACT"
+    .asciiz "ACTEDIT NAME OR PATH[:LINE]"
 msg_no_source:
     .asciiz "NO SOURCE"
+msg_bad_location:
+    .asciiz "BAD SOURCE LINE"
+actedit_mutation_overlay_path:
+    .asciiz "!ACTEDIT_OVL1.BIN"
+msg_no_line:
+    .asciiz "NO SOURCE LINE"
 title_prefix:
     .asciiz "ACTEDIT "
 help_line:
-    .asciiz "F1SV F2/4 F3MK F5/6/7 D/U/Y G/R HM/IN PG"
+    .asciiz "F1SV ^OCMP ^BBLD ^DDBG F2/4 F5/6/7"
 dirty_suffix:
     .asciiz "* DIRTY"
 goto_prompt:
     .asciiz "GOTO"
 replace_prompt:
     .asciiz "REPL"
+workflow_actc_prefix:
+    .asciiz "ACTC "
 
 row_offset_lo:
     .byte <(0*40), <(1*40), <(2*40), <(3*40), <(4*40), <(5*40), <(6*40), <(7*40), <(8*40), <(9*40)
@@ -5145,6 +6238,8 @@ arg_buffer:
     .res PATH_LIMIT+1
 actedit_source_path:
     .res PATH_LIMIT+1
+actedit_module_name:
+    .res 25
 line_buffer:
     .res LINE_BUFFER_LIMIT+1
 actedit_current_line_buffer:
@@ -5159,6 +6254,40 @@ actedit_source_line_count_lo:
     .res 1
 actedit_source_line_count_hi:
     .res 1
+actedit_source_line_index_base_lo:
+    .res 1
+actedit_source_line_index_base_hi:
+    .res 1
+actedit_source_line_index_base_bank:
+    .res 1
+actedit_source_line_index_next_lo:
+    .res 1
+actedit_source_line_index_next_hi:
+    .res 1
+actedit_source_line_index_next_bank:
+    .res 1
+actedit_source_line_index_end_bank:
+    .res 1
+actedit_source_line_index_window_len:
+    .res 1
+actedit_source_line_index_ready:
+    .res 1
+actedit_logical_line_count_lo:
+    .res 1
+actedit_logical_line_count_hi:
+    .res 1
+actedit_logical_line_index_next_lo:
+    .res 1
+actedit_logical_line_index_next_hi:
+    .res 1
+actedit_logical_line_index_next_bank:
+    .res 1
+actedit_logical_line_index_end_bank:
+    .res 1
+actedit_logical_line_index_window_len:
+    .res 1
+actedit_logical_line_index_ready:
+    .res 1
 actedit_piece_count:
     .res 1
 actedit_piece_loaded:
@@ -5167,12 +6296,88 @@ actedit_piece_dirty:
     .res 1
 actedit_piece_found_index:
     .res 1
+actedit_piece_rebuild_count:
+    .res 1
+actedit_direct_patch_count:
+    .res 1
+actedit_direct_insert_count:
+    .res 1
+actedit_direct_remove_count:
+    .res 1
+actedit_direct_insert_update_count:
+    .res 1
+actedit_logical_index_suffix_count:
+    .res 1
+actedit_mutation_overlay_state:
+    .res 1
+actedit_mutation_overlay_load_count:
+    .res 1
+actedit_mutation_overlay_fail_count:
+    .res 1
+actedit_mutation_overlay_command:
+    .res 1
+actedit_mutation_overlay_loaded_len:
+    .res 2
+actedit_mutation_overlay_saved_memcfg:
+    .res 1
+actedit_direct_patch_ready:
+    .res 1
+actedit_direct_insert_ready:
+    .res 1
+actedit_direct_remove_ready:
+    .res 1
+actedit_direct_remove_line_kind:
+    .res 1
+actedit_direct_insert_piece_index:
+    .res 1
+actedit_direct_insert_slot:
+    .res 1
+actedit_direct_patch_kind:
+    .res 1
+actedit_direct_patch_piece_index:
+    .res 1
+actedit_direct_patch_ref_lo:
+    .res 1
+actedit_direct_patch_ref_hi:
+    .res 1
+actedit_direct_patch_piece_count_lo:
+    .res 1
+actedit_direct_patch_piece_count_hi:
+    .res 1
+actedit_direct_patch_offset_lo:
+    .res 1
+actedit_direct_patch_offset_hi:
+    .res 1
+actedit_direct_patch_source_lo:
+    .res 1
+actedit_direct_patch_source_hi:
+    .res 1
+actedit_direct_patch_after_lo:
+    .res 1
+actedit_direct_patch_after_hi:
+    .res 1
+actedit_direct_patch_extra:
+    .res 1
+actedit_direct_patch_slot:
+    .res 1
+actedit_direct_patch_shift_index:
+    .res 1
 actedit_text_next_lo:
     .res 1
 actedit_text_next_hi:
     .res 1
 word_tmp:
     .res 2
+actedit_arg_len:
+    .res 1
+actedit_location_separator:
+    .res 1
+actedit_start_line_valid:
+    .res 1
+actedit_start_line_lo:
+    .res 1
+actedit_start_line_hi:
+    .res 1
 line_number_lo:
     .res 1
 line_number_hi:
@@ -5184,6 +6389,10 @@ work_line_hi:
 requested_line_lo:
     .res 1
 requested_line_hi:
+    .res 1
+actedit_exists_line_lo:
+    .res 1
+actedit_exists_line_hi:
     .res 1
 scan_source_line_lo:
     .res 1
@@ -5201,9 +6410,13 @@ actedit_file_window_start_lo:
     .res 1
 actedit_file_window_start_hi:
     .res 1
+actedit_file_window_start_bank:
+    .res 1
 actedit_file_window_end_lo:
     .res 1
 actedit_file_window_end_hi:
+    .res 1
+actedit_file_window_end_bank:
     .res 1
 actedit_current_line_lo:
     .res 1
@@ -5289,6 +6502,14 @@ actedit_search_last_col:
     .res 1
 actedit_search_found:
     .res 1
+actedit_replace_line_lo:
+    .res 1
+actedit_replace_line_hi:
+    .res 1
+actedit_replace_limit_lo:
+    .res 1
+actedit_replace_limit_hi:
+    .res 1
 actedit_output_chunk_len:
     .res 1
 actedit_prompt_len:
@@ -5310,6 +6531,8 @@ actedit_redo_head_slot:
 actedit_redo_slot:
     .res 1
 actedit_journal_kind:
+    .res 1
+actedit_workflow_mode:
     .res 1
 actedit_insert_search_order:
     .res 1
@@ -5351,6 +6574,8 @@ actedit_test_key22 = actedit_test_keys+22
 actedit_test_key23 = actedit_test_keys+23
 actedit_file_window:
     .res ACTEDIT_FILE_WINDOW_LIMIT
+actedit_source_line_index_window:
+    .res ACTEDIT_LINE_INDEX_WINDOW_LIMIT
 actedit_output_chunk_buffer:
     .res OUTPUT_CHUNK_SIZE
 actedit_undo_state_buffer:

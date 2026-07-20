@@ -8,6 +8,11 @@ Near-term work:
 - keep source parsing and object emission deterministic
 - continue moving large source and lookup data toward REU-backed streaming
 - preserve object records needed by ALINK for dead-strip and helper selection
+- continue moving supported body lowering into ACTC-emitted native machine and
+  relocation records instead of adding shape-specific linker compilers
+- generalize the proven pass-K function and bounded `FMin`/`FMax` selector paths
+  into reusable REAL expression, control-flow, call, and return lowering for
+  dependency-sized MATH1 modules
 - avoid adding launch-time runtime responsibilities to ACTC
 - keep focused UDOS VICE gates green after each compiler widening step
 

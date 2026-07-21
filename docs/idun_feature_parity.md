@@ -4,8 +4,10 @@ This document compares user-visible capabilities, not executable
 implementations. The Idun fork runs development tools as Alpine Linux
 processes. The native product runs its tools as 6502 programs under UDOS.
 Generated applications in both products remain self-contained C64 PRGs built
-from OBJ1 modules. ALINK selects only reachable OBJ1 modules; code already
-placed in a selected application object is not presently discarded.
+from OBJ1 modules. ALINK selects only reachable OBJ1 modules. Idun ACTC also
+prunes unreachable source-defined library routines from an application OBJ
+before linking while retaining every project routine; native ACTC retains only
+the bounded routines it can currently lower.
 
 Status date: 2026-07-21. Full cross-product parity is not yet complete; the
 matrix and ordered implementation plan below are the authoritative gap list.
@@ -21,9 +23,9 @@ compiler accepts.
 What is still missing on native UDOS falls into five portable groups:
 
 1. General expression and ABI lowering: arbitrary REAL trees, typed nested
-   calls and returns, REAL locals, arrays, pointers, records, strings, indirect
-   parameters, bounded recursive frames, and complete structured-expression
-   control including `ELSEIF`.
+   calls and returns, reentrant/frame-backed locals, arrays, pointers, records,
+   strings, indirect parameters, bounded recursive frames, and complete
+   structured-expression control including `ELSEIF`.
 2. Libraries: 28 MATH1 routines and 45 high-level GFX1 routines, each packaged
    so ALINK includes only reachable OBJ1 dependencies.
 3. Application facilities: command-tail-backed program arguments, application
@@ -35,20 +37,25 @@ What is still missing on native UDOS falls into five portable groups:
    and release checks after the implementation work passes VICE.
 
 The Idun fork's hardware-free feature set is otherwise ahead of native. Its
-required portable correction is reachable-only packaging for the remaining
-full-source MATH1 bodies. Attached Idun/cartridge validation remains a release
-gate. Linux processes, POSIX paths, SQLite, sockets, AArch64/APK packaging, and
+compiler treats every project routine and module-level routine reference as a
+root, then emits only the transitive included-library call graph. This closes
+the previously tracked full-source MATH1/GFX1 packaging gap without suppressing
+project diagnostics. Attached Idun/cartridge validation remains a release gate.
+Linux processes, POSIX paths, SQLite, sockets, AArch64/APK packaging, and
 the Idun target protocol are intentional Idun mechanisms, not code to port into
 UDOS. Native PRGs, overlays, REU compiler workspace, UDOS services, and DNP/D64
 media are the corresponding intentional native mechanisms.
 
 The active native dependency is general REAL lowering. Passes 6 and 7 collect
-and preallocate bounded REAL operands in child-first postfix order. New pass L
-now consumes that stream for a one-procedure, module-REAL-only, straight-line
-subset and emits ordinary machine, relocation, data, line, and variable OBJ1
-records. Nested unary, binary, and `FClamp` expressions in that subset run as
-direct ALINK PRGs. General functions, control flow, locals, mixed types, arrays,
-pointers, strings, calls, and frames remain tracked native gaps.
+and preallocate bounded REAL operands in child-first postfix order. Pass L now
+consumes that stream for a straight-line module-REAL subset and emits ordinary
+machine, relocation, data, line, and variable OBJ1 records. Besides one
+`MAIN`, it now crosses one procedure boundary: `MAIN` may call one nonrecursive
+two-REAL-parameter function whose return is a nested REAL tree. That function
+may use bounded all-REAL static locals with DBG1 local records. General call
+graphs, control flow, reentrant local frames, mixed types, arrays, pointers,
+strings, arbitrary signatures, and recursive frames remain tracked native
+gaps.
 
 ## Parity Rules
 
@@ -89,17 +96,17 @@ not parity artifacts.
 | Raw bracketed machine-code bodies | Constants, symbols, current address, routine addresses | Byte/word/character/sum constants plus preprocessed `DEFINE`, storage, local-routine, and current-address relocations | Core parity; linked external routine-symbol expressions remain a native compiler/address gap |
 | Numeric literals in call arguments | Decimal, hexadecimal, and binary forms | Same three 16-bit forms through streamed SourceReader tokens | Parity; object, REU-window, and live VICE proofs pass |
 | Arrays, pointers, records, and indirect parameters | Dynamically sized compiler metadata and typed target operations | Not part of the maintained native direct-machine core | Native compiler gap |
-| Typed functions and recursive frames | BYTE/CARD/INT/REAL, nested calls, direct/mutual recursion | Scalar nonrecursive word functions plus constrained REAL forms | Native compiler/ABI gap |
+| Typed functions and recursive frames | BYTE/CARD/INT/REAL, nested calls, direct/mutual recursion | Scalar nonrecursive word functions plus constrained REAL forms, including one nested two-REAL-parameter callee with bounded static REAL locals | Native compiler/ABI gap beyond the bounded pass-L call ABI |
 | Application REU arrays | `REU BYTE ARRAY` plus 8/16-bit accessors | Runtime helpers exist, but native ACTC has no declaration/access lowering | Native compiler gap; compiler REU workspace is not equivalent |
 | Program-owned overlay sections | `OVERLAY`/`ENDOVERLAY` and relocated `OverlayCall` | No native source lowering | Native compiler gap; ACTC tool overlays are not equivalent |
 | Program argument entry | `MAIN(argc,argv)` through the Idun target service | `MAIN()` and UDOS command-tail workflow | OS-specific contracts; expose equivalent user arguments without copying the Idun upload ABI |
 | IEEE-754 binary32 arithmetic and exceptional values | Standalone modules | Standalone modules plus native support modules | Parity at runtime |
-| General REAL source expressions, calls, and returns | Full binary32 compiler path with intrinsic `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, and `FHypot` | Core operations, bounded nested straight-line trees over module REAL values, and constrained zero-, one-, and two-parameter native function shapes including one selected-binary return | Partial parity; pass L covers nested unary/binary/`FClamp` trees in one `MAIN`, but functions, locals, control flow, mixed types, arbitrary calls, and frames remain gaps |
+| General REAL source expressions, calls, and returns | Full binary32 compiler path with intrinsic `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, and `FHypot` | Core operations, bounded nested straight-line trees over module REAL values, and one nested two-REAL-parameter function with bounded static REAL locals called by `MAIN`, plus earlier constrained function shapes | Partial parity; multiple functions, reentrant locals, control flow, mixed types, arbitrary signatures/calls, and recursive frames remain gaps |
 | INPUT1 joystick/two-button mouse API | 19 declarations | 19 declarations | Parity; physical checks remain |
 | DBF1 API | 20 declarations | 20 declarations | Parity; physical REU/disk checks remain |
 | SIDSPR1 API | 37 declarations | 37 declarations | Parity; physical SID/display checks remain |
 | Full MATH1 source library | 43 public routines plus 8 constants, 51 catalog features; `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, and `FHypot` are intrinsic and the remaining implementations are portable source | Eight compile-time constants plus fifteen link-selected callable builtins: `PrintR`, `PrintRE`, `FAbs`, `FSqrt`, `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FMin`, `FMax`, and `FClamp` | Constants plus seven shared intrinsic semantics are at parity; native implementation gap remains for 28 public routines |
-| MATH1 reachable-only packaging | `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, and `FHypot` import independent OBJs, but full-source `INCLUDE` still emits all other MATH1 implementation bodies into the application OBJ | Constants emit no code; fifteen callable builtins import independent OBJ modules | Cross-product packaging gap; Idun needs call-graph pruning or dependency-sized library objects before full parity |
+| MATH1 reachable-only packaging | Included library routines are pruned to the transitive graph referenced by project routines and module-level routine addresses; `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, and `FHypot` remain independent OBJs | Constants emit no code; fifteen callable builtins import independent OBJ modules | Packaging behavior is at parity for implemented routines; native still lacks 28 public routines |
 | Full GFX1 source library | 67 public source routines plus 16 constants; 60 routines plus the constants form the 76-feature GFX1 catalog, while seven low-level sprite aliases are cataloged under SIDSPR1 | Fifteen low-level callable declarations | Native implementation gap |
 | ASP1/ABM1 resources and compiler embedding | Linux editors and ACTC loader | Contract documented only | Native implementation gap |
 | Source formatting | `actspc` and ACTEDIT F6 | No complete UDOS formatter | Native workflow gap |
@@ -150,6 +157,29 @@ Idun target protocol are deliberately not native gaps. Conversely, UDOS
 resident services, compiler overlays, REU compiler workspace, and D64/DNP
 release media are deliberately not Idun gaps.
 
+## Parity Delivery Ledger
+
+This ledger is the implementation boundary for the remaining work. A row is
+complete only when the portable result passes the acceptance gates below; using
+the same host-side implementation is neither required nor desirable.
+
+| Work package | Portable result | Native C64U/UDOS work | Idun/Alpine work | State |
+| --- | --- | --- | --- | --- |
+| Compiler expression and call core | The same supported typed source produces equivalent OBJ1 calls, storage, returns, and direct-PRG results | Extend pass L beyond its one nonrecursive two-REAL-parameter callee with bounded static REAL locals to general functions, parameters, reentrant locals, control flow, and nested calls; then add arrays, pointers, records, strings, indirect parameters, and bounded frames | Keep Linux ACTC as the behavioral oracle and add every shared fixture to its regression suite | In progress; pass L now proves one `MAIN`-to-function boundary and local storage but not a general call graph |
+| MATH1 | All 43 routines and 8 constants have the same binary32/domain behavior and unused routines are absent from the PRG | Lower the 28 missing source routines after general REAL calls work; package each routine or dependency group as OBJ1 | Complete: ACTC emits only source routines reachable from `MAIN`, while intrinsic helpers remain independent OBJ1 modules | Blocked on the native compiler core; Idun packaging is complete |
+| GFX1 | The common 60-routine/16-constant catalog behaves the same on the C64 target | Implement the 45 missing high-level routines in reachable OBJ1 groups and retain the existing 15 low-level calls | Keep the implemented source library and generated-program tests as the reference | Native implementation pending |
+| Resources | `SPRITE`, `MSPRITE`, `BITMAP`, and `MBITMAP` validate ASP1/ABM1 and expose equivalent linked asset addresses | Load through UDOS/REU services, emit aligned relocatable data, and add native ACTSPRITE/ACTBITMAP plus ACTEDIT F8 | Keep POSIX loading and Linux editors; add shared malformed-resource and emitted-layout fixtures | Native implementation pending |
+| Program entry and application storage | Portable argument values, application REU arrays, and program-owned overlays have matching target semantics | Decode the UDOS command tail into target-owned `argc`/`argv`; add source lowering for REU arrays and application overlays | Retain Idun upload arguments and Linux-side placement; do not export that transport as a language contract | Native implementation pending |
+| Development workflow | Users can edit, format, inspect help, debug source, and manage graphics resources on either product | Extend ACTEDIT/help and native resource tools; use DBG1/ACTDBG and decide separately whether a profiler is useful | Retain Linux terminal tools, SQLite index/help, `actsvc`, ACTDBG, and ACTPROF | Partial OS-appropriate parity |
+| Product acceptance | Shared fixtures agree in both toolchains and generated PRGs; hardware-dependent behavior is recorded | Run native unit, UDOS release, VICE, ACTDBG, then physical C64U input/display/SID/REU/disk gates | Run Linux, sanitizer, export/APK, VICE, then attached Idun/cartridge gates | Emulated baseline passes; physical gates pending |
+
+The critical path is the table order: general native typed lowering, MATH1,
+general aggregate/frame support, program entry/storage, resources and GFX1,
+native workflows, then physical acceptance. Independent shared-runtime fixes and
+Idun library call-graph pruning are complete. No work package may add
+a runtime launcher; ALINK remains solely responsible for selecting and laying
+out the code present in the final PRG.
+
 
 ## Native Work Order
 
@@ -172,7 +202,7 @@ module selected only when reachable. Idun lowers `FTrunc`, `FFloor`, `FCeil`, `F
 same shared helpers and keeps portable source implementations for the other
 MATH1 routines because its host compiler can lower those bodies directly.
 
-The first item now has twelve tested checkpoints. Native pass A accepts two named
+The first item now has thirteen tested checkpoints. Native pass A accepts two named
 REAL arguments after their immediate `REAL(integer)` initializers, copies both
 values into distinct parameter storage, and returns either named parameter by
 pointer. Dedicated pass K then lowers the exact finite comparison/select form
@@ -222,19 +252,27 @@ result cell so helper output never aliases either parameter. The shared
 `RETURN(FHypot(A,B))` fixture compiles in both products; native ALINK selects
 only the twelve-module conversion/hypotenuse closure, and its direct PRG writes
 binary32 5.0 in VICE. This closes that exact function-return shape. Pass L
-separately handles bounded nested straight-line trees in one module-REAL-only
-`MAIN`. General REAL functions, locals, control flow, mixed types, nested user
-calls, and the rest of MATH1 remain incomplete.
+handles bounded nested straight-line trees and now extends them across one
+`MAIN`-to-function call. The function has exactly two REAL parameters, bounded
+all-REAL static locals, no control flow, and returns a nested helper result
+through A/X after reverse-binding caller-pushed pointers. The shared
+`real_function_nested_postfix.act` fixture compiles and links in both products;
+the native direct PRG evaluates `FHypot(FAbs(A),FAbs(B))` and prints `5` in
+VICE. The shared `real_function_local_nested_postfix.act` fixture stores
+`FAbs(A)` in a DBG1-scoped local before the same nested return; its native PRG
+prints `5` and verifies binary32 3.0 in that local. General call graphs,
+reentrant local frames, control flow, mixed types, arbitrary signatures,
+recursive frames, and the rest of MATH1 remain incomplete.
 
 Remaining work is dependency ordered:
 
-1. Generalize native REAL declarations, parameters, locals, expressions, calls,
-   and returns enough to compile portable multi-function MATH1 modules.
+1. Generalize native REAL declarations, parameters, frame-backed locals,
+   expressions, calls, and returns enough to compile portable multi-function
+   MATH1 modules.
 2. Port the remaining 28 MATH1 routines in dependency-sized OBJ modules and
    prove representative values in direct linked PRGs without making unused
-   functions reachable. Give Idun equivalent call-graph pruning or generated
-   dependency-sized modules so its full-source include no longer embeds every
-   unused MATH1 body in the application object.
+   functions reachable. Keep Idun's project-rooted library call-graph pruning
+   and independent intrinsic modules covered as the packaging reference.
 3. Widen native arrays, pointers, length-prefixed strings, records, typed
    function calls, and stack-bounded recursive frames where shared libraries or
    portable programs require them. Keep fixed C64/REU limits explicit rather
@@ -354,16 +392,16 @@ make sync-native-check NATIVE_ACTION_ROOT=/path/to/actionc64u
 
 The 2026-07-21 current cross-product baseline passed:
 
-- 805 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
+- 809 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
   ALINK closure, IEEE-754, ACTEDIT, ACTDBG, Linux compatibility, export, and
   release-image checks;
 - 133 UDOS integration tests, with one intentional embedded-AUTOEXEC capacity
   skip, plus rebuilt release artifacts and direct VICE launches for both
   side-effect and stored-result runtime calls through the native REAL bridge;
-- 152 Idun/Alpine unittests covering the Linux compiler/linker, libraries,
+- 153 Idun/Alpine unittests covering the Linux compiler/linker, libraries,
   resource editors, help, semantic map, debugger/profiler transport, export,
   and packaging contracts;
-- 137 Idun ASan/UBSan tests covering the Linux tools under instrumented builds;
+- 138 Idun ASan/UBSan tests covering the Linux tools under instrumented builds;
   and
 - 21 Idun direct-PRG tests on VICE, with the known VICE 3.7 long-DBF case
   version-skipped on the local host.
@@ -462,7 +500,7 @@ unselected sibling helper is absent. The broad direct-PRG inventory is now
 and the compiled-runtime relocation oracle covers 290 cases. Idun carries the
 same generated target modules and manifest; its portable MATH1 source remains
 the general implementation. Current hardware-independent Idun release gates
-also pass: 152 active Linux tests, 137 sanitizer tests, 21 direct-PRG tests with
+also pass: 153 active Linux tests, 138 sanitizer tests, 21 direct-PRG tests with
 the documented VICE 3.7 DBF/REU skip, and verified host plus static AArch64
 exports containing 31 commands and 260 help topics. This selector refresh has
 not yet been redeployed to the Pi or accepted on an attached cartridge/C64.
@@ -643,10 +681,23 @@ REAL conversion, REAL assignment/print, the supported unary and binary MATH1
 helpers, and `FClamp`; it emits `__idata` plus source-variable debug records so
 ACTDBG sidecars remain usable. Focused ALINK/VICE cases execute
 `FMin(FMax(A,B),C)` and `FClamp(FAbs(A),FMin(B,C),FMax(A,C))`, print `2`, prove
-16-bit internal export offsets, and prune unreferenced helpers. Current
-inventories are 1,344 broad direct-PRG shapes, 176 non-runtime source-backed
+16-bit internal export offsets, and prune unreferenced helpers. That one-`MAIN`
+checkpoint had 1,344 broad direct-PRG shapes, 176 non-runtime source-backed
 object-emission shapes, and 298 compiled-runtime relocation-oracle cases. Pass
-L is 4,195 bytes with 3,997 bytes free. The 28-routine MATH1 gap is unchanged.
+L then added the bounded two-REAL-parameter callee ABI described above. Its
+exact OBJ regression verifies separate root and function exports, caller
+pointer pushes, reverse parameter binds, an A/X result pointer, DBG1
+line/variable records, and ordinary ALINK relocations. The shared fixture
+compiles and links with Idun; the rebuilt native release prints `5` in VICE
+while loading only the `FAbs`/`FHypot` closure plus conversion and printing.
+Pass L then added bounded all-REAL static locals to that same nonrecursive
+callee. The shared `real_function_local_nested_postfix.act` fixture emits a
+DBG1 local record plus ordinary local load/store relocations; Linux ACTC/ALINK
+accepts the same source, and native VICE verifies binary32 5.0 in the result and
+3.0 in the local while printing `5`. Current inventories are 1,346 broad
+direct-PRG shapes, 178 non-runtime source-backed object-emission shapes, and
+298 compiled-runtime relocation-oracle cases. Pass L is 5,455 bytes with 2,737
+bytes free. The 28-routine MATH1 gap is unchanged.
 
 Pass 1 now contains only the streamed module-header validator. Moving the
 transform into `ACTC_OVLI.BIN` reduced pass 1 to 788 bytes. Integer folding,
@@ -662,7 +713,7 @@ label index, and emitter state occupy the reserved `$9E00-$9F1E` range. Pass J
 is 7,901 bytes with 291 bytes free under its 256-byte reserve; pass A is 7,418
 bytes with 774 bytes free under its 768-byte reserve; pass K is 5,877 bytes with
 2,315 bytes free. The complete
-213-test overlay suite and 198-test source-cache suite pass with this layout.
+215-test overlay suite and 198-test source-cache suite pass with this layout.
 
 Shipped and ordinary harness builds default to
 `ACTC_ENABLE_REAL_CONST_EVALUATOR=1`. The legacy all-resident body, layout, and

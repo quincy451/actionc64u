@@ -8688,6 +8688,121 @@ class TestActcOverlay(unittest.TestCase):
             signed_obj,
         )
 
+    def test_nested_real_function_uses_generic_postfix_call_abi(self) -> None:
+        source = (
+            self.root / "tests" / "parity" / "real_function_nested_postfix.act"
+        ).read_text(encoding="ascii").replace("\n", "\r")
+        obj = self.compile_overlay_object(
+            source,
+            "actc-overlay-nested-real-function",
+            extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [21])
+        self.assertIn(
+            "x main 0 275\n"
+            "x length 119 112\n"
+            "x __idata 231 20\n"
+            "x __rv0 231 4\n"
+            "x __rv1 235 4\n"
+            "x __rv2 239 4\n"
+            "x __rv3 243 4\n"
+            "x __rv4 247 4\n",
+            obj,
+        )
+        self.assertIn(
+            "x __rt0 251 4\n"
+            "x __rt1 255 4\n"
+            "x __rt2 259 4\n"
+            "x __rt3 263 4\n"
+            "x __rt4 267 4\n"
+            "x __rt5 271 4\n",
+            obj,
+        )
+        self.assertIn("b u0u1u2u3M\nb u0u1u2u3M\n", obj)
+        self.assertIn("L 0 119 0 5 11\nL 0 140 0 5 11\n", obj)
+        self.assertIn("L 1 0 0 8 1\n", obj)
+        self.assertIn(
+            "r 53 l x __rv0\n"
+            "r 56 h x __rv0\n"
+            "r 59 l x __rv1\n"
+            "r 62 h x __rv1\n"
+            "r 65 x length\n"
+            "r 76 x __rt2\n",
+            obj,
+        )
+        self.assertIn("r 135 x __rv4\nr 151 x __rv3\n", obj)
+        self.assertIn(
+            "r 224 u1\nr 227 l x __rt5\nr 229 h x __rt5\n",
+            obj,
+        )
+        self.assertIn(
+            "u rt_f_abs\nu rt_f_hypot\n"
+            "u rt_i_to_f\nu rt_print_f\n",
+            obj,
+        )
+        self.assertNotIn("b S4S3L3U3", obj)
+
+    def test_nested_real_function_uses_real_local_storage(self) -> None:
+        source = (
+            self.root / "tests" / "parity" / "real_function_local_nested_postfix.act"
+        ).read_text(encoding="ascii").replace("\n", "\r")
+        obj = self.compile_overlay_object(
+            source,
+            "actc-overlay-local-nested-real-function",
+            extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [21])
+        self.assertIn("V l r 0 5 0 6 6\n", obj)
+        self.assertIn(
+            "x main 0 290\n"
+            "x length 119 123\n"
+            "x __idata 242 24\n"
+            "x __rv0 242 4\n"
+            "x __rv1 246 4\n"
+            "x __rv2 250 4\n"
+            "x __rv3 254 4\n"
+            "x __rv4 258 4\n"
+            "x __rv5 262 4\n",
+            obj,
+        )
+        self.assertIn(
+            "x __rt0 266 4\n"
+            "x __rt1 270 4\n"
+            "x __rt2 274 4\n"
+            "x __rt3 278 4\n"
+            "x __rt4 282 4\n"
+            "x __rt5 286 4\n",
+            obj,
+        )
+        self.assertIn("r 135 x __rv4\nr 151 x __rv3\n", obj)
+        self.assertIn(
+            "r 162 l x __rv3\n"
+            "r 166 h x __rv3\n"
+            "r 170 l x __rt3\n"
+            "r 174 h x __rt3\n"
+            "r 178 u0\n"
+            "r 183 x __rt3\n"
+            "r 186 x __rv5\n",
+            obj,
+        )
+        self.assertIn(
+            "r 211 l x __rv5\n"
+            "r 215 h x __rv5\n"
+            "r 219 l x __rt4\n"
+            "r 223 h x __rt4\n"
+            "r 227 l x __rt5\n"
+            "r 231 h x __rt5\n"
+            "r 235 u1\n",
+            obj,
+        )
+        self.assertIn(
+            "u rt_f_abs\nu rt_f_hypot\n"
+            "u rt_i_to_f\nu rt_print_f\n",
+            obj,
+        )
+
     def test_native_real_emitter_owns_math1_clamp_call(self) -> None:
         obj = self.compile_overlay_object(
             "MODULE MAIN\r"

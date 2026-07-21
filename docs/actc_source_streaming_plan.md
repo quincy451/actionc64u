@@ -822,11 +822,15 @@ respectively. General REAL expression/control lowering remains the next compiler
 dependency.
 
 Base-36 pass L, `ACTC_OVLL.BIN`, now turns the bounded child-first stream into
-ordinary executable OBJ1 for a one-procedure, module-REAL-only, straight-line
-subset. It retains native line offsets, emits `__idata`-anchored source-variable
-debug records, allocates private four-byte temporaries, and supports 16-bit
-export and relocation offsets. Nested binary and mixed unary/binary/ternary
-direct PRGs pass ACTC, ALINK, DBG validation, and VICE execution while loading
-only reachable runtime modules. Its 4,195-byte image leaves 3,997 bytes in
-`$A000-$BFFF`. General functions, local frames, control flow, mixed types, and
-arbitrary calls remain the next compiler dependency.
+ordinary executable OBJ1 for a straight-line module-REAL subset. It retains
+native line offsets, emits `__idata`-anchored source-variable debug records,
+allocates private four-byte temporaries, and supports 16-bit export and
+relocation offsets. It also lowers one nonrecursive two-REAL-parameter function
+called by `MAIN`: caller-pushed pointers are reverse-bound to static parameter
+cells, A/X returns the selected result pointer, and bounded all-REAL locals use
+ordinary static OBJ1 storage plus DBG1 local records. Nested expression,
+function-call, and local-storage PRGs pass ACTC, ALINK, DBG validation, and VICE
+execution while loading only reachable runtime modules. Its 5,455-byte image
+leaves 2,737 bytes in `$A000-$BFFF`. General multi-function calls, reentrant
+local frames, control flow, mixed types, arbitrary signatures, and recursion
+remain the next compiler dependency.

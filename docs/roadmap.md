@@ -1612,3 +1612,57 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   4,195 bytes with 3,997 bytes free. General REAL functions, locals, control
   flow, mixed-type expressions, arbitrary calls, and recursive frames remain
   pending.
+
+## 2026-07-21 Native Nested REAL Function Call
+
+- Extended pass L across one bounded procedure boundary: `MAIN` can call one
+  nonrecursive function with exactly two REAL parameters, no locals, and one
+  nested straight-line REAL return expression.
+- The caller pushes low/high argument pointers, the callee preserves the JSR
+  return address while reverse-binding both parameters into static four-byte
+  cells, and the function returns a result pointer in A/X. ALINK sees only
+  ordinary exports and relocations and remains solely responsible for closure
+  and placement.
+- Added the shared `real_function_nested_postfix.act` fixture. Linux ACTC/ALINK
+  compiles it, while native ACTC emits the exact OBJ1 call ABI and the linked
+  native PRG prints `5` in VICE after evaluating
+  `FHypot(FAbs(A),FAbs(B))`.
+- At that checkpoint inventories were 1,345 broad direct-PRG and 177 non-runtime
+  source-backed shapes; the compiled-runtime oracle remains 298. Pass L is
+  5,443 bytes with 2,749 bytes free. General call graphs, REAL locals, control
+  flow, mixed types, arbitrary signatures, and recursive frames remain pending.
+
+## 2026-07-21 Native REAL Function Local Storage
+
+- Extended pass L's existing nonrecursive two-REAL-parameter function path to
+  accept bounded all-REAL local declarations. Locals use the same ordinary
+  four-byte OBJ1 data exports as module variables and parameters; DBG1 records
+  retain procedure-local scope.
+- Added the shared `real_function_local_nested_postfix.act` fixture. Its
+  function stores `FAbs(A)` in local `ABSLEFT`, then returns
+  `FHypot(ABSLEFT,FAbs(B))` through the existing A/X result-pointer ABI.
+- Linux ACTC/ALINK compiles and links the same fixture. Native ACTC emits exact
+  local load/store relocations, and the direct native PRG prints `5`, stores
+  binary32 5.0 in `RESULT`, and stores binary32 3.0 in `ABSLEFT` under VICE.
+  ALINK retains the existing reachable `FAbs`/`FHypot` closure and prunes
+  staged siblings.
+- Current inventories are 1,346 broad direct-PRG and 178 non-runtime
+  source-backed shapes; the compiled-runtime oracle remains 298. Pass L is
+  5,455 bytes with 2,737 bytes free. General call graphs, reentrant local
+  frames, control flow, mixed types, arbitrary signatures, and recursive
+  frames remain pending.
+
+## 2026-07-21 Idun Source Call-Graph Pruning
+
+- The Linux fork now retains every project routine and prunes source-defined
+  MATH1/GFX1 library routines to the transitive graph referenced by project
+  code, while shared intrinsic helpers remain independent OBJ modules selected
+  by ALINK.
+- Bare routine addresses, `OverlayCall` targets, globals, and declaration-time
+  address expressions preserve their referenced routines. Focused real-library
+  and synthetic chain tests prove reachable bodies remain and unused siblings
+  are absent.
+- Idun's active host suite now contains 153 tests and its sanitizer suite
+  contains 138 hardware-free tests. This is a compiler-packaging change only;
+  the portable source contract, OBJ1 semantics, ALINK closure, and direct-PRG
+  runtime model are unchanged.

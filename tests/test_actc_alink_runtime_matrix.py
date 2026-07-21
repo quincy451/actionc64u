@@ -223,6 +223,9 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
                 r"currently enumerates all (\d+) non-runtime, non-object-code source-backed\s+"
                 r"object-emission shapes"
             ),
+            "udos/MILESTONE_HANDOFF.md": (
+                r"non-runtime source-backed ACTC object-emission matrix at (\d+) shapes"
+            ),
         }
 
         for relative_path, pattern in documented_counts.items():

@@ -26,6 +26,9 @@ class TestAlinkPrgObjectCodeMatrix(unittest.TestCase):
                 r"it currently enumerates (\d+) shape probes"
             ),
             "udos/BUILDING.md": r"currently enumerates (\d+) object/link shapes",
+            "udos/MILESTONE_HANDOFF.md": (
+                r"Current status docs report the broad ALINK direct-PRG matrix at (\d+) shapes"
+            ),
             "udos/STATUS_UDOS.md": r"vice-action-alink-prg-matrix` now enumerates (\d+) direct-PRG\s+object/link shapes",
         }
 
@@ -462,6 +465,58 @@ class TestAlinkPrgObjectCodeMatrix(unittest.TestCase):
         self.assertEqual(case["store_check_hi_value"], 0x00)
         self.assertIn({"addr": 0x10AD, "value": 0xA0}, case["extra_store_checks"])
         self.assertIn({"addr": 0x10AE, "value": 0x40}, case["extra_store_checks"])
+
+    def test_nested_real_function_case_uses_generic_postfix_call_abi(self) -> None:
+        sys.path.insert(0, str(self.workspace / "udos" / "tools"))
+        import run_action_alink_prg_probe as probe
+
+        case = probe.DIRECT_PRG_CASES[
+            "actc_real_function_nested_postfix_linked"
+        ]
+        fragments = "".join(case["expected_object_fragments"])
+        fixture = (
+            self.workspace
+            / "actionc64u"
+            / "tests"
+            / "parity"
+            / "real_function_nested_postfix.act"
+        ).read_text(encoding="ascii")
+
+        self.assertEqual(case["source"].replace("\r", "\n"), fixture)
+        self.assertIn("x main 0 275\nx length 119 112\n", fragments)
+        self.assertIn("r 65 x length\n", fragments)
+        self.assertIn("r 135 x __rv4\nr 151 x __rv3\n", fragments)
+        self.assertIn("r 227 l x __rt5\nr 229 h x __rt5\n", fragments)
+        self.assertEqual(case["screen_fragments"], ["5"])
+        self.assertIn("LIB/RT_F_HYPOT.OBJ", case["expected_alink_loads"])
+        self.assertIn("LIB/RT_PRINT_F.OBJ", case["expected_alink_loads"])
+        self.assertNotIn("LIB/RT_F_CLAMP.OBJ", case["expected_alink_loads"])
+        self.assertTrue(case["expected_tail_from_compiled_object"])
+
+    def test_nested_real_function_local_case_uses_obj_storage(self) -> None:
+        sys.path.insert(0, str(self.workspace / "udos" / "tools"))
+        import run_action_alink_prg_probe as probe
+
+        case = probe.DIRECT_PRG_CASES[
+            "actc_real_function_local_nested_postfix_linked"
+        ]
+        fragments = "".join(case["expected_object_fragments"])
+        fixture = (
+            self.workspace
+            / "actionc64u"
+            / "tests"
+            / "parity"
+            / "real_function_local_nested_postfix.act"
+        ).read_text(encoding="ascii")
+
+        self.assertEqual(case["source"].replace("\r", "\n"), fixture)
+        self.assertIn("V l r 0 5 0 6 6\n", fragments)
+        self.assertIn("x main 0 290\nx length 119 123\n", fragments)
+        self.assertIn("r 183 x __rt3\nr 186 x __rv5\n", fragments)
+        self.assertEqual(case["screen_fragments"], ["5"])
+        self.assertIn("LIB/RT_F_HYPOT.OBJ", case["expected_alink_loads"])
+        self.assertNotIn("LIB/RT_F_CLAMP.OBJ", case["expected_alink_loads"])
+        self.assertTrue(case["expected_tail_from_compiled_object"])
 
     def test_full_range_multiply_probe_forces_staged_root_object_path(self) -> None:
         sys.path.insert(0, str(self.workspace / "udos" / "tools"))

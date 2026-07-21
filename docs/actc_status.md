@@ -155,7 +155,8 @@ Current state:
   link-selected helpers, and
   DO/WHILE EXIT lowering. It leaves 593 bytes free under its dedicated
   128-byte minimum reserve. `ACTC_OVL6.BIN` is 8,094 bytes with 98 bytes free
-  under a 96-byte gate, and raw-block-capable `ACTC_OVL4.BIN` is 5,603 bytes.
+  under a 96-byte gate. `ACTC_OVL7.BIN` is 6,678 bytes with 1,514 bytes free in
+  its 8 KiB window, and raw-block-capable `ACTC_OVL4.BIN` is 5,603 bytes.
   Function-aware pass G is 6,645 bytes with 1,547 bytes free under a 512-byte
   gate. Universal mixed pass H is 8,064 bytes with exactly 128 bytes free under a
   128-byte gate. Fixed-address and register-machine pass J is 7,901 bytes with
@@ -340,14 +341,17 @@ Current state:
   one `MAIN`, pass L accepts up to two nonrecursive two-REAL-parameter functions
   with bounded all-REAL locals, no control flow, and nested REAL return trees.
   `MAIN` may call either function, and a later function may assign an earlier
-  function's result to a local. The caller pushes
+  function's result to a local or feed it directly to a supported intrinsic
+  return tree. The caller pushes
   argument pointers, each callee reverse-binds them to disjoint static parameter
-  cells, and A/X returns a result pointer. Six direct PRGs prove nested
+  cells, and A/X returns a result pointer. Seven direct PRGs prove nested
   expression trees, both root-to-function selectors, function-local storage,
-  one declaration-order function edge, and reachable-only runtime objects.
+  one declaration-order function edge, a nested local-call operand, and
+  reachable-only runtime objects.
   Forward, self, and cyclic edges are rejected. Reentrant local frames, control
-  flow, nested call expressions, mixed declarations, arbitrary signatures, and
-  recursive frames remain unsupported.
+  flow, user calls as arguments to other user calls, unrestricted nested call
+  expressions, mixed declarations, arbitrary signatures, and recursive frames
+  remain unsupported.
 
 Current focus:
 

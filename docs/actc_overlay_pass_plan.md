@@ -108,7 +108,8 @@ The overlay artifacts share one stable execution ABI:
   `build/udos_tools/ACTC_OVL6.BIN`, pass id `6`, which is the current
   proc-body lowering overlay. `tools/build_actc_overlay_body_preallocate.sh`
   builds `build/udos_tools/ACTC_OVL7.BIN`, pass id `7`, which owns the
-  overlay-hosted preallocation scanner. Both are packaged beside `ACTC.PRG` and
+  overlay-hosted preallocation scanner. Its current 6,678-byte image leaves
+  1,514 bytes free in the 8 KiB window. Both are packaged beside `ACTC.PRG` and
   enabled in the default production build.
 - `tools/build_actc_overlay_emit_native_local_object.sh` builds
   `build/udos_tools/ACTC_OVL9.BIN`, pass id `9`. It owns native local-procedure
@@ -174,8 +175,9 @@ The overlay artifacts share one stable execution ABI:
   argument pointers, reverse-bound static parameter cells, an A/X result
   pointer, and bounded all-REAL local storage with DBG1 local records. `MAIN`
   may call either function, and a later function may assign the result of an
-  earlier function. Forward, self, and cyclic edges are hard errors; the pass
-  remains explicitly nonrecursive and has no control flow. Its private
+  earlier function or feed it directly to a supported intrinsic return tree.
+  Forward, self, and cyclic edges are hard errors; the pass remains explicitly
+  nonrecursive and has no control flow. Its private
   four-byte temporaries and every export/relocation offset are 16-bit; an
   overlapping `__idata` aggregate anchors only source variables in DBG1. The
   5,667-byte image leaves 2,525 bytes free in the 8 KiB execution window.

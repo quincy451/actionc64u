@@ -372,14 +372,22 @@ REAL FUNC CHAIN(REAL A,B)
   RETURN(FMax(BASE,FAbs(A)))
 ```
 
-The call uses ordinary OBJ1 export relocation and returns a four-byte result
-pointer in A/X. The local assignment copies that result before the caller
-continues. Because parameters and locals are currently static, function edges
-must point to an earlier declaration. ACTC rejects forward, self, and cyclic
-edges instead of falling back to generic object emission. Reentrant frames,
-control flow in these functions, nested calls inside another call expression,
-mixed parameter types, arbitrary signatures, recursive calls, and external REAL
-functions are not yet part of this native path.
+The earlier call may also feed a supported intrinsic expression directly:
+
+```action
+REAL FUNC CHAIN(REAL A,B)
+  RETURN(FMax(LENGTH(A,B),FAbs(A)))
+```
+
+Each call uses an ordinary OBJ1 export relocation and returns a four-byte result
+pointer in A/X. An assignment copies that result; a nested intrinsic consumes a
+private temporary. Because parameters and locals are currently static, function
+edges must point to an earlier declaration. ACTC rejects forward, self, and
+cyclic edges instead of falling back to generic object emission. Reentrant
+frames, control flow in these functions, user calls as arguments to another user
+call, unrestricted nested call expressions, mixed parameter types, arbitrary
+signatures, recursive calls, and external REAL functions are not yet part of
+this native path.
 
 ## Dynamic Word Arithmetic
 

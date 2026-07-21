@@ -7127,7 +7127,30 @@ emit_runtime_real_value_from_scan_y_or_fail:
     bcs emit_runtime_real_value_from_scan_y_or_fail_fail
     sty symbol_end_y_data
     jsr find_var_index_from_declared
+    bcc emit_runtime_real_value_from_scan_y_or_fail_var
+    ; A typed local REAL call is another value in the postfix stream.
+    jsr find_export_index_from_declared
     bcs emit_runtime_real_value_from_scan_y_or_fail_fail
+.if ACTC_REU_PROC_META
+    jsr load_proc_meta_from_reu_x
+    lda proc_meta_param_count_data
+.else
+    lda proc_param_count_data,x
+.endif
+    and #(ACTC_PROC_META_FUNCTION | ACTC_PROC_META_REAL_RETURN)
+    cmp #(ACTC_PROC_META_FUNCTION | ACTC_PROC_META_REAL_RETURN)
+    bne emit_runtime_real_value_from_scan_y_or_fail_fail
+    jsr resolve_call_target_from_declared_or_fail
+    bcs emit_runtime_real_value_from_scan_y_or_fail_fail
+    ldy symbol_end_y_data
+    jsr emit_call_args_from_scan_y_or_fail
+    bcs emit_runtime_real_value_from_scan_y_or_fail_fail
+    ldx call_target_index_data
+    lda #'C'
+    jsr append_body_op_for_current_proc
+    jsr skip_inline_spaces_at_scan_y
+    jmp emit_runtime_real_value_from_scan_y_or_fail_done
+emit_runtime_real_value_from_scan_y_or_fail_var:
     stx real_lhs_index_data
     jsr require_var_index_real_or_fail
     bcs emit_runtime_real_value_from_scan_y_or_fail_fail

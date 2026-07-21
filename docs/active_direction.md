@@ -100,9 +100,11 @@ returns binary32 5.0 in both products; native ALINK loads only its reachable
 closure. This is a bounded checkpoint, not general REAL expression lowering.
 Pass L now supports up to two such REAL functions and one declaration-order
 function edge: `MAIN` may call either function, and the later function may
-assign the earlier function's result to a REAL local. The direct PRG call-chain
-fixture returns 5.0 in both products through ordinary OBJ1 relocations. Static
-frames remain nonreentrant, so forward, self, and cyclic edges are rejected.
+assign the earlier function's result to a REAL local or use the call directly
+inside a supported intrinsic return tree. The direct PRG call-chain and nested
+local-call-expression fixtures return 5.0 in both products through ordinary
+OBJ1 relocations. Static frames remain nonreentrant, so forward, self, and
+cyclic edges are rejected.
 Bounded named-REAL `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FMin`, `FMax`, and `FClamp` calls now have
 complete portable call semantics through independently link-selected helpers.
 The pass-K clamp root captures initializer, argument, destination, and print
@@ -135,10 +137,10 @@ Treat `vice-action-alink` as the default direct-native linker gate that emits
 `BIN/MAIN.PRG`.
 Treat `vice-action-actc-alink-launch` as the helper-free higher-level default.
 Treat `vice-action-actc-alink-launch-object-emission-matrix` as the all
-source-backed ACTC object-emission launch matrix; it currently enumerates 180
+source-backed ACTC object-emission launch matrix; it currently enumerates 181
 non-runtime, non-object-code source shapes.
 Treat `vice-action-alink-prg-matrix` as the broad direct-PRG object/link matrix;
-it currently enumerates 1348 shape probes.
+it currently enumerates 1349 shape probes.
 Treat `vice-action-alink-prg-object-code-matrices` as the focused direct
 object-code graph, behavior, and rejection gate.
 Treat `vice-action-actc-alink-launch-runtime-matrices` as the focused

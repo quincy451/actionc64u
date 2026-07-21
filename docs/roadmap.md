@@ -1705,3 +1705,26 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   shapes; the compiled-runtime oracle remains 298. Pass L is 5,667 bytes with
   2,525 bytes free. Reentrant frames, control flow, nested call expressions,
   mixed types, arbitrary signatures, and recursion remain pending.
+
+## 2026-07-21 Native Nested Local REAL Call Expression
+
+- Extended the resident REAL value parser to recognize a declared local
+  REAL-returning function after a variable lookup misses. It validates the
+  function metadata, emits the existing argument body operations, and appends
+  the existing `C` selector, so pass L and ALINK need no new opcode or ABI.
+- Extended pass 7's recursive dependency scan to traverse a bounded
+  two-REAL-parameter local call as an expression operand. The scan follows both
+  arguments for helper dependencies without preallocating the local function or
+  misclassifying the enclosing intrinsic as an unresolved import.
+- Added the shared `real_function_nested_local_call_postfix.act` fixture. Its
+  later function returns `FMax(LENGTH(A,B),FAbs(A))`; native ACTC emits ordinary
+  `MAIN -> CHAIN` and `CHAIN -> LENGTH` relocations, and ALINK selects only
+  `FAbs`, `FHypot`, `FMax`, conversion, and printing. The direct PRG prints `5`
+  and VICE verifies binary32 5.0 in both `RESULT` and the nested-call temporary.
+- Idun ACTC/ALINK compiles, links, and executes the byte-identical fixture.
+  Current native inventories are 1,349 broad direct-PRG and 181 non-runtime
+  source-backed shapes; the compiled-runtime oracle remains 298. Pass L remains
+  5,667 bytes with 2,525 bytes free, while pass 7 is 6,678 bytes with 1,514 bytes
+  free. Reentrant frames, control flow, user calls as arguments to other user
+  calls, unrestricted nested calls, mixed types, arbitrary signatures, and
+  recursion remain pending.

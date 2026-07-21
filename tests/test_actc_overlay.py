@@ -8859,6 +8859,37 @@ class TestActcOverlay(unittest.TestCase):
         )
         self.assertNotIn("u rt_f_min\n", obj)
 
+    def test_real_function_call_can_feed_an_intrinsic_expression(self) -> None:
+        source = (
+            self.root
+            / "tests"
+            / "parity"
+            / "real_function_nested_local_call_postfix.act"
+        ).read_text(encoding="ascii").replace("\n", "\r")
+        obj = self.compile_overlay_object(
+            source,
+            "actc-overlay-real-function-nested-local-call",
+            extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [21])
+        self.assertIn(
+            "x main 0 417\n"
+            "x length 119 112\n"
+            "x chain 231 122\n"
+            "x __idata 353 28\n",
+            obj,
+        )
+        self.assertEqual(len(re.findall(r"(?m)^r \d+ x length$", obj)), 1)
+        self.assertEqual(len(re.findall(r"(?m)^r \d+ x chain$", obj)), 1)
+        self.assertIn(
+            "u rt_f_abs\nu rt_f_hypot\nu rt_f_max\n"
+            "u rt_i_to_f\nu rt_print_f\n",
+            obj,
+        )
+        self.assertNotIn("u fmax\n", obj)
+        self.assertNotIn("u rt_f_min\n", obj)
+
     def test_real_function_forward_call_is_rejected(self) -> None:
         console = self.compile_overlay_object(
             "MODULE MAIN\r"
@@ -8877,6 +8908,28 @@ class TestActcOverlay(unittest.TestCase):
             "RESULT=FIRST(LEFT,RIGHT)\r"
             "RETURN\r",
             "actc-overlay-reject-forward-real-function-call",
+            extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+            expected_exit_status=1,
+        )
+
+        self.assertIn("EMIT OVL FAIL", console)
+
+    def test_real_function_forward_call_in_expression_is_rejected(self) -> None:
+        console = self.compile_overlay_object(
+            "MODULE MAIN\r"
+            "REAL LEFT\r"
+            "REAL RIGHT\r"
+            "REAL RESULT\r"
+            "REAL FUNC FIRST(REAL A,B)\r"
+            "RETURN(FMax(SECOND(A,B),A))\r"
+            "REAL FUNC SECOND(REAL A,B)\r"
+            "RETURN(A)\r"
+            "PROC MAIN()\r"
+            "LEFT=REAL(3)\r"
+            "RIGHT=REAL(4)\r"
+            "RESULT=FIRST(LEFT,RIGHT)\r"
+            "RETURN\r",
+            "actc-overlay-reject-forward-real-function-expression-call",
             extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
             expected_exit_status=1,
         )

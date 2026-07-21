@@ -561,6 +561,9 @@ preallocate_real_value_worker_external_from_scan_y_overlay:
     jsr preallocate_real_binary_print_external_from_scan_y_overlay
     bcc preallocate_real_print_value_external_from_scan_y_overlay_done
     jsr preallocate_real_value_reset_y_overlay
+    jsr preallocate_real_local_function_external_from_scan_y_overlay
+    bcc preallocate_real_print_value_external_from_scan_y_overlay_done
+    jsr preallocate_real_value_reset_y_overlay
     jsr preallocate_real_print_var_external_from_scan_y_overlay
     bcs preallocate_real_print_value_external_from_scan_y_overlay_miss
 preallocate_real_print_value_external_from_scan_y_overlay_done:
@@ -630,6 +633,47 @@ preallocate_real_print_var_external_from_scan_y_overlay:
     clc
     rts
 preallocate_real_print_var_external_from_scan_y_overlay_miss:
+    sec
+    rts
+
+preallocate_real_local_function_external_from_scan_y_overlay:
+    ; Traverse local-call operands without allocating a library import.
+    lda #ACTC_OVERLAY_CTX_COPY_SYMBOL_FROM_SCAN_Y_FN_LO
+    jsr call_context_function
+    bcs preallocate_real_local_function_external_from_scan_y_overlay_miss
+    sty symbol_end_y_local
+    lda #ACTC_OVERLAY_CTX_FIND_EXPORT_INDEX_FN_LO
+    jsr call_context_function
+    bcs preallocate_real_local_function_external_from_scan_y_overlay_miss
+    lda #ACTC_OVERLAY_CTX_LOAD_PROC_META_FN_LO
+    jsr call_indexed_context_function
+    lda #ACTC_OVERLAY_CTX_PROC_META_WINDOW_PTR_LO
+    jsr load_context_ptr_to_work_zp
+    ldy #$00
+    lda (ACTC_OVERLAY_WORK_ZP),y
+    cmp #(ACTC_PROC_META_FUNCTION | ACTC_PROC_META_REAL_RETURN | 2)
+    bne preallocate_real_local_function_external_from_scan_y_overlay_miss
+    ldy symbol_end_y_local
+    lda #ACTC_OVERLAY_CTX_SKIP_INLINE_SPACES_FN_LO
+    jsr call_context_function
+    lda #'('
+    jsr preallocate_consume_scan_char_from_y_overlay
+    bcs preallocate_real_local_function_external_from_scan_y_overlay_miss
+    jsr preallocate_real_value_nested_external_from_scan_y_overlay
+    bcs preallocate_real_local_function_external_from_scan_y_overlay_miss
+    lda #','
+    jsr preallocate_consume_scan_char_from_y_overlay
+    bcs preallocate_real_local_function_external_from_scan_y_overlay_miss
+    jsr preallocate_real_value_nested_external_from_scan_y_overlay
+    bcs preallocate_real_local_function_external_from_scan_y_overlay_miss
+    lda #')'
+    jsr preallocate_consume_scan_char_from_y_overlay
+    bcs preallocate_real_local_function_external_from_scan_y_overlay_miss
+    lda #ACTC_OVERLAY_CTX_SKIP_INLINE_SPACES_FN_LO
+    jsr call_context_function
+    clc
+    rts
+preallocate_real_local_function_external_from_scan_y_overlay_miss:
     sec
     rts
 

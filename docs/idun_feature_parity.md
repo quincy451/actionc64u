@@ -221,8 +221,9 @@ two-REAL-parameter function whose single return expression selects `+`, `-`,
 result cell so helper output never aliases either parameter. The shared
 `RETURN(FHypot(A,B))` fixture compiles in both products; native ALINK selects
 only the twelve-module conversion/hypotenuse closure, and its direct PRG writes
-binary32 5.0 in VICE. This closes that exact function-return shape, not general
-expression lowering. General REAL expression trees, nested
+binary32 5.0 in VICE. This closes that exact function-return shape. Pass L
+separately handles bounded nested straight-line trees in one module-REAL-only
+`MAIN`. General REAL functions, locals, control flow, mixed types, nested user
 calls, and the rest of MATH1 remain incomplete.
 
 Remaining work is dependency ordered:
@@ -268,7 +269,7 @@ remaining parity and acceptance work. Items 1 through 10 are implementation
 work; item 11 is the final emulated and physical acceptance phase.
 
 The native D64 is intentionally a valid UDOS boot plus standalone ALINK disk.
-The complete ACTC compiler, passes 0 through K, development tools, libraries,
+The complete ACTC compiler, passes 0 through L, development tools, libraries,
 examples, and assets live in `ACTION.DNP`, the primary C64 Ultimate workspace.
 New native parity work targets the DNP and must not produce a partial compiler
 on the capacity-constrained D64.

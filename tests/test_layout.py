@@ -160,6 +160,8 @@ class TestRepoLayout(unittest.TestCase):
         self.assertIn("Generalize native REAL", parity)
         self.assertIn("MATH1 reachable-only packaging", parity)
         self.assertIn("call-graph pruning", parity)
+        self.assertIn("Pass L\nseparately handles bounded nested straight-line trees", parity)
+        self.assertIn("complete ACTC compiler, passes 0 through L", parity)
         self.assertIn("The portable products are therefore not yet at full feature parity", parity)
         self.assertNotIn("binary32 folding remains", parity)
         self.assertIn(

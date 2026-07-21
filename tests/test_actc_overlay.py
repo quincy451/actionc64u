@@ -507,10 +507,26 @@ class TestActcOverlay(unittest.TestCase):
         )
         self.assertIn(
             "emit_runtime_real_value_local_or_fail:\n"
+            "    lda #$00\n"
+            "    sta real_expression_depth_local\n"
+            "; Bound recursive operand collection independently of the source-reader window.\n"
+            "emit_runtime_real_value_nested_local_or_fail:",
+            body_overlay_text,
+        )
+        self.assertIn(
+            "emit_runtime_real_value_worker_local_or_fail:\n"
             "    jsr try_consume_real_open_local\n"
             "    bcs emit_runtime_real_value_local_try_fabs\n"
             "    jmp emit_runtime_real_explicit_value_after_open_local_or_fail",
             body_overlay_text,
+        )
+        self.assertIn(
+            "preallocate_real_value_nested_external_from_scan_y_overlay:",
+            body_preallocate_overlay_text,
+        )
+        self.assertIn(
+            "preallocate_real_value_worker_external_from_scan_y_overlay:",
+            body_preallocate_overlay_text,
         )
         self.assertIn("emit_runtime_real_unary_value_local_or_fail:", body_overlay_text)
         self.assertIn("emit_runtime_real_binary_value_local_or_fail:", body_overlay_text)
@@ -8544,6 +8560,73 @@ class TestActcOverlay(unittest.TestCase):
                     if other_module != runtime_module:
                         self.assertNotIn(f"u {other_module}\n", obj)
                 self.assertNotIn(f"u {function_name.lower()}\n", obj)
+
+    def test_recursive_real_preparation_preserves_postfix_helper_order(self) -> None:
+        obj = self.compile_overlay_object(
+            "MODULE MAIN\r"
+            "REAL A\r"
+            "REAL B\r"
+            "REAL C\r"
+            "REAL X\r"
+            "PROC MAIN()\r"
+            "A=REAL(1)\r"
+            "B=REAL(2)\r"
+            "C=REAL(3)\r"
+            "X=FMin(FMax(A,B),C)\r"
+            "PrintRE(X)\r"
+            "RETURN\r",
+            "actc-overlay-recursive-real-preparation",
+            extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [5])
+        self.assertIn(
+            "b p1u0T0S0p3u0T1S1p5u0T2S2L0U0L1U1u1L2U2u2T3S3L3U3p6u3r\n",
+            obj,
+        )
+        self.assertIn(
+            "u rt_i_to_f\nu rt_f_max\nu rt_f_min\nu rt_print_f\n",
+            obj,
+        )
+        self.assertFalse(any(line.startswith("m ") for line in obj.splitlines()))
+
+        mixed_prefix = (
+            "MODULE MAIN\r"
+            "REAL A\r"
+            "REAL B\r"
+            "REAL C\r"
+            "REAL X\r"
+            "PROC MAIN()\r"
+            "A=REAL(1)\r"
+            "B=REAL(2)\r"
+            "C=REAL(3)\r"
+        )
+        mixed_statement = (
+            "X=FClamp(FAbs(A),FMin(B,C),FMax(A,C))\r"
+            "PrintRE(X)\r"
+            "RETURN\r"
+        )
+        mixed_padding = "\r" * (1270 - len(mixed_prefix) - len("X="))
+        mixed_source = mixed_prefix + mixed_padding + mixed_statement
+        self.assertEqual(mixed_source.index("FClamp"), 1270)
+        mixed_obj = self.compile_overlay_object(
+            mixed_source,
+            "actc-overlay-recursive-real-mixed-preparation",
+            extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [5])
+        self.assertIn(
+            "b p1u0T0S0p3u0T1S1p5u0T2S2L0U0u1L1U1L2U2u2"
+            "L0U0L2U2u3u4T3S3L3U3p6u5r\n",
+            mixed_obj,
+        )
+        self.assertIn(
+            "u rt_i_to_f\nu rt_f_abs\nu rt_f_min\nu rt_f_max\n"
+            "u rt_f_clamp\nu rt_print_f\n",
+            mixed_obj,
+        )
+        self.assertFalse(any(line.startswith("m ") for line in mixed_obj.splitlines()))
 
     def test_native_real_emitter_owns_math1_clamp_call(self) -> None:
         obj = self.compile_overlay_object(

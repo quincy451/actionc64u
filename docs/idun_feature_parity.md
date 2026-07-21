@@ -10,6 +10,44 @@ placed in a selected application object is not presently discarded.
 Status date: 2026-07-21. Full cross-product parity is not yet complete; the
 matrix and ordered implementation plan below are the authoritative gap list.
 
+## Executive Status
+
+The native C64U/UDOS product already has the direct-PRG/OBJ1 foundation,
+link-selected common 6502 runtime, scalar compiler core, ASMBLOCK and fixed
+machine-call ABI, IEEE-754 binary32 runtime, INPUT1, DBF1, SIDSPR1, and native
+ACTDBG. It does not yet accept the full portable source surface that the Idun
+compiler accepts.
+
+What is still missing on native UDOS falls into five portable groups:
+
+1. General expression and ABI lowering: arbitrary REAL trees, typed nested
+   calls and returns, REAL locals, arrays, pointers, records, strings, indirect
+   parameters, bounded recursive frames, and complete structured-expression
+   control including `ELSEIF`.
+2. Libraries: 28 MATH1 routines and 45 high-level GFX1 routines, each packaged
+   so ALINK includes only reachable OBJ1 dependencies.
+3. Application facilities: command-tail-backed program arguments, application
+   REU arrays, program-owned overlays, and ASP1/ABM1 resource declarations and
+   embedding.
+4. Native workflows: sprite/bitmap editors plus ACTEDIT F8, source formatting,
+   fuller help/navigation, and an explicit decision on a separate profiler.
+5. Acceptance: physical C64U input, display, SID, REU, filesystem, debugger,
+   and release checks after the implementation work passes VICE.
+
+The Idun fork's hardware-free feature set is otherwise ahead of native. Its
+required portable correction is reachable-only packaging for the remaining
+full-source MATH1 bodies. Attached Idun/cartridge validation remains a release
+gate. Linux processes, POSIX paths, SQLite, sockets, AArch64/APK packaging, and
+the Idun target protocol are intentional Idun mechanisms, not code to port into
+UDOS. Native PRGs, overlays, REU compiler workspace, UDOS services, and DNP/D64
+media are the corresponding intentional native mechanisms.
+
+The active native dependency is general REAL lowering. Passes 6 and 7 now have
+bounded recursive operand traversal: collection emits postfix operations and
+preallocation selects helper imports in that same child-first order. The
+machine-object emitter still owns fixed shapes. Nested REAL source therefore
+remains a tracked gap until native machine records and direct-PRG tests land.
+
 ## Parity Rules
 
 - Shared Action syntax, library APIs, OBJ1 records, runtime results, PRG layout
@@ -589,7 +627,15 @@ while native ACTC/ALINK and VICE prove the same source and result with unused
 MATH1 siblings staged but not loaded. Current inventories are 1,342 broad
 direct-PRG shapes, 174 non-runtime source-backed object-emission shapes, and
 298 compiled-runtime relocation-oracle cases. Pass K is 5,877 bytes with
-2,315 bytes free in its 8 KiB window; pass 6 and the 28-routine MATH1 gap are
+2,315 bytes free in its 8 KiB window. The following internal parser preparation
+lets pass 6 collect bounded nested REAL operands without changing the runnable
+source contract; it is 8,094 bytes with 98 bytes free under the 96-byte gate.
+Pass 7 now preallocates the same tree in postfix helper order; it is 6,587 bytes
+with 1,605 bytes free. A mixed unary/binary/ternary regression starts its outer
+helper at source byte 1,270 and proves the tree across the production 1,280-byte
+source-window boundary. The generic emitter can preserve that tree in
+transitional `b` metadata, but general native machine emission is still
+required before the source slice is runnable. The 28-routine MATH1 gap is
 unchanged.
 
 Pass 1 now contains only the streamed module-header validator. Moving the

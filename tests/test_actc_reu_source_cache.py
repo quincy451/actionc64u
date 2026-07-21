@@ -3096,7 +3096,6 @@ class TestActcReuSourceCache(unittest.TestCase):
             "emit_real_explicit_value_local_or_fail",
             "emit_real_explicit_value_local_or_fail_wide",
             "emit_real_explicit_value_local_or_fail_signed_prep",
-            "emit_runtime_real_unary_value_local_or_fail",
             "emit_runtime_real_binary_value_local_or_fail",
             "emit_runtime_real_explicit_bridge_value_local_or_fail",
             "emit_runtime_real_explicit_value_after_open_local_or_fail",

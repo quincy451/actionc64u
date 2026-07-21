@@ -128,6 +128,11 @@ class TestRepoLayout(unittest.TestCase):
         root = Path(__file__).resolve().parents[1]
         parity = (root / "docs" / "idun_feature_parity.md").read_text(encoding="ascii")
 
+        self.assertIn("## Executive Status", parity)
+        self.assertIn("five portable groups", parity)
+        self.assertIn("Passes 6 and 7 now have\nbounded recursive operand traversal", parity)
+        self.assertIn("machine-object emitter still owns fixed shapes", parity)
+        self.assertIn("intentional Idun mechanisms", parity)
         self.assertIn("Full MATH1 source library", parity)
         self.assertIn("Native implementation gap", parity)
         self.assertIn("Linux/APK deployment", parity)

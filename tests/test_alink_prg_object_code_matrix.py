@@ -518,6 +518,38 @@ class TestAlinkPrgObjectCodeMatrix(unittest.TestCase):
         self.assertNotIn("LIB/RT_F_CLAMP.OBJ", case["expected_alink_loads"])
         self.assertTrue(case["expected_tail_from_compiled_object"])
 
+    def test_two_real_function_case_uses_independent_obj_storage(self) -> None:
+        sys.path.insert(0, str(self.workspace / "udos" / "tools"))
+        import run_action_alink_prg_probe as probe
+
+        shape = "actc_real_two_function_nested_postfix_linked"
+        case = probe.DIRECT_PRG_CASES[shape]
+        fragments = "".join(case["expected_object_fragments"])
+        fixture = (
+            self.workspace
+            / "actionc64u"
+            / "tests"
+            / "parity"
+            / "real_two_function_nested_postfix.act"
+        ).read_text(encoding="ascii")
+
+        self.assertEqual(case["source"].replace("\r", "\n"), fixture)
+        self.assertIn(f"\t{shape} \\\n", self.make_text)
+        self.assertIn("q 0 0 6 11\nq 1 0 10 11\nq 2 0 14 6\n", fragments)
+        self.assertIn("V l r 0 6 0 7 6\n", fragments)
+        self.assertIn("V l r 1 9 0 11 6\n", fragments)
+        self.assertIn(
+            "x main 0 496\nx length 170 123\nx shorter 293 123\n",
+            fragments,
+        )
+        self.assertIn("r 65 x length\n", fragments)
+        self.assertIn("r 105 x shorter\n", fragments)
+        self.assertEqual(case["screen_fragments"], ["5", "3"])
+        self.assertIn("LIB/RT_F_HYPOT.OBJ", case["expected_alink_loads"])
+        self.assertIn("LIB/RT_F_MIN.OBJ", case["expected_alink_loads"])
+        self.assertNotIn("LIB/RT_F_CLAMP.OBJ", case["expected_alink_loads"])
+        self.assertTrue(case["expected_tail_from_compiled_object"])
+
     def test_full_range_multiply_probe_forces_staged_root_object_path(self) -> None:
         sys.path.insert(0, str(self.workspace / "udos" / "tools"))
         import run_action_alink_prg_probe as probe

@@ -21,6 +21,8 @@ NRP_HELPER_TERNARY = 5
 NRP_STACK_MAX = 8
 NRP_TEMP_MAX = 16
 NRP_DEBUG_MAX = 64
+NRP_FUNCTION_MAX = 2
+NRP_PROC_MAX = NRP_FUNCTION_MAX+1
 NRP_HELPER_COUNT = 20
 
 native_real_postfix_detect:
@@ -32,8 +34,13 @@ native_real_postfix_detect:
     cmp #$01
     beq native_real_postfix_detect_main
     cmp #$02
-    jeq native_real_postfix_detect_function
-    jmp native_real_postfix_detect_no
+    jcc native_real_postfix_detect_no
+    cmp #NRP_FUNCTION_MAX+2
+    jcs native_real_postfix_detect_no
+    sec
+    sbc #$01
+    sta nrp_function_count
+    jmp native_real_postfix_detect_function
 
 native_real_postfix_detect_main:
     lda #ACTC_OVERLAY_CTX_MODULE_NAME_PTR_LO
@@ -77,14 +84,24 @@ native_real_postfix_detect_function:
     jsr load_context_ptr_to_scan_zp
     jsr scan_zp_is_main_symbol
     jcc native_real_postfix_detect_no
-    ldx #$01
+    ldx nrp_function_count
     lda #ACTC_OVERLAY_CTX_SET_EXPORT_PTR_FN_LO
     jsr call_indexed_context_function
     jsr load_resident_export_ptr_to_scan_zp
     jsr scan_zp_is_main_symbol
     jcc native_real_postfix_detect_no
 
-    ldx #$00
+    lda #ACTC_OVERLAY_CTX_MODULE_VAR_COUNT_PTR_LO
+    jsr load_count_from_context
+    sta nrp_module_var_count
+    sta nrp_expected_var_index
+    lda #$00
+    sta nrp_function_index
+native_real_postfix_detect_function_meta_loop:
+    lda nrp_function_index
+    cmp nrp_function_count
+    beq native_real_postfix_detect_main_meta
+    tax
     lda #ACTC_OVERLAY_CTX_LOAD_PROC_META_FN_LO
     jsr call_indexed_context_function
     lda #ACTC_OVERLAY_CTX_PROC_META_WINDOW_PTR_LO
@@ -95,12 +112,25 @@ native_real_postfix_detect_function:
     jne native_real_postfix_detect_no
     iny
     lda (ACTC_OVERLAY_WORK_ZP),y
-    sta nrp_param_base
+    cmp nrp_expected_var_index
+    jne native_real_postfix_detect_no
+    ldx nrp_function_index
+    sta nrp_function_param_base,x
     iny
     lda (ACTC_OVERLAY_WORK_ZP),y
-    sta nrp_function_local_count
+    sta nrp_function_local_count,x
+    clc
+    adc #$02
+    jcs native_real_postfix_detect_no
+    clc
+    adc nrp_expected_var_index
+    jcs native_real_postfix_detect_no
+    sta nrp_expected_var_index
+    inc nrp_function_index
+    jmp native_real_postfix_detect_function_meta_loop
 
-    ldx #$01
+native_real_postfix_detect_main_meta:
+    ldx nrp_function_count
     lda #ACTC_OVERLAY_CTX_LOAD_PROC_META_FN_LO
     jsr call_indexed_context_function
     lda #ACTC_OVERLAY_CTX_PROC_META_WINDOW_PTR_LO
@@ -112,21 +142,9 @@ native_real_postfix_detect_function:
     lda (ACTC_OVERLAY_WORK_ZP),y
     jne native_real_postfix_detect_no
 
-    lda #ACTC_OVERLAY_CTX_MODULE_VAR_COUNT_PTR_LO
-    jsr load_count_from_context
-    sta nrp_module_var_count
-    cmp nrp_param_base
-    jne native_real_postfix_detect_no
-    clc
-    adc #$02
-    jcs native_real_postfix_detect_no
-    clc
-    adc nrp_function_local_count
-    jcs native_real_postfix_detect_no
-    sta nrp_saved_index
     lda #ACTC_OVERLAY_CTX_VAR_COUNT_PTR_LO
     jsr load_count_from_context
-    cmp nrp_saved_index
+    cmp nrp_expected_var_index
     jne native_real_postfix_detect_no
     cmp #NRP_TEMP_MAX+1
     jcs native_real_postfix_detect_no
@@ -178,7 +196,7 @@ native_real_postfix_detect_var_loop:
     jmp native_real_postfix_analyze_done
 
 native_real_postfix_analyze_function:
-    lda #$01
+    lda nrp_function_count
     sta nrp_proc_index
     lda #$00
     sta nrp_code_start_lo
@@ -188,41 +206,60 @@ native_real_postfix_analyze_function:
     jsr nrp_parse_body
     jcc native_real_postfix_detect_no
     lda #ACTC_OVERLAY_CTX_BODY_DEBUG_COUNT_PTR_LO
-    ldx #$01
+    ldx nrp_proc_index
     jsr load_indexed_byte_from_context_ptr
     cmp nrp_debug_count
     jne native_real_postfix_detect_no
     lda nrp_code_lo
     sta nrp_main_code_size_lo
-    sta nrp_code_start_lo
+    sta nrp_code_size_lo
     lda nrp_code_hi
     sta nrp_main_code_size_hi
-    sta nrp_code_start_hi
+    sta nrp_code_size_hi
     lda nrp_temp_count
     sta nrp_main_temp_count
-    sta nrp_temp_base
-
+    sta nrp_temp_total
     lda #$00
+    sta nrp_function_index
+native_real_postfix_analyze_function_loop:
+    lda nrp_function_index
+    cmp nrp_function_count
+    beq native_real_postfix_analyze_done
     sta nrp_proc_index
+    tax
+    lda nrp_code_size_lo
+    sta nrp_code_start_lo
+    sta nrp_function_code_start_lo,x
+    lda nrp_code_size_hi
+    sta nrp_code_start_hi
+    sta nrp_function_code_start_hi,x
+    lda nrp_temp_total
+    sta nrp_temp_base
+    sta nrp_function_temp_base,x
+    lda nrp_function_param_base,x
+    sta nrp_param_base
     lda #NRP_MODE_ANALYZE
     jsr nrp_parse_body
     jcc native_real_postfix_detect_no
     lda #ACTC_OVERLAY_CTX_BODY_DEBUG_COUNT_PTR_LO
-    ldx #$00
+    ldx nrp_proc_index
     jsr load_indexed_byte_from_context_ptr
     cmp nrp_debug_count
     jne native_real_postfix_detect_no
+    ldx nrp_function_index
     lda nrp_code_lo
     sta nrp_code_size_lo
     sec
-    sbc nrp_main_code_size_lo
-    sta nrp_function_code_size_lo
+    sbc nrp_code_start_lo
+    sta nrp_function_code_size_lo,x
     lda nrp_code_hi
     sta nrp_code_size_hi
-    sbc nrp_main_code_size_hi
-    sta nrp_function_code_size_hi
+    sbc nrp_code_start_hi
+    sta nrp_function_code_size_hi,x
     lda nrp_temp_count
     sta nrp_temp_total
+    inc nrp_function_index
+    jmp native_real_postfix_analyze_function_loop
 
 native_real_postfix_analyze_done:
     lda nrp_nested
@@ -294,7 +331,8 @@ nrp_parse_body:
     cmp #NRP_PROGRAM_REAL_FUNCTION
     bne :+
     lda nrp_proc_index
-    bne :+
+    cmp nrp_function_count
+    bcs :+
     lda #$02
     sta nrp_param_binds_left
 :
@@ -495,12 +533,12 @@ nrp_parse_local_call:
     cmp #NRP_PROGRAM_REAL_FUNCTION
     jne nrp_parse_body_fail
     lda nrp_proc_index
-    cmp #$01
+    cmp nrp_function_count
     jne nrp_parse_body_fail
     jsr nrp_read_selector
     jcc nrp_parse_body_fail
-    cmp #$00
-    jne nrp_parse_body_fail
+    cmp nrp_function_count
+    jcs nrp_parse_body_fail
     sta nrp_call_export_index
     jsr nrp_pop_real_to_operand2
     jcc nrp_parse_body_fail
@@ -552,7 +590,8 @@ nrp_parse_return:
     cmp #NRP_PROGRAM_REAL_FUNCTION
     bne nrp_parse_main_return
     lda nrp_proc_index
-    bne nrp_parse_main_return
+    cmp nrp_function_count
+    bcs nrp_parse_main_return
     lda nrp_param_binds_left
     jne nrp_parse_body_fail
     lda nrp_stack_depth
@@ -603,12 +642,7 @@ nrp_record_debug_offset:
     lda nrp_mode
     bne nrp_record_debug_offset_next
     lda nrp_proc_index
-    beq :+
-    txa
-    clc
-    adc #NRP_DEBUG_MAX
-    tax
-:
+    jsr nrp_offset_debug_x_by_proc_a
     lda nrp_code_lo
     sta nrp_debug_lo,x
     lda nrp_code_hi
@@ -1165,15 +1199,23 @@ nrp_advance_code:
 native_real_postfix_emit_debug_offset:
     ldx body_debug_index_data
     lda entry_index_data
-    beq :+
-    txa
-    clc
-    adc #NRP_DEBUG_MAX
-    tax
-:
+    jsr nrp_offset_debug_x_by_proc_a
     lda nrp_debug_lo,x
     ldy nrp_debug_hi,x
     jmp emit_word_decimal
+
+nrp_offset_debug_x_by_proc_a:
+    tay
+    beq nrp_offset_debug_x_done
+    txa
+nrp_offset_debug_x_loop:
+    clc
+    adc #NRP_DEBUG_MAX
+    dey
+    bne nrp_offset_debug_x_loop
+    tax
+nrp_offset_debug_x_done:
+    rts
 
 native_real_postfix_emit_export_list:
     lda nrp_program_mode
@@ -1183,10 +1225,18 @@ native_real_postfix_emit_export_list:
     jsr nrp_emit_root_export
     jmp native_real_postfix_emit_data_exports
 native_real_postfix_emit_function_exports:
-    ldx #$01
+    ldx nrp_function_count
     jsr nrp_emit_root_export
-    ldx #$00
+    lda #$00
+    sta nrp_function_index
+native_real_postfix_emit_function_export_loop:
+    lda nrp_function_index
+    cmp nrp_function_count
+    beq native_real_postfix_emit_data_exports
+    tax
     jsr nrp_emit_function_export
+    inc nrp_function_index
+    jmp native_real_postfix_emit_function_export_loop
 native_real_postfix_emit_data_exports:
     lda nrp_code_size_lo
     sta nrp_export_offset_lo
@@ -1236,13 +1286,15 @@ nrp_emit_function_export:
     jsr emit_lower_scan_zp_string
     lda #' '
     jsr emit_char_overlay
-    lda nrp_main_code_size_lo
-    ldy nrp_main_code_size_hi
+    ldx nrp_saved_index
+    lda nrp_function_code_start_lo,x
+    ldy nrp_function_code_start_hi,x
     jsr emit_word_decimal
     lda #' '
     jsr emit_char_overlay
-    lda nrp_function_code_size_lo
-    ldy nrp_function_code_size_hi
+    ldx nrp_saved_index
+    lda nrp_function_code_size_lo,x
+    ldy nrp_function_code_size_hi,x
     jsr emit_word_decimal
     jmp emit_newline
 
@@ -1327,7 +1379,15 @@ native_real_postfix_emit_body_marker_list:
     lda nrp_program_mode
     cmp #NRP_PROGRAM_REAL_FUNCTION
     bne native_real_postfix_emit_body_data
+    lda #$00
+    sta nrp_function_index
+native_real_postfix_emit_function_body_marker_loop:
+    lda nrp_function_index
+    cmp nrp_function_count
+    beq native_real_postfix_emit_body_data
     jsr nrp_emit_root_body_marker
+    inc nrp_function_index
+    jmp native_real_postfix_emit_function_body_marker_loop
 native_real_postfix_emit_body_data:
     lda nrp_data_slots
     clc
@@ -1408,7 +1468,7 @@ nrp_parse_program:
     lda nrp_program_parse_mode
     jmp nrp_parse_body
 nrp_parse_program_function:
-    lda #$01
+    lda nrp_function_count
     sta nrp_proc_index
     lda #$00
     sta nrp_code_start_lo
@@ -1418,15 +1478,29 @@ nrp_parse_program_function:
     jsr nrp_parse_body
     bcc nrp_parse_program_fail
     lda #$00
+    sta nrp_function_index
+nrp_parse_program_function_loop:
+    lda nrp_function_index
+    cmp nrp_function_count
+    beq nrp_parse_program_done
     sta nrp_proc_index
-    lda nrp_main_code_size_lo
+    tax
+    lda nrp_function_code_start_lo,x
     sta nrp_code_start_lo
-    lda nrp_main_code_size_hi
+    lda nrp_function_code_start_hi,x
     sta nrp_code_start_hi
-    lda nrp_main_temp_count
+    lda nrp_function_temp_base,x
     sta nrp_temp_base
+    lda nrp_function_param_base,x
+    sta nrp_param_base
     lda nrp_program_parse_mode
-    jmp nrp_parse_body
+    jsr nrp_parse_body
+    bcc nrp_parse_program_fail
+    inc nrp_function_index
+    jmp nrp_parse_program_function_loop
+nrp_parse_program_done:
+    sec
+    rts
 nrp_parse_program_fail:
     clc
     rts
@@ -1573,6 +1647,8 @@ nrp_active: .res 1
 nrp_mode: .res 1
 nrp_program_mode: .res 1
 nrp_program_parse_mode: .res 1
+nrp_function_count: .res 1
+nrp_function_index: .res 1
 nrp_proc_index: .res 1
 nrp_body_pos: .res 1
 nrp_opcode: .res 1
@@ -1592,11 +1668,13 @@ nrp_pending_value: .res 1
 nrp_nested: .res 1
 nrp_saw_return: .res 1
 nrp_param_base: .res 1
-nrp_function_local_count: .res 1
+nrp_expected_var_index: .res 1
+nrp_function_param_base: .res NRP_FUNCTION_MAX
+nrp_function_local_count: .res NRP_FUNCTION_MAX
 nrp_param_binds_left: .res 1
 nrp_debug_count: .res 1
-nrp_debug_lo: .res NRP_DEBUG_MAX*2
-nrp_debug_hi: .res NRP_DEBUG_MAX*2
+nrp_debug_lo: .res NRP_DEBUG_MAX*NRP_PROC_MAX
+nrp_debug_hi: .res NRP_DEBUG_MAX*NRP_PROC_MAX
 nrp_code_lo: .res 1
 nrp_code_hi: .res 1
 nrp_code_start_lo: .res 1
@@ -1605,8 +1683,11 @@ nrp_code_size_lo: .res 1
 nrp_code_size_hi: .res 1
 nrp_main_code_size_lo: .res 1
 nrp_main_code_size_hi: .res 1
-nrp_function_code_size_lo: .res 1
-nrp_function_code_size_hi: .res 1
+nrp_function_code_start_lo: .res NRP_FUNCTION_MAX
+nrp_function_code_start_hi: .res NRP_FUNCTION_MAX
+nrp_function_code_size_lo: .res NRP_FUNCTION_MAX
+nrp_function_code_size_hi: .res NRP_FUNCTION_MAX
+nrp_function_temp_base: .res NRP_FUNCTION_MAX
 nrp_root_size_lo: .res 1
 nrp_root_size_hi: .res 1
 nrp_operand1_kind: .res 1

@@ -1666,3 +1666,23 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   contains 138 hardware-free tests. This is a compiler-packaging change only;
   the portable source contract, OBJ1 semantics, ALINK closure, and direct-PRG
   runtime model are unchanged.
+
+## 2026-07-21 Native Two-Function REAL Module
+
+- Generalized pass L from one bounded REAL callee to up to two independent
+  nonrecursive two-REAL-parameter functions called directly by `MAIN`. Each
+  function receives disjoint static parameter/local storage and its own DBG1
+  procedure bank; function-to-function calls and recursion remain rejected.
+- Added the shared `real_two_function_nested_postfix.act` fixture. Native ACTC
+  emits `length` and `shorter` exports plus both selector relocations, and ALINK
+  continues to perform ordinary closure, placement, and relocation only.
+- The rebuilt native direct PRG prints `5` and `3`; VICE verifies binary32 5.0
+  and 3.0 in both result cells plus 3.0 and 4.0 in the two function locals.
+  Idun ACTC now lowers direct `FMin`/`FMax` expressions to `RT_F_MIN` and
+  `RT_F_MAX`, folds constants with the same NaN/signed-zero operand selection,
+  and executes the same fixture with identical result cells.
+- Current inventories are 1,347 broad direct-PRG and 179 non-runtime
+  source-backed shapes; the compiled-runtime oracle remains 298. Pass L is
+  5,636 bytes with 2,556 bytes free. Function-to-function calls, reentrant
+  local frames, control flow, mixed types, arbitrary signatures, and recursive
+  frames remain pending.

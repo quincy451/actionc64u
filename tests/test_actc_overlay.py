@@ -8803,6 +8803,39 @@ class TestActcOverlay(unittest.TestCase):
             obj,
         )
 
+    def test_two_real_functions_use_independent_static_storage(self) -> None:
+        source = (
+            self.root / "tests" / "parity" / "real_two_function_nested_postfix.act"
+        ).read_text(encoding="ascii").replace("\n", "\r")
+        obj = self.compile_overlay_object(
+            source,
+            "actc-overlay-two-nested-real-functions",
+            extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [21])
+        self.assertIn("q 0 0 6 11\nq 1 0 10 11\nq 2 0 14 6\n", obj)
+        self.assertIn("V l r 0 6 0 7 6\n", obj)
+        self.assertIn("V l r 1 9 0 11 6\n", obj)
+        self.assertIn(
+            "x main 0 496\n"
+            "x length 170 123\n"
+            "x shorter 293 123\n"
+            "x __idata 416 40\n",
+            obj,
+        )
+        self.assertIn("b u0u1u2u3u4M\n" * 3, obj)
+        self.assertIn("r 65 x length\n", obj)
+        self.assertIn("r 105 x shorter\n", obj)
+        self.assertIn("r 186 x __rv5\nr 202 x __rv4\n", obj)
+        self.assertIn("r 309 x __rv8\nr 325 x __rv7\n", obj)
+        self.assertIn(
+            "u rt_f_abs\nu rt_f_hypot\nu rt_f_min\n"
+            "u rt_i_to_f\nu rt_print_f\n",
+            obj,
+        )
+        self.assertNotIn("u rt_f_clamp\n", obj)
+
     def test_native_real_emitter_owns_math1_clamp_call(self) -> None:
         obj = self.compile_overlay_object(
             "MODULE MAIN\r"

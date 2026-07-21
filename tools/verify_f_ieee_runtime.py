@@ -17,16 +17,19 @@ from generate_math_runtime import (
     ceil_module,
     compare_module,
     clamp_module,
+    divide_module,
     floor_module,
     frac_module,
     link_runtime_builders,
     minmax_module,
+    mod_module,
     multiply_module,
     round_module,
     sign_module,
     special_value_module,
     trunc_module,
 )
+from verify_f_div_runtime import expected_division
 
 
 LOAD_ADDR = 0x2000
@@ -78,15 +81,17 @@ int main(int argc, char **argv)
     uint16_t destination;
     int comparison;
     int clamp;
-    int alias;
+    int alias_left;
+    int alias_right;
 
     if (argc != 3) {
         return 2;
     }
     comparison = strcmp(argv[2], "compare") == 0;
     clamp = strcmp(argv[2], "clamp") == 0;
-    alias = strcmp(argv[2], "alias") == 0;
-    destination = alias ? left_addr : result_addr;
+    alias_left = strcmp(argv[2], "alias") == 0;
+    alias_right = strcmp(argv[2], "alias-right") == 0;
+    destination = alias_left ? left_addr : alias_right ? right_addr : result_addr;
     runtime = fopen(argv[1], "rb");
     if (!runtime) {
         return 3;
@@ -117,7 +122,7 @@ int main(int argc, char **argv)
         put32(memory, left_addr, left);
         put32(memory, right_addr, right);
         put32(memory, upper_addr, upper);
-        if (!alias) {
+        if (!alias_left && !alias_right) {
             put32(memory, result_addr, 0xccccccccu);
         }
         memory[0x02] = left_addr & 0xff;
@@ -340,6 +345,19 @@ def expected_frac(value: int) -> int:
     return expected_addsub(value, expected_trunc(value), True)
 
 
+def expected_mod(value: int, divisor: int) -> int:
+    if is_nan(value) or is_nan(divisor):
+        return CANONICAL_QNAN
+    if divisor & 0x7FFFFFFF == 0 or is_infinity(value):
+        return CANONICAL_QNAN
+    if is_infinity(divisor):
+        return value
+    quotient = expected_division(value, divisor)
+    truncated = expected_trunc(quotient)
+    product = expected_multiply(truncated, divisor)
+    return expected_addsub(value, product, True)
+
+
 def expected_clamp(value: int, lower: int, upper: int) -> int:
     if is_nan(value) or is_nan(lower) or is_nan(upper):
         return CANONICAL_QNAN
@@ -381,6 +399,16 @@ def runtime_builders(operation: str):
         return [
             frac_module(),
             trunc_module(),
+            addsub_wrapper_module("rt_f_sub", True),
+            addsub_core_module(),
+            special,
+        ]
+    if operation == "mod":
+        return [
+            mod_module(),
+            divide_module(),
+            trunc_module(),
+            multiply_module(),
             addsub_wrapper_module("rt_f_sub", True),
             addsub_core_module(),
             special,
@@ -487,7 +515,7 @@ def verification_clamp_cases(
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/min/max/clamp code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/min/max/clamp code against exact IEEE "
             "binary32"
         )
     )
@@ -541,6 +569,7 @@ def main() -> int:
             "ceil",
             "round",
             "frac",
+            "mod",
             "min",
             "max",
             "clamp",
@@ -595,6 +624,8 @@ def main() -> int:
                     expected = expected_round(left)
                 elif operation == "frac":
                     expected = expected_frac(left)
+                elif operation == "mod":
+                    expected = expected_mod(left, right)
                 elif operation == "clamp":
                     expected = expected_clamp(left, right, case[2])
                 else:
@@ -611,7 +642,7 @@ def main() -> int:
                 f"rt_f_{operation} {len(image)} linked bytes: "
                 f"{len(operation_cases)} exact edge/random cases passed"
             )
-            if operation in ("sign", "trunc", "floor", "ceil", "round", "frac"):
+            if operation in ("sign", "trunc", "floor", "ceil", "round", "frac", "mod"):
                 alias_completed = subprocess.run(
                     [str(harness_path), str(runtime_path), "alias"],
                     input="".join(
@@ -625,7 +656,7 @@ def main() -> int:
                 alias_results = [
                     int(line, 16) for line in alias_completed.stdout.splitlines()
                 ]
-                for index, ((left, _), actual) in enumerate(
+                for index, ((left, right), actual) in enumerate(
                     zip(operation_cases, alias_results)
                 ):
                     expected = (
@@ -640,6 +671,8 @@ def main() -> int:
                         else expected_round(left)
                         if operation == "round"
                         else expected_frac(left)
+                        if operation == "frac"
+                        else expected_mod(left, right)
                     )
                     if actual != expected:
                         raise SystemExit(
@@ -649,6 +682,35 @@ def main() -> int:
                 print(
                     f"rt_f_{operation} {len(alias_results)} in-place alias cases passed"
                 )
+                if operation == "mod":
+                    alias_right_completed = subprocess.run(
+                        [str(harness_path), str(runtime_path), "alias-right"],
+                        input="".join(
+                            f"{left:08x} {right:08x}\n"
+                            for left, right in operation_cases
+                        ),
+                        text=True,
+                        capture_output=True,
+                        check=True,
+                    )
+                    alias_right_results = [
+                        int(line, 16)
+                        for line in alias_right_completed.stdout.splitlines()
+                    ]
+                    for index, ((left, right), actual) in enumerate(
+                        zip(operation_cases, alias_right_results)
+                    ):
+                        expected = expected_mod(left, right)
+                        if actual != expected:
+                            raise SystemExit(
+                                f"mod right-alias case {index}: "
+                                f"{left:08x} {right:08x}: got {actual:08x}, "
+                                f"expected {expected:08x}"
+                            )
+                    print(
+                        "rt_f_mod "
+                        f"{len(alias_right_results)} right-operand alias cases passed"
+                    )
     return 0
 
 

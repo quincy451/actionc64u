@@ -1535,6 +1535,25 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
 - Exact host verification, 116-vector Idun VICE execution, and the focused
   native direct-PRG case prove signed finite fractions, integral cancellation,
   exceptional-value policy, full dependency closure, and sibling pruning.
-- Current inventories are 1,339 broad and 296 compiled-runtime cases. Pass 6
-  is 8,085 bytes with 107 bytes free under its 96-byte reserve. Native MATH1
-  now exposes thirteen link-selected calls and lacks 30 public routines.
+- At that checkpoint inventories were 1,339 broad and 296 compiled-runtime
+  cases. Pass 6 was 8,085 bytes with 107 bytes free under its 96-byte reserve.
+  Native MATH1 exposed thirteen link-selected calls and lacked 30 public
+  routines.
+
+## 2026-07-20 Native MATH1 Remainder
+
+- Added `RT_F_MOD.OBJ`, a 245-byte alias-safe binary32 helper that imports
+  division, truncation, multiplication, and subtraction and computes
+  `value-FTrunc(value/divisor)*divisor`.
+- Zero divisors, NaN operands, and infinite dividends return canonical quiet
+  NaN. A finite dividend with either infinity as divisor is returned exactly.
+- Native ACTC recognizes `FMod(A,B)` in assignment, direct-print, and
+  REAL-condition positions. Idun ACTC constant-folds constant calls and emits
+  the same shared OBJ only for dynamic calls.
+- Exact host verification covers 332 vectors in each of the ordinary,
+  left-alias, and right-alias modes. The
+  116-pair Idun VICE fixture and focused native direct PRG prove full semantics,
+  dependency closure, and sibling pruning.
+- Current inventories are 1,340 broad and 297 compiled-runtime cases. Pass 6
+  is 8,094 bytes with 98 bytes free under its 96-byte reserve. Native MATH1 now
+  exposes fourteen link-selected calls and lacks 29 public routines.

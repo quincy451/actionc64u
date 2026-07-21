@@ -93,7 +93,7 @@ to one fixed slot order.
 Pass A's simpler bounded two-parameter function also captures its named return
 independently and can return either parameter through the portable A/X pointer
 ABI.
-Bounded named-REAL `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMin`, `FMax`, and `FClamp` calls now have
+Bounded named-REAL `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FMin`, `FMax`, and `FClamp` calls now have
 complete portable call semantics through independently link-selected helpers.
 The pass-K clamp root captures initializer, argument, destination, and print
 storage rather than assuming declaration order, but it remains a fixed
@@ -128,7 +128,7 @@ Treat `vice-action-actc-alink-launch-object-emission-matrix` as the all
 source-backed ACTC object-emission launch matrix; it currently enumerates 173
 non-runtime, non-object-code source shapes.
 Treat `vice-action-alink-prg-matrix` as the broad direct-PRG object/link matrix;
-it currently enumerates 1339 shape probes.
+it currently enumerates 1340 shape probes.
 Treat `vice-action-alink-prg-object-code-matrices` as the focused direct
 object-code graph, behavior, and rejection gate.
 Treat `vice-action-actc-alink-launch-runtime-matrices` as the focused

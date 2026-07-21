@@ -8,6 +8,12 @@ ACTC_KEEP_BODY_RESIDENT_FALLBACK = 0
 LOOP_MAX = 16
 .endif
 
+REAL_FUNCTION_FLAG = $80
+REAL_FUNCTION_FMIN = REAL_FUNCTION_FLAG + '<'
+REAL_FUNCTION_FMAX = REAL_FUNCTION_FLAG + '>'
+REAL_FUNCTION_FMOD = REAL_FUNCTION_FLAG + 'm'
+REAL_FUNCTION_FCLAMP = REAL_FUNCTION_FLAG + 'k'
+
 .export actc_overlay_header
 .export actc_overlay_entry
 .export actc_overlay_end
@@ -1627,7 +1633,7 @@ emit_runtime_real_binary_value_local_or_fail:
     lda #ACTC_OVERLAY_CTX_SAVE_SOURCE_MARK_FN_LO
     jsr call_context_function
     lda #$00
-    sta real_binary_function_local
+    sta real_operator_local
     jsr call_copy_symbol_from_scan_y_context
     bcc :+
     jmp emit_runtime_real_binary_value_local_or_fail_restore
@@ -1641,23 +1647,26 @@ emit_runtime_real_binary_value_local_or_fail:
     ldy #>pattern_fmax
     jsr symbol_buffer_matches_local_const
     bcc emit_runtime_real_binary_value_local_fmax
+    lda #<pattern_fmod
+    ldy #>pattern_fmod
+    jsr symbol_buffer_matches_local_const
+    bcc emit_runtime_real_binary_value_local_fmod
     lda #<pattern_fclamp
     ldy #>pattern_fclamp
     jsr symbol_buffer_matches_local_const
     bcs emit_runtime_real_binary_value_local_first_symbol
-    lda #'k'
-    sta real_operator_local
-    inc real_binary_function_local
-    inc real_binary_function_local
-    bne emit_runtime_real_binary_value_local_consume_open
+    lda #REAL_FUNCTION_FCLAMP
+    bne emit_runtime_real_binary_value_local_function
+emit_runtime_real_binary_value_local_fmod:
+    lda #REAL_FUNCTION_FMOD
+    bne emit_runtime_real_binary_value_local_function
 emit_runtime_real_binary_value_local_fmax:
-    lda #'>'
+    lda #REAL_FUNCTION_FMAX
     bne emit_runtime_real_binary_value_local_function
 emit_runtime_real_binary_value_local_fmin:
-    lda #'<'
+    lda #REAL_FUNCTION_FMIN
 emit_runtime_real_binary_value_local_function:
     sta real_operator_local
-    inc real_binary_function_local
 emit_runtime_real_binary_value_local_consume_open:
     ldy symbol_end_y_local
     jsr call_skip_inline_spaces_context
@@ -1685,8 +1694,8 @@ emit_runtime_real_binary_value_local_first_symbol:
 :
     ldy symbol_end_y_local
     jsr call_skip_inline_spaces_context
-    lda real_binary_function_local
-    beq emit_runtime_real_binary_value_local_infix_operator
+    lda real_operator_local
+    bpl emit_runtime_real_binary_value_local_infix_operator
     lda #','
     jsr consume_scan_char_local
     bcc :+
@@ -1725,9 +1734,9 @@ emit_runtime_real_binary_value_local_after_operator:
     bcs emit_runtime_real_binary_value_local_fail_near
     ldy symbol_end_y_local
     jsr call_skip_inline_spaces_context
-    lda real_binary_function_local
-    beq emit_runtime_real_binary_value_local_args_done
-    cmp #$02
+    lda real_operator_local
+    bpl emit_runtime_real_binary_value_local_args_done
+    cmp #REAL_FUNCTION_FCLAMP
     bne emit_runtime_real_binary_value_local_consume_close
     lda #','
     jsr consume_scan_char_local
@@ -1767,8 +1776,8 @@ emit_runtime_real_binary_value_local_args_done:
     ldx real_rhs_index_local
     lda #'U'
     jsr call_loaded_target_with_a
-    lda real_binary_function_local
-    cmp #$02
+    lda real_operator_local
+    cmp #REAL_FUNCTION_FCLAMP
     bne :+
     ldx real_third_index_local
     lda #'L'
@@ -1780,6 +1789,7 @@ emit_runtime_real_binary_value_local_args_done:
     lda #ACTC_OVERLAY_CTX_FIND_OR_STORE_REAL_OPERATOR_EXTERNAL_FN_LO
     jsr load_context_function_ptr
     lda real_operator_local
+    and #($FF-REAL_FUNCTION_FLAG)
     jsr call_loaded_target_with_a
     bcs emit_runtime_real_binary_value_local_or_fail_restore
     stx real_rhs_index_local
@@ -2866,6 +2876,8 @@ pattern_fmin:
     .asciiz "FMIN"
 pattern_fmax:
     .asciiz "FMAX"
+pattern_fmod:
+    .asciiz "FMOD"
 real_value_pattern_table_local:
     .word pattern_real_decl
     .word pattern_fabs
@@ -2878,6 +2890,7 @@ real_value_pattern_table_local:
     .word pattern_ffrac
     .word pattern_fmin
     .word pattern_fmax
+    .word pattern_fmod
 real_value_pattern_table_local_end:
 real_unary_pattern_table_local:
     .word pattern_fabs
@@ -2992,8 +3005,6 @@ real_rhs_index_local:
 real_third_index_local:
     .byte $00
 real_operator_local:
-    .byte $00
-real_binary_function_local:
     .byte $00
 runtime_print_op_local:
     .byte $00

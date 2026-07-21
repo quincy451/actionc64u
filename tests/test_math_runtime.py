@@ -44,6 +44,7 @@ class TestMathRuntime(unittest.TestCase):
             "ceil",
             "round",
             "frac",
+            "mod",
             "min",
             "max",
             "clamp",

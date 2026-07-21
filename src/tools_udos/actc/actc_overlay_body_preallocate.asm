@@ -581,6 +581,11 @@ preallocate_real_binary_function_external_from_scan_y_overlay_try_fmax:
     jsr preallocate_consume_keyword_open_from_scan_y_overlay
     bcc preallocate_real_binary_function_external_from_scan_y_overlay_fmax
     ldy keyword_scan_y_local
+    lda #<pattern_fmod
+    ldy #>pattern_fmod
+    jsr preallocate_consume_keyword_open_from_scan_y_overlay
+    bcc preallocate_real_binary_function_external_from_scan_y_overlay_fmod
+    ldy keyword_scan_y_local
     lda #<pattern_fclamp
     ldy #>pattern_fclamp
     jsr preallocate_consume_keyword_open_from_scan_y_overlay
@@ -592,6 +597,9 @@ preallocate_real_binary_function_external_from_scan_y_overlay_try_fmax:
     bne preallocate_real_binary_function_external_from_scan_y_overlay_operator
 preallocate_real_binary_function_external_from_scan_y_overlay_fmax:
     lda #'>'
+    bne preallocate_real_binary_function_external_from_scan_y_overlay_operator
+preallocate_real_binary_function_external_from_scan_y_overlay_fmod:
+    lda #'m'
 preallocate_real_binary_function_external_from_scan_y_overlay_operator:
     sta real_operator_local
     lda #ACTC_OVERLAY_CTX_COPY_SYMBOL_FROM_SCAN_Y_FN_LO
@@ -1896,7 +1904,9 @@ preallocate_declared_symbol_is_reserved_call_keyword_overlay:
     lda #<pattern_and
     ldy #>pattern_and
     jsr symbol_buffer_matches_local_const
-    bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
+    bcs :+
+    jmp preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
+:
     lda #<pattern_or
     ldy #>pattern_or
     jsr symbol_buffer_matches_local_const
@@ -1947,6 +1957,10 @@ preallocate_declared_symbol_is_reserved_call_keyword_overlay:
     bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
     lda #<pattern_ffrac
     ldy #>pattern_ffrac
+    jsr symbol_buffer_matches_local_const
+    bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
+    lda #<pattern_fmod
+    ldy #>pattern_fmod
     jsr symbol_buffer_matches_local_const
     bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
     sec
@@ -2185,6 +2199,8 @@ pattern_fmin:
     .asciiz "FMIN"
 pattern_fmax:
     .asciiz "FMAX"
+pattern_fmod:
+    .asciiz "FMOD"
 pattern_fclamp:
     .asciiz "FCLAMP"
 pattern_and:

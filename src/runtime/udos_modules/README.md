@@ -99,6 +99,11 @@ Current status:
   `rt_f_sub.obj`. It implements `value-FTrunc(value)`, is safe when source and
   destination alias, and inherits the shared IEEE subtraction policy for
   exceptional values.
+- `rt_f_mod.obj` reads REAL32 value and divisor pointers through `$02/$03` and
+  `$04/$05`, writes through `$06/$07`, and computes
+  `value-FTrunc(value/divisor)*divisor`. It preserves both operands privately,
+  so the destination may alias either input, and imports only the divide,
+  truncation, multiply, and subtraction closure when referenced.
 - `rt_f_sqrt.obj` reads a REAL32 value through zero page `$02/$03`, writes the
   result through `$06/$07`, and handles every non-negative normal,
   subnormal, and signed-zero value using an exact 48-bit scaled radicand and

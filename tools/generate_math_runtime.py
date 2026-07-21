@@ -1052,6 +1052,110 @@ def frac_module() -> ObjectBuilder:
     return b
 
 
+def mod_module() -> ObjectBuilder:
+    """Build value - trunc(value / divisor) * divisor."""
+    b = ObjectBuilder("rt_f_mod")
+
+    def load_local_pointer(low: str, high: str, destination: int) -> None:
+        b.local_reference(0xAD, low)
+        b.zero_page(0x85, destination)
+        b.local_reference(0xAD, high)
+        b.zero_page(0x85, destination + 1)
+
+    def emit_pointer(low: str, high: str, target: str) -> None:
+        b.label(low)
+        offset = len(b.code)
+        b.emit(0x00)
+        b.label(high)
+        b.emit(0x00)
+        b.local_relocations.append((offset, target))
+
+    # Every dependency uses overlapping zero-page work areas. Preserve both
+    # operands before the first call so either one may alias the destination.
+    b.zero_page(0xA5, 0x06)
+    b.local_reference(0x8D, "dp")
+    b.zero_page(0xA5, 0x07)
+    b.local_reference(0x8D, "dph")
+    b.immediate(0xA0, 0x00)
+    b.label("save")
+    b.emit(0xB1, 0x02)
+    b.local_reference(0x99, "value")
+    b.emit(0xB1, 0x04)
+    b.local_reference(0x99, "divisor")
+    b.emit(0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "save")
+
+    # The portable MATH1 contract returns a finite value unchanged when the
+    # divisor is either infinity. NaN divisors and non-finite values continue
+    # through the arithmetic closure, which canonicalizes them to quiet NaN.
+    b.local_reference(0xAD, "divisor_3")
+    b.immediate(0x29, 0x7F)
+    b.immediate(0xC9, 0x7F)
+    b.branch(0xD0, "calculate")
+    b.local_reference(0xAD, "divisor_2")
+    b.immediate(0xC9, 0x80)
+    b.branch(0xD0, "calculate")
+    b.local_reference(0xAD, "divisor_1")
+    b.local_reference(0x0D, "divisor")
+    b.branch(0xD0, "calculate")
+    b.local_reference(0xAD, "value_3")
+    b.immediate(0x29, 0x7F)
+    b.immediate(0xC9, 0x7F)
+    b.branch(0xD0, "return_value")
+    b.local_reference(0xAD, "value_2")
+    b.immediate(0x29, 0x80)
+    b.branch(0xD0, "calculate")
+    b.label("return_value")
+    load_local_pointer("dp", "dph", 0x06)
+    b.immediate(0xA0, 0x00)
+    b.label("return_value_loop")
+    b.local_reference(0xB9, "value")
+    b.emit(0x91, 0x06)
+    b.emit(0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "return_value_loop")
+    b.emit(0x60)
+
+    b.label("calculate")
+    load_local_pointer("vp", "vph", 0x02)
+    load_local_pointer("rp", "rph", 0x04)
+    load_local_pointer("qp", "qph", 0x06)
+    b.jsr("rt_f_div")
+
+    load_local_pointer("qp", "qph", 0x02)
+    load_local_pointer("tp", "tph", 0x06)
+    b.jsr("rt_f_trunc")
+
+    load_local_pointer("tp", "tph", 0x02)
+    load_local_pointer("rp", "rph", 0x04)
+    load_local_pointer("pp", "pph", 0x06)
+    b.jsr("rt_f_mul")
+
+    load_local_pointer("vp", "vph", 0x02)
+    load_local_pointer("pp", "pph", 0x04)
+    load_local_pointer("dp", "dph", 0x06)
+    b.jsr("rt_f_sub")
+    b.emit(0x60)
+
+    emit_pointer("vp", "vph", "value")
+    emit_pointer("rp", "rph", "divisor")
+    emit_pointer("qp", "qph", "quotient")
+    emit_pointer("tp", "tph", "truncated")
+    emit_pointer("pp", "pph", "product")
+    b.label("dp")
+    b.emit(0x00)
+    b.label("dph")
+    b.emit(0x00)
+    for label in ("value", "divisor", "quotient", "truncated", "product"):
+        for index in range(4):
+            b.label(label if index == 0 else f"{label}_{index}")
+            b.emit(0x00)
+
+    b.export("rt_f_mod")
+    return b
+
+
 def float_to_int_module() -> ObjectBuilder:
     """Build finite binary32 to signed 16-bit truncation toward zero."""
     b = ObjectBuilder("rt_f_to_i")
@@ -3047,6 +3151,7 @@ def main() -> int:
             ceil_module(),
             round_module(),
             frac_module(),
+            mod_module(),
             minmax_module("rt_f_min", maximum=False),
             minmax_module("rt_f_max", maximum=True),
             clamp_module(),

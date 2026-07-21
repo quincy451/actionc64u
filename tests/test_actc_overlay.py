@@ -4389,18 +4389,21 @@ class TestActcOverlay(unittest.TestCase):
             "REAL B\r"
             "REAL R\r"
             "REAL Q\r"
+            "REAL M\r"
             "PROC MAIN()\r"
             "R=A+B\r"
             "Q=A/B\r"
+            "M=FMOD(A,B)\r"
             "RETURN\r",
             "actc-overlay-preallocation-body-mode-real-binary-assignments",
             {"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
         )
 
-        runtime_imports = ("rt_f_add", "rt_f_div")
+        runtime_imports = ("rt_f_add", "rt_f_div", "rt_f_mod")
         for runtime_import in runtime_imports:
             self.assertIn(f"u {runtime_import}\n", obj)
         self.assertLess(obj.index("u rt_f_add\n"), obj.index("u rt_f_div\n"), msg=obj)
+        self.assertLess(obj.index("u rt_f_div\n"), obj.index("u rt_f_mod\n"), msg=obj)
 
     def test_actc_preallocation_body_overlay_mode_maps_real_bridge_assignments(self) -> None:
         obj = self.compile_overlay_object(
@@ -8395,6 +8398,19 @@ class TestActcOverlay(unittest.TestCase):
                 "IF FFrac(A)<B THEN\rPrintE(\"OK\")\rFI\rRETURN\r",
                 ("rt_f_frac", "rt_f_cmp"),
             ),
+            (
+                "mod-print-position",
+                "MODULE MAIN\rREAL A\rREAL B\rPROC MAIN()\r"
+                "A=REAL(7)\rB=REAL(3)\rPrintRE(FMod(A,B))\rRETURN\r",
+                ("rt_f_mod", "rt_print_f"),
+            ),
+            (
+                "mod-condition-position",
+                "MODULE MAIN\rREAL A\rREAL B\rREAL C\rPROC MAIN()\r"
+                "A=REAL(7)\rB=REAL(3)\rC=REAL(2)\r"
+                "IF FMod(A,B)<C THEN\rPrintE(\"OK\")\rFI\rRETURN\r",
+                ("rt_f_mod", "rt_f_cmp"),
+            ),
         )
         for name, source, expected_modules in position_cases:
             with self.subTest(name=name):
@@ -8413,16 +8429,18 @@ class TestActcOverlay(unittest.TestCase):
                     "rt_f_ceil",
                     "rt_f_round",
                     "rt_f_frac",
+                    "rt_f_mod",
                     "rt_f_min",
                     "rt_f_max",
                 ):
                     if unrelated_module not in expected_modules:
                         self.assertNotIn(f"u {unrelated_module}\n", obj)
 
-    def test_native_real_emitter_owns_math1_minmax_calls(self) -> None:
+    def test_native_real_emitter_owns_math1_binary_calls(self) -> None:
         for function_name, runtime_module in (
             ("FMin", "rt_f_min"),
             ("FMax", "rt_f_max"),
+            ("FMod", "rt_f_mod"),
         ):
             with self.subTest(function_name=function_name):
                 obj = self.compile_overlay_object(
@@ -8441,8 +8459,9 @@ class TestActcOverlay(unittest.TestCase):
 
                 self.assertEqual(self.last_emit_overlay_pass, [10])
                 self.assertIn(f"u {runtime_module}\n", obj)
-                other_module = "rt_f_max" if runtime_module == "rt_f_min" else "rt_f_min"
-                self.assertNotIn(f"u {other_module}\n", obj)
+                for other_module in ("rt_f_min", "rt_f_max", "rt_f_mod"):
+                    if other_module != runtime_module:
+                        self.assertNotIn(f"u {other_module}\n", obj)
                 self.assertNotIn(f"u {function_name.lower()}\n", obj)
 
     def test_native_real_emitter_owns_math1_clamp_call(self) -> None:

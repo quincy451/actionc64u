@@ -12,6 +12,7 @@ REAL_FUNCTION_FLAG = $80
 REAL_FUNCTION_FMIN = REAL_FUNCTION_FLAG + '<'
 REAL_FUNCTION_FMAX = REAL_FUNCTION_FLAG + '>'
 REAL_FUNCTION_FMOD = REAL_FUNCTION_FLAG + 'm'
+REAL_FUNCTION_FHYPOT = REAL_FUNCTION_FLAG + 'h'
 REAL_FUNCTION_FCLAMP = REAL_FUNCTION_FLAG + 'k'
 
 .export actc_overlay_header
@@ -1256,11 +1257,7 @@ emit_runtime_int_explicit_value_after_open_local_or_fail:
     sty symbol_end_y_local
     jsr load_append_body_op_ptr
     ldx real_lhs_index_local
-    lda #'L'
-    jsr call_loaded_target_with_a
-    ldx real_lhs_index_local
-    lda #'U'
-    jsr call_loaded_target_with_a
+    jsr append_loaded_real_var_x
     lda #ACTC_OVERLAY_CTX_FIND_OR_STORE_RT_F_TO_I_FN_LO
     jsr call_context_function
     bcs emit_runtime_int_explicit_value_after_open_local_or_fail_fail
@@ -1639,34 +1636,29 @@ emit_runtime_real_binary_value_local_or_fail:
     jmp emit_runtime_real_binary_value_local_or_fail_restore
 :
     sty symbol_end_y_local
-    lda #<pattern_fmin
-    ldy #>pattern_fmin
-    jsr symbol_buffer_matches_local_const
-    bcc emit_runtime_real_binary_value_local_fmin
-    lda #<pattern_fmax
-    ldy #>pattern_fmax
-    jsr symbol_buffer_matches_local_const
-    bcc emit_runtime_real_binary_value_local_fmax
-    lda #<pattern_fmod
-    ldy #>pattern_fmod
-    jsr symbol_buffer_matches_local_const
-    bcc emit_runtime_real_binary_value_local_fmod
-    lda #<pattern_fclamp
-    ldy #>pattern_fclamp
-    jsr symbol_buffer_matches_local_const
-    bcs emit_runtime_real_binary_value_local_first_symbol
-    lda #REAL_FUNCTION_FCLAMP
-    bne emit_runtime_real_binary_value_local_function
-emit_runtime_real_binary_value_local_fmod:
-    lda #REAL_FUNCTION_FMOD
-    bne emit_runtime_real_binary_value_local_function
-emit_runtime_real_binary_value_local_fmax:
-    lda #REAL_FUNCTION_FMAX
-    bne emit_runtime_real_binary_value_local_function
-emit_runtime_real_binary_value_local_fmin:
-    lda #REAL_FUNCTION_FMIN
-emit_runtime_real_binary_value_local_function:
+    ldx #$00
+emit_runtime_real_binary_value_local_function_loop:
+    lda real_binary_pattern_table_local,x
+    sta pattern_ptr_local
+    inx
+    lda real_binary_pattern_table_local,x
+    sta pattern_ptr_local+1
+    inx
+    lda real_binary_pattern_table_local,x
     sta real_operator_local
+    inx
+    stx real_lhs_index_local
+    lda pattern_ptr_local
+    ldy pattern_ptr_local+1
+    jsr symbol_buffer_matches_local_const
+    bcc emit_runtime_real_binary_value_local_function
+    ldx real_lhs_index_local
+    cpx #(real_binary_pattern_table_local_end-real_binary_pattern_table_local)
+    bcc emit_runtime_real_binary_value_local_function_loop
+    lda #$00
+    sta real_operator_local
+    jmp emit_runtime_real_binary_value_local_first_symbol
+emit_runtime_real_binary_value_local_function:
 emit_runtime_real_binary_value_local_consume_open:
     ldy symbol_end_y_local
     jsr call_skip_inline_spaces_context
@@ -1765,26 +1757,14 @@ emit_runtime_real_binary_value_local_args_done:
     sty symbol_end_y_local
     jsr load_append_body_op_ptr
     ldx real_lhs_index_local
-    lda #'L'
-    jsr call_loaded_target_with_a
-    ldx real_lhs_index_local
-    lda #'U'
-    jsr call_loaded_target_with_a
+    jsr append_loaded_real_var_x
     ldx real_rhs_index_local
-    lda #'L'
-    jsr call_loaded_target_with_a
-    ldx real_rhs_index_local
-    lda #'U'
-    jsr call_loaded_target_with_a
+    jsr append_loaded_real_var_x
     lda real_operator_local
     cmp #REAL_FUNCTION_FCLAMP
     bne :+
     ldx real_third_index_local
-    lda #'L'
-    jsr call_loaded_target_with_a
-    ldx real_third_index_local
-    lda #'U'
-    jsr call_loaded_target_with_a
+    jsr append_loaded_real_var_x
 :
     lda #ACTC_OVERLAY_CTX_FIND_OR_STORE_REAL_OPERATOR_EXTERNAL_FN_LO
     jsr load_context_function_ptr
@@ -1805,6 +1785,14 @@ emit_runtime_real_binary_value_local_or_fail_restore:
     ldy symbol_start_y_local
     sec
     rts
+
+append_loaded_real_var_x:
+    stx saved_x_local
+    lda #'L'
+    jsr call_loaded_target_with_a
+    ldx saved_x_local
+    lda #'U'
+    jmp call_loaded_target_with_a
 
 emit_runtime_real_explicit_bridge_value_local_or_fail:
     jsr call_copy_symbol_from_scan_y_context
@@ -2878,6 +2866,8 @@ pattern_fmax:
     .asciiz "FMAX"
 pattern_fmod:
     .asciiz "FMOD"
+pattern_fhypot:
+    .asciiz "FHYPOT"
 real_value_pattern_table_local:
     .word pattern_real_decl
     .word pattern_fabs
@@ -2891,6 +2881,7 @@ real_value_pattern_table_local:
     .word pattern_fmin
     .word pattern_fmax
     .word pattern_fmod
+    .word pattern_fhypot
 real_value_pattern_table_local_end:
 real_unary_pattern_table_local:
     .word pattern_fabs
@@ -2910,6 +2901,18 @@ real_unary_pattern_table_local:
     .word pattern_ffrac
     .byte 'f'
 real_unary_pattern_table_local_end:
+real_binary_pattern_table_local:
+    .word pattern_fmin
+    .byte REAL_FUNCTION_FMIN
+    .word pattern_fmax
+    .byte REAL_FUNCTION_FMAX
+    .word pattern_fmod
+    .byte REAL_FUNCTION_FMOD
+    .word pattern_fhypot
+    .byte REAL_FUNCTION_FHYPOT
+    .word pattern_fclamp
+    .byte REAL_FUNCTION_FCLAMP
+real_binary_pattern_table_local_end:
 pattern_fclamp:
     .asciiz "FCLAMP"
 pattern_proc:

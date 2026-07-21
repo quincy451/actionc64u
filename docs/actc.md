@@ -61,7 +61,7 @@ Current contract:
   assignments. Dedicated pass K also accepts the exact finite select body
   `IF B<A THEN RETURN(B) FI RETURN(A)`, returning either parameter pointer after
   an ordinary `RT_F_CMP` call. Separately, the bounded REAL value parser lowers
-  `FSign(A)`, `FTrunc(A)`, `FFloor(A)`, `FCeil(A)`, `FRound(A)`, `FFrac(A)`, `FMod(A,B)`, `FMin(A,B)`, and `FMax(A,B)` with named REAL operands in
+  `FSign(A)`, `FTrunc(A)`, `FFloor(A)`, `FCeil(A)`, `FRound(A)`, `FFrac(A)`, `FMod(A,B)`, `FHypot(A,B)`, `FMin(A,B)`, and `FMax(A,B)` with named REAL operands in
   assignments, REAL printing, and conditions. Those calls use independently
   selected helpers with complete MATH1 NaN/signed-zero semantics. Neither path
   is general REAL expression, control-flow, nested-call, or return lowering.

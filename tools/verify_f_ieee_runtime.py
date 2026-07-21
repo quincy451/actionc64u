@@ -12,6 +12,7 @@ from fractions import Fraction
 from pathlib import Path
 
 from generate_math_runtime import (
+    abs_module,
     addsub_core_module,
     addsub_wrapper_module,
     ceil_module,
@@ -20,6 +21,7 @@ from generate_math_runtime import (
     divide_module,
     floor_module,
     frac_module,
+    hypot_module,
     link_runtime_builders,
     minmax_module,
     mod_module,
@@ -27,9 +29,11 @@ from generate_math_runtime import (
     round_module,
     sign_module,
     special_value_module,
+    square_root_module,
     trunc_module,
 )
 from verify_f_div_runtime import expected_division
+from verify_f_sqrt_runtime import expected_square_root
 
 
 LOAD_ADDR = 0x2000
@@ -358,6 +362,20 @@ def expected_mod(value: int, divisor: int) -> int:
     return expected_addsub(value, product, True)
 
 
+def expected_hypot(left: int, right: int) -> int:
+    left_abs = left & 0x7FFFFFFF
+    right_abs = right & 0x7FFFFFFF
+    largest = expected_minmax(left_abs, right_abs, maximum=True)
+    smallest = expected_minmax(left_abs, right_abs, maximum=False)
+    if largest == 0x7F800000 or largest == 0:
+        return largest
+    ratio = expected_division(smallest, largest)
+    square = expected_multiply(ratio, ratio)
+    total = expected_addsub(0x3F800000, square, False)
+    root = expected_square_root(total)
+    return expected_multiply(largest, root)
+
+
 def expected_clamp(value: int, lower: int, upper: int) -> int:
     if is_nan(value) or is_nan(lower) or is_nan(upper):
         return CANONICAL_QNAN
@@ -411,6 +429,20 @@ def runtime_builders(operation: str):
             multiply_module(),
             addsub_wrapper_module("rt_f_sub", True),
             addsub_core_module(),
+            special,
+        ]
+    if operation == "hypot":
+        return [
+            hypot_module(),
+            abs_module(),
+            minmax_module("rt_f_min", maximum=False),
+            minmax_module("rt_f_max", maximum=True),
+            divide_module(),
+            multiply_module(),
+            addsub_wrapper_module("rt_f_add", False),
+            addsub_core_module(),
+            square_root_module(),
+            compare_module(),
             special,
         ]
     if operation in ("min", "max"):
@@ -515,7 +547,7 @@ def verification_clamp_cases(
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/min/max/clamp code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/min/max/clamp code against exact IEEE "
             "binary32"
         )
     )
@@ -570,6 +602,7 @@ def main() -> int:
             "round",
             "frac",
             "mod",
+            "hypot",
             "min",
             "max",
             "clamp",
@@ -626,6 +659,8 @@ def main() -> int:
                     expected = expected_frac(left)
                 elif operation == "mod":
                     expected = expected_mod(left, right)
+                elif operation == "hypot":
+                    expected = expected_hypot(left, right)
                 elif operation == "clamp":
                     expected = expected_clamp(left, right, case[2])
                 else:
@@ -642,7 +677,7 @@ def main() -> int:
                 f"rt_f_{operation} {len(image)} linked bytes: "
                 f"{len(operation_cases)} exact edge/random cases passed"
             )
-            if operation in ("sign", "trunc", "floor", "ceil", "round", "frac", "mod"):
+            if operation in ("sign", "trunc", "floor", "ceil", "round", "frac", "mod", "hypot"):
                 alias_completed = subprocess.run(
                     [str(harness_path), str(runtime_path), "alias"],
                     input="".join(
@@ -673,6 +708,8 @@ def main() -> int:
                         else expected_frac(left)
                         if operation == "frac"
                         else expected_mod(left, right)
+                        if operation == "mod"
+                        else expected_hypot(left, right)
                     )
                     if actual != expected:
                         raise SystemExit(
@@ -682,7 +719,7 @@ def main() -> int:
                 print(
                     f"rt_f_{operation} {len(alias_results)} in-place alias cases passed"
                 )
-                if operation == "mod":
+                if operation in ("mod", "hypot"):
                     alias_right_completed = subprocess.run(
                         [str(harness_path), str(runtime_path), "alias-right"],
                         input="".join(
@@ -700,15 +737,19 @@ def main() -> int:
                     for index, ((left, right), actual) in enumerate(
                         zip(operation_cases, alias_right_results)
                     ):
-                        expected = expected_mod(left, right)
+                        expected = (
+                            expected_mod(left, right)
+                            if operation == "mod"
+                            else expected_hypot(left, right)
+                        )
                         if actual != expected:
                             raise SystemExit(
-                                f"mod right-alias case {index}: "
+                                f"{operation} right-alias case {index}: "
                                 f"{left:08x} {right:08x}: got {actual:08x}, "
                                 f"expected {expected:08x}"
                             )
                     print(
-                        "rt_f_mod "
+                        f"rt_f_{operation} "
                         f"{len(alias_right_results)} right-operand alias cases passed"
                     )
     return 0

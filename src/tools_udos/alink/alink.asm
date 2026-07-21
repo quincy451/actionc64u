@@ -792,6 +792,7 @@ set_body_ptr_to_loaded_body_index_bad:
     jmp fail_with_ptr
 
 append_imports_from_body_ptr_to_queue_or_fail:
+    jsr stabilize_body_ptr_for_import_scan_or_fail
     ldy #$00
 append_imports_from_body_ptr_loop:
     lda (body_ptr),y
@@ -833,6 +834,39 @@ append_imports_from_body_ptr_bad:
     ldy #>msg_bad_object
     jmp fail_with_ptr
 append_imports_from_body_ptr_done:
+    rts
+
+stabilize_body_ptr_for_import_scan_or_fail:
+    lda body_ptr
+    cmp #<body_ops_window
+    bne stabilize_body_ptr_for_import_scan_copy
+    lda body_ptr+1
+    cmp #>body_ops_window
+    beq stabilize_body_ptr_for_import_scan_done
+stabilize_body_ptr_for_import_scan_copy:
+    ldy #$00
+stabilize_body_ptr_for_import_scan_loop:
+    lda (body_ptr),y
+    beq stabilize_body_ptr_for_import_scan_terminate
+    cmp #10
+    beq stabilize_body_ptr_for_import_scan_terminate
+    cmp #13
+    beq stabilize_body_ptr_for_import_scan_terminate
+    sta body_ops_window,y
+    iny
+    cpy #BODY_OPS_STRIDE-1
+    bcc stabilize_body_ptr_for_import_scan_loop
+    lda #<msg_bad_object
+    ldy #>msg_bad_object
+    jmp fail_with_ptr
+stabilize_body_ptr_for_import_scan_terminate:
+    lda #$00
+    sta body_ops_window,y
+stabilize_body_ptr_for_import_scan_done:
+    lda #<body_ops_window
+    sta body_ptr
+    lda #>body_ops_window
+    sta body_ptr+1
     rts
 
 append_all_loaded_object_imports_to_queue_or_fail:

@@ -640,6 +640,24 @@ def sign_module() -> ObjectBuilder:
     return b
 
 
+def abs_module() -> ObjectBuilder:
+    """Build binary32 absolute value by clearing only the sign bit."""
+    b = ObjectBuilder("rt_f_abs")
+    b.immediate(0xA0, 0x00)
+    b.label("copy")
+    b.emit(0xB1, 0x02)
+    b.immediate(0xC0, 0x03)
+    b.branch(0xD0, "store")
+    b.immediate(0x29, 0x7F)
+    b.label("store")
+    b.emit(0x91, 0x06, 0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "copy")
+    b.emit(0x60)
+    b.export("rt_f_abs")
+    return b
+
+
 def trunc_module() -> ObjectBuilder:
     """Build binary32 truncation toward zero without arithmetic helpers."""
     b = ObjectBuilder("rt_f_trunc")
@@ -1153,6 +1171,150 @@ def mod_module() -> ObjectBuilder:
             b.emit(0x00)
 
     b.export("rt_f_mod")
+    return b
+
+
+def hypot_module() -> ObjectBuilder:
+    """Build a scaled square root of x*x + y*y without avoidable overflow."""
+    b = ObjectBuilder("rt_f_hypot")
+
+    pointer_targets = (
+        "destination",
+        "left",
+        "right",
+        "left_abs",
+        "right_abs",
+        "largest",
+        "smallest",
+        "ratio",
+        "square",
+        "one",
+        "sum",
+        "root",
+    )
+    pointer_offsets = {
+        target: index * 2 for index, target in enumerate(pointer_targets)
+    }
+
+    def load_local_pointer(target: str, destination: int) -> None:
+        b.immediate(0xA2, pointer_offsets[target])
+        b.local_reference(0xBD, "pt")
+        b.zero_page(0x85, destination)
+        b.emit(0xE8)
+        b.local_reference(0xBD, "pt")
+        b.zero_page(0x85, destination + 1)
+
+    # Dependencies share zero-page scratch, so snapshot both source values and
+    # the caller's destination before invoking any helper.
+    b.immediate(0xA2, pointer_offsets["destination"])
+    b.zero_page(0xA5, 0x06)
+    b.local_reference(0x9D, "pt")
+    b.emit(0xE8)
+    b.zero_page(0xA5, 0x07)
+    b.local_reference(0x9D, "pt")
+    b.immediate(0xA0, 0x00)
+    b.label("save")
+    b.emit(0xB1, 0x02)
+    b.local_reference(0x99, "left")
+    b.emit(0xB1, 0x04)
+    b.local_reference(0x99, "right")
+    b.emit(0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "save")
+
+    load_local_pointer("left", 0x02)
+    load_local_pointer("left_abs", 0x06)
+    b.jsr("rt_f_abs")
+    load_local_pointer("right", 0x02)
+    load_local_pointer("right_abs", 0x06)
+    b.jsr("rt_f_abs")
+
+    load_local_pointer("left_abs", 0x02)
+    load_local_pointer("right_abs", 0x04)
+    load_local_pointer("largest", 0x06)
+    b.jsr("rt_f_max")
+    load_local_pointer("left_abs", 0x02)
+    load_local_pointer("right_abs", 0x04)
+    load_local_pointer("smallest", 0x06)
+    b.jsr("rt_f_min")
+
+    # FAbs makes every finite magnitude and infinity nonnegative. Preserve
+    # exact positive infinity and zero instead of entering a 0/0 or inf/inf
+    # arithmetic path.
+    b.local_reference(0xAD, "largest_3")
+    b.immediate(0xC9, 0x7F)
+    b.branch(0xD0, "check_zero")
+    b.local_reference(0xAD, "largest_2")
+    b.immediate(0xC9, 0x80)
+    b.branch(0xD0, "calculate")
+    b.local_reference(0xAD, "largest_1")
+    b.local_reference(0x0D, "largest")
+    b.branch(0xF0, "return_largest")
+    b.jmp_local("calculate")
+
+    b.label("check_zero")
+    b.local_reference(0xAD, "largest")
+    b.local_reference(0x0D, "largest_1")
+    b.local_reference(0x0D, "largest_2")
+    b.local_reference(0x0D, "largest_3")
+    b.branch(0xD0, "calculate")
+    b.label("return_largest")
+    load_local_pointer("destination", 0x06)
+    b.immediate(0xA0, 0x00)
+    b.label("return_loop")
+    b.local_reference(0xB9, "largest")
+    b.emit(0x91, 0x06, 0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "return_loop")
+    b.emit(0x60)
+
+    b.label("calculate")
+    load_local_pointer("smallest", 0x02)
+    load_local_pointer("largest", 0x04)
+    load_local_pointer("ratio", 0x06)
+    b.jsr("rt_f_div")
+    load_local_pointer("ratio", 0x02)
+    load_local_pointer("ratio", 0x04)
+    load_local_pointer("square", 0x06)
+    b.jsr("rt_f_mul")
+    load_local_pointer("one", 0x02)
+    load_local_pointer("square", 0x04)
+    load_local_pointer("sum", 0x06)
+    b.jsr("rt_f_add")
+    load_local_pointer("sum", 0x02)
+    load_local_pointer("root", 0x06)
+    b.jsr("rt_f_sqrt")
+    load_local_pointer("largest", 0x02)
+    load_local_pointer("root", 0x04)
+    load_local_pointer("destination", 0x06)
+    b.jsr("rt_f_mul")
+    b.emit(0x60)
+
+    b.label("pt")
+    b.emit(0x00, 0x00)
+    for target in pointer_targets[1:]:
+        offset = len(b.code)
+        b.emit(0x00, 0x00)
+        b.local_relocations.append((offset, target))
+    for label in (
+        "left",
+        "right",
+        "left_abs",
+        "right_abs",
+        "largest",
+        "smallest",
+        "ratio",
+        "square",
+        "sum",
+        "root",
+    ):
+        for index in range(4):
+            b.label(label if index == 0 else f"{label}_{index}")
+            b.emit(0x00)
+    b.label("one")
+    b.emit(0x00, 0x00, 0x80, 0x3F)
+
+    b.export("rt_f_hypot")
     return b
 
 
@@ -3143,6 +3305,7 @@ def main() -> int:
     expected = {
         builder.module: render_module(builder)
         for builder in (
+            abs_module(),
             special_value_module(),
             compare_module(),
             sign_module(),
@@ -3152,6 +3315,7 @@ def main() -> int:
             round_module(),
             frac_module(),
             mod_module(),
+            hypot_module(),
             minmax_module("rt_f_min", maximum=False),
             minmax_module("rt_f_max", maximum=True),
             clamp_module(),

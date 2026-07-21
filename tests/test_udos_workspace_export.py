@@ -205,6 +205,7 @@ class TestUdosWorkspaceExport(unittest.TestCase):
             self.assertTrue((lib_dir / "RT_F_TO_I.OBJ").is_file())
             self.assertTrue((lib_dir / "RT_F_FRAC.OBJ").is_file())
             self.assertTrue((lib_dir / "RT_F_MOD.OBJ").is_file())
+            self.assertTrue((lib_dir / "RT_F_HYPOT.OBJ").is_file())
             self.assertTrue((lib_dir / "MATH1.ACT").is_file())
             self.assertTrue((lib_dir / "GFX1.ACT").is_file())
             self.assertTrue((lib_dir / "RT_GFX_SCREEN_CELL.OBJ").is_file())
@@ -304,7 +305,7 @@ class TestUdosWorkspaceExport(unittest.TestCase):
             self.assertIn("REAL FUNC FRound(REAL value)", math1_contents)
             self.assertIn("REAL FUNC FFrac(REAL value)", math1_contents)
             self.assertIn("REAL FUNC FMod(REAL value,divisor)", math1_contents)
-            self.assertIn("REAL FUNC FMod(REAL value,divisor)", math1_contents)
+            self.assertIn("REAL FUNC FHypot(REAL x,y)", math1_contents)
             self.assertIn("REAL FUNC FMin(REAL left,right)", math1_contents)
             self.assertIn("REAL FUNC FMax(REAL left,right)", math1_contents)
             self.assertIn("REAL FUNC FClamp(REAL value,lower,upper)", math1_contents)
@@ -444,6 +445,22 @@ class TestUdosWorkspaceExport(unittest.TestCase):
             self.assertIn("r 121 u0", f_mod_contents)
             self.assertIn("r 210 u3", f_mod_contents)
             self.assertIn("n rt_f_mod", f_mod_contents)
+            f_hypot_contents = (lib_dir / "RT_F_HYPOT.OBJ").read_text(encoding="ascii")
+            self.assertIn("x rt_f_hypot 0 503", f_hypot_contents)
+            self.assertIn("b u0u1u2u3u4u5u6M", f_hypot_contents)
+            for dependency in (
+                "rt_f_abs",
+                "rt_f_max",
+                "rt_f_min",
+                "rt_f_div",
+                "rt_f_mul",
+                "rt_f_add",
+                "rt_f_sqrt",
+            ):
+                self.assertIn(f"u {dependency}", f_hypot_contents)
+            self.assertIn("r 57 u0", f_hypot_contents)
+            self.assertIn("r 432 u4", f_hypot_contents)
+            self.assertIn("n rt_f_hypot", f_hypot_contents)
             f_sqrt_contents = (lib_dir / "RT_F_SQRT.OBJ").read_text(encoding="ascii")
             self.assertIn("x rt_f_sqrt 0 506", f_sqrt_contents)
             self.assertIn("x RT_F_SQRT_SQRT_LOOP 236 1", f_sqrt_contents)

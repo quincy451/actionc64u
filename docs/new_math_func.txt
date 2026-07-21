@@ -7,8 +7,8 @@ Target: C64 6502 generated program; no UDOS calls or resident service required.
 Numeric base: IEEE-754 binary32 REAL, round-to-nearest/ties-to-even core runtime.
 
 Native UDOS status: all 8 public constants are available through the usable
-INCLUDE "MATH1" header, and fourteen low-level calls are available: FAbs, FSqrt,
-FSign, FTrunc, FFloor, FCeil, FRound, FFrac, FMod, FMin, FMax, FClamp, PrintR, and PrintRE. FSign is a dependency-free
+INCLUDE "MATH1" header, and fifteen low-level calls are available: FAbs, FSqrt,
+FSign, FTrunc, FFloor, FCeil, FRound, FFrac, FMod, FHypot, FMin, FMax, FClamp, PrintR, and PrintRE. FSign is a dependency-free
 selected OBJ helper with canonical-NaN and signed-zero behavior. FMin/FMax use
 independently selected OBJ helpers with the complete portable NaN and
 signed-zero policy. FTrunc is a dependency-free bitwise binary32 helper that
@@ -22,7 +22,9 @@ integral values. FFrac imports FTrunc and subtraction, returns
 `value-FTrunc(value)`, and is safe when source and destination alias. FMod
 imports division, truncation, multiplication, and subtraction, computes
 `value-FTrunc(value/divisor)*divisor`, and is safe when either operand aliases
-the destination. FClamp
+the destination. FHypot uses a scaled maximum/minimum calculation, is safe
+when either operand aliases the destination, and selects its seven direct
+dependencies only when referenced. FClamp
 selects its comparison/minimum/maximum closure only when referenced, returns
 canonical NaN for NaN input or inverted bounds, and
 otherwise preserves the selected operand bits. Native source lowering remains
@@ -37,7 +39,7 @@ Idun/Alpine fork implements the complete source library: 8 public constants,
 43 public routines, and 1 private helper, producing 51 public help features.
 Native delivery still requires general REAL function parameters, locals,
 expressions, calls, and returns before those portable bodies can provide the
-remaining 29 public routines. See docs/idun_feature_parity.md.
+remaining 28 public routines. See docs/idun_feature_parity.md.
 
 The constants and routines below are public after INCLUDE "MATH1".  The
 transcendental routines are portable Action implementations over the binary32
@@ -142,6 +144,8 @@ IEEE and domain behavior
 - FMod returns `value-FTrunc(value/divisor)*divisor`; NaN, zero divisor, and
   infinite dividend return canonical quiet NaN, while a finite dividend with
   an infinite divisor is returned bit-for-bit.
+- FHypot computes a scaled square root of `x*x+y*y`, returns positive zero for
+  two zero inputs, and gives infinity precedence when paired with NaN.
 - Division-based functions naturally return infinity or NaN at poles according
   to the binary32 runtime.
 - Core IEEE arithmetic is correctly rounded.  Transcendental results use
@@ -153,7 +157,7 @@ Porting checklist for the native C64U tree
 
 1. Port lib/math1.act as source, retaining the public signatures above.
 2. Supply the same link-selected binary32 primitives for PrintR, PrintRE,
-   FAbs, FSqrt, FSign, FTrunc, FFloor, FCeil, FRound, FFrac, FMod, FMin, FMax, FClamp, add, subtract, multiply, divide, compare, INT
+   FAbs, FSqrt, FSign, FTrunc, FFloor, FCeil, FRound, FFrac, FMod, FHypot, FMin, FMax, FClamp, add, subtract, multiply, divide, compare, INT
    conversion, and REAL conversion.
 3. Keep _MathWrapPi private; help/catalog builders intentionally ignore names
    beginning with an underscore.

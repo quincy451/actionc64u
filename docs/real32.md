@@ -15,7 +15,7 @@ The exponent bias is `127`.
 
 Supported forms include decimal literals, exponent notation, arithmetic
 operators, comparisons, `REAL(x)`, `INT(r)`, and the bounded named-value
-`FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FMin`, `FMax`, and `FClamp` calls.
+`FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FMin`, `FMax`, and `FClamp` calls.
 
 Rules:
 
@@ -41,6 +41,9 @@ Rules:
 - `FMod(value,divisor)` returns `value-FTrunc(value/divisor)*divisor`; NaN,
   zero divisor, and infinite dividend return canonical quiet NaN, while a
   finite dividend with an infinite divisor is returned bit-for-bit
+- `FHypot(left,right)` uses a scaled maximum/minimum calculation to avoid
+  avoidable intermediate overflow and underflow; two zero inputs return
+  positive zero, and infinity takes precedence when paired with NaN
 - `FClamp(value,lower,upper)` returns canonical quiet NaN if any argument is
   NaN or if `lower>upper`; otherwise it returns
   `FMin(FMax(value,lower),upper)` with the selected operand bits preserved
@@ -224,6 +227,8 @@ Examples:
 - `FFrac(r)` imports `rt_f_frac` plus its truncation and subtraction closure
 - `FMod(a,b)` imports `rt_f_mod` plus its division, truncation,
   multiplication, subtraction, and special-value closure
+- `FHypot(a,b)` imports `rt_f_hypot` plus its absolute-value,
+  minimum/maximum, division, multiplication, addition, and square-root closure
 - `FMin(a,b)` imports `rt_f_min` and its comparison closure
 - `FMax(a,b)` imports `rt_f_max` and its comparison closure
 - `FClamp(value,lower,upper)` imports `rt_f_clamp` plus its
@@ -261,7 +266,7 @@ implemented REAL32 helper surface. It defines all eight portable MATH1
 constants, which ACTC folds without target storage or runtime imports, and
 documents the core source forms that ACTC already recognizes directly:
 `REAL(x)`, `INT(x)`, REAL arithmetic/comparison operators, `FAbs`, `FSqrt`,
-`FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FMin`, `FMax`, `FClamp`, and `PrintR` / `PrintRE`.
+`FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FMin`, `FMax`, `FClamp`, and `PrintR` / `PrintRE`.
 
 `SRC/MATH1_DEMO.ACT` validates the exported-library path by compiling a small
 REAL absolute-value program through ACTC, linking it with ALINK, and running

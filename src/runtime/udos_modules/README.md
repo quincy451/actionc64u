@@ -104,6 +104,11 @@ Current status:
   `value-FTrunc(value/divisor)*divisor`. It preserves both operands privately,
   so the destination may alias either input, and imports only the divide,
   truncation, multiply, and subtraction closure when referenced.
+- `rt_f_hypot.obj` reads two REAL32 values through `$02/$03` and `$04/$05`,
+  writes through `$06/$07`, and computes a scaled hypotenuse through absolute
+  value, minimum, maximum, division, multiplication, addition, and square root.
+  The destination may alias either input. Two zero inputs produce positive
+  zero, and infinity takes precedence when paired with NaN.
 - `rt_f_sqrt.obj` reads a REAL32 value through zero page `$02/$03`, writes the
   result through `$06/$07`, and handles every non-negative normal,
   subnormal, and signed-zero value using an exact 48-bit scaled radicand and

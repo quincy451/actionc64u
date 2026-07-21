@@ -253,7 +253,7 @@ Current state:
   return operands. Canonical and permuted declaration/parameter orders therefore
   emit the same bounded layout with role-correct named relocations. General
   function expression/control lowering and MATH1 remain outside this pass.
-- The bounded REAL value parser also recognizes `FSign(A)`, `FTrunc(A)`, `FFloor(A)`, `FCeil(A)`, `FRound(A)`, `FFrac(A)`, `FMod(A,B)`,
+- The bounded REAL value parser also recognizes `FSign(A)`, `FTrunc(A)`, `FFloor(A)`, `FCeil(A)`, `FRound(A)`, `FFrac(A)`, `FMod(A,B)`, `FHypot(A,B)`,
   `FMin(A,B)`, and `FMax(A,B)` for named REAL operands in assignment, print, and condition
   positions. ACTC emits ordinary imports for the selected helper. The
   dependency-free 123-byte sign helper canonicalizes NaN, preserves signed
@@ -266,9 +266,11 @@ Current state:
   truncation and rounds nearest with halfway cases away from zero while preserving
   large integral values. The 93-byte fractional helper imports truncation and
   subtraction. The 245-byte remainder helper imports division, truncation,
-  multiplication, and subtraction; the 77-byte selectors reach comparison and
-  exceptional-value support transitively. Exact checks and focused live VICE
-  launches prove that unrelated helpers are pruned. This completes nine
+  multiplication, and subtraction. The 503-byte scaled hypotenuse helper
+  imports absolute value, minimum, maximum, division, multiplication, addition,
+  and square root; the 77-byte selectors reach comparison and exceptional-value
+  support transitively. Exact checks and focused live VICE launches prove that
+  unrelated helpers are pruned. This completes ten
   utility routines, not general MATH1 source lowering. Pass K separately owns
   a bounded three-initializer `FClamp` assignment/print root. It captures all
   eight named-storage uses, so initializer order, clamp arguments, destination,

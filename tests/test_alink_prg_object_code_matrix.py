@@ -1311,6 +1311,16 @@ class TestAlinkPrgObjectCodeMatrix(unittest.TestCase):
             graph_shapes,
             "Object-code graph matrix must cover dependency relocation scans restored after source-windowed import lookup",
         )
+        sys.path.insert(0, str(self.workspace / "udos" / "tools"))
+        import run_action_alink_prg_probe as probe
+
+        windowed_case = probe.DIRECT_PRG_CASES[
+            "object_code_dependency_reloc_scan_windowed_imports"
+        ]
+        windowed_dependency = windowed_case["extra_library_objects"]["A.OBJ"]
+        self.assertGreater(len(windowed_dependency.encode("ascii")), 767)
+        self.assertGreater(windowed_dependency.index("x a 0 34\n"), 512)
+        self.assertIn("b u0u1u2u3u4u5u6u7u8u9uAM\n", windowed_dependency)
         self.assertIn(
             "object_code_library_imports_root_local_export",
             graph_shapes,

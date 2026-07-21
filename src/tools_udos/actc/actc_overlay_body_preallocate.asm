@@ -586,6 +586,11 @@ preallocate_real_binary_function_external_from_scan_y_overlay_try_fmax:
     jsr preallocate_consume_keyword_open_from_scan_y_overlay
     bcc preallocate_real_binary_function_external_from_scan_y_overlay_fmod
     ldy keyword_scan_y_local
+    lda #<pattern_fhypot
+    ldy #>pattern_fhypot
+    jsr preallocate_consume_keyword_open_from_scan_y_overlay
+    bcc preallocate_real_binary_function_external_from_scan_y_overlay_fhypot
+    ldy keyword_scan_y_local
     lda #<pattern_fclamp
     ldy #>pattern_fclamp
     jsr preallocate_consume_keyword_open_from_scan_y_overlay
@@ -600,6 +605,9 @@ preallocate_real_binary_function_external_from_scan_y_overlay_fmax:
     bne preallocate_real_binary_function_external_from_scan_y_overlay_operator
 preallocate_real_binary_function_external_from_scan_y_overlay_fmod:
     lda #'m'
+    bne preallocate_real_binary_function_external_from_scan_y_overlay_operator
+preallocate_real_binary_function_external_from_scan_y_overlay_fhypot:
+    lda #'h'
 preallocate_real_binary_function_external_from_scan_y_overlay_operator:
     sta real_operator_local
     lda #ACTC_OVERLAY_CTX_COPY_SYMBOL_FROM_SCAN_Y_FN_LO
@@ -1910,23 +1918,26 @@ preallocate_declared_symbol_is_reserved_call_keyword_overlay:
     lda #<pattern_or
     ldy #>pattern_or
     jsr symbol_buffer_matches_local_const
-    bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
+    bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes_near
     lda #<pattern_not
     ldy #>pattern_not
     jsr symbol_buffer_matches_local_const
-    bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
+    bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes_near
     lda #<pattern_int_decl
     ldy #>pattern_int_decl
     jsr symbol_buffer_matches_local_const
-    bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
+    bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes_near
     lda #<pattern_real_decl
     ldy #>pattern_real_decl
     jsr symbol_buffer_matches_local_const
-    bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
+    bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes_near
     lda #<pattern_realbits
     ldy #>pattern_realbits
     jsr symbol_buffer_matches_local_const
-    bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
+    bcs :+
+preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes_near:
+    jmp preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
+:
     lda #<pattern_fabs
     ldy #>pattern_fabs
     jsr symbol_buffer_matches_local_const
@@ -1961,6 +1972,10 @@ preallocate_declared_symbol_is_reserved_call_keyword_overlay:
     bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
     lda #<pattern_fmod
     ldy #>pattern_fmod
+    jsr symbol_buffer_matches_local_const
+    bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
+    lda #<pattern_fhypot
+    ldy #>pattern_fhypot
     jsr symbol_buffer_matches_local_const
     bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
     sec
@@ -2201,6 +2216,8 @@ pattern_fmax:
     .asciiz "FMAX"
 pattern_fmod:
     .asciiz "FMOD"
+pattern_fhypot:
+    .asciiz "FHYPOT"
 pattern_fclamp:
     .asciiz "FCLAMP"
 pattern_and:

@@ -1554,6 +1554,23 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   left-alias, and right-alias modes. The
   116-pair Idun VICE fixture and focused native direct PRG prove full semantics,
   dependency closure, and sibling pruning.
-- Current inventories are 1,340 broad and 297 compiled-runtime cases. Pass 6
-  is 8,094 bytes with 98 bytes free under its 96-byte reserve. Native MATH1 now
-  exposes fourteen link-selected calls and lacks 29 public routines.
+- At that checkpoint inventories were 1,340 broad and 297 compiled-runtime cases. Pass 6
+  was 8,094 bytes with 98 bytes free under its 96-byte reserve. Native MATH1 then
+  exposed fourteen link-selected calls and lacked 29 public routines.
+
+## 2026-07-20 Shared MATH1 Hypotenuse
+
+- Added the 503-byte alias-safe `RT_F_HYPOT.OBJ`, which computes a scaled
+  hypotenuse through seven independently selected direct dependencies and a
+  3,617-byte linked closure.
+- Native and Linux ACTC recognize `FHypot(A,B)`; Linux constant-folds constant
+  calls, and both compilers import the helper only for reachable dynamic calls.
+- Exact host verification covers 2,316 vectors in ordinary, left-alias, and
+  right-alias modes. The 116-pair Idun VICE fixture, focused native launch, and
+  complete native MATH1 matrix pass.
+- Fixed ALINK import discovery for paged objects by stabilizing body-selector
+  records before recursive module lookups. An 11-import object regression now
+  crosses the source-window boundary.
+- Current inventories are 1,341 broad and 298 compiled-runtime cases. Pass 6
+  is 8,093 bytes with 99 bytes free under its 96-byte reserve. Native MATH1 now
+  exposes fifteen link-selected calls and lacks 28 public routines.

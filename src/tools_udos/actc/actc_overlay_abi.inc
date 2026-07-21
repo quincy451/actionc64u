@@ -347,5 +347,7 @@ ACTC_OVERLAY_CTX_SIZE = 231
 ; +10..11 overlay byte length, including this header
 ; +12..13 reserved
 ACTC_OVERLAY_HEADER_SIZE = 14
+ACTC_OVERLAY_HEADER_AUX_ENTRY_LO = 12
+ACTC_OVERLAY_HEADER_AUX_ENTRY_HI = 13
 
 .endif

@@ -807,11 +807,12 @@ copies. `ACTC_OVLA.BIN` is 7,418 bytes with 774 bytes free under its enforced
 The first bounded REAL control-flow function runs in base-36 pass K,
 `ACTC_OVLK.BIN`. It recognizes the exact two-REAL-parameter finite
 comparison/select body and a bounded four-REAL `FClamp` assignment/print root,
-emits ordinary machine OBJ records, and declines other forms before opening
+plus a bounded single-return selected-binary expression over two REAL
+parameters. It emits ordinary machine OBJ records, and declines other forms before opening
 output. The clamp root captures each named storage use instead of assuming
 fixed declaration order. The finite function similarly captures caller,
 parameter-bind, comparison, and return roles while retaining its bounded body
-shape. Its 4,594-byte image leaves 3,598 bytes in
+shape. Its 5,877-byte image leaves 2,315 bytes in
 `$A000-$BFFF`. The focused release
 probe links only integer conversion, comparison, and comparison's transitive
 special-value support; its direct PRG verifies 2.0/1.0 parameter copies and a

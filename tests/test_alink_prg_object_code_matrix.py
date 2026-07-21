@@ -382,6 +382,41 @@ class TestAlinkPrgObjectCodeMatrix(unittest.TestCase):
         self.assertIn({"addr": 0x10B2, "value": 0x40}, case["extra_store_checks"])
         self.assertIn({"addr": 0x10B5, "value": 0x80}, case["extra_store_checks"])
 
+    def test_real_function_binary_hypot_case_selects_only_runtime_closure(self) -> None:
+        sys.path.insert(0, str(self.workspace / "udos" / "tools"))
+        import run_action_alink_prg_probe as probe
+
+        case = probe.DIRECT_PRG_CASES[
+            "actc_real_function_binary_hypot_linked"
+        ]
+        fragments = "".join(case["expected_object_fragments"])
+        fixture = (
+            self.workspace
+            / "actionc64u"
+            / "tests"
+            / "parity"
+            / "real_function_binary_hypot.act"
+        ).read_text(encoding="ascii")
+
+        self.assertIn("REAL FUNC LENGTH(REAL A,B)", case["source"])
+        self.assertIn("RETURN(FHypot(A,B))", case["source"])
+        self.assertEqual(case["source"].replace("\r", "\n"), fixture)
+        self.assertIn("x __fresult 183 4\n", fragments)
+        self.assertIn("b u0u1M\nb u0M\n", fragments)
+        self.assertIn("r 155 u0\n", fragments)
+        self.assertIn("u rt_f_hypot\nu rt_i_to_f\n", fragments)
+        self.assertEqual(case["expected_alink_loads"][0], "LIB/RT_F_HYPOT.OBJ")
+        self.assertIn("LIB/RT_F_SQRT.OBJ", case["expected_alink_loads"])
+        self.assertIn("LIB/RT_I_TO_F.OBJ", case["expected_alink_loads"])
+        self.assertNotIn("LIB/RT_PRINT_F.OBJ", case["expected_alink_loads"])
+        self.assertIn("LIB/RT_PRINT_F.OBJ", case["unexpected_alink_loads"])
+        self.assertTrue(case["expected_tail_from_compiled_object"])
+        self.assertEqual(case["store_check_addr"], 0x10AB)
+        self.assertEqual(case["store_check_value"], 0x00)
+        self.assertEqual(case["store_check_hi_value"], 0x00)
+        self.assertIn({"addr": 0x10AD, "value": 0xA0}, case["extra_store_checks"])
+        self.assertIn({"addr": 0x10AE, "value": 0x40}, case["extra_store_checks"])
+
     def test_full_range_multiply_probe_forces_staged_root_object_path(self) -> None:
         sys.path.insert(0, str(self.workspace / "udos" / "tools"))
         import run_action_alink_prg_probe as probe

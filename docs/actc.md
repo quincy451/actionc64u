@@ -60,7 +60,11 @@ Current contract:
   arguments to be initialized by the two immediately preceding `REAL(integer)`
   assignments. Dedicated pass K also accepts the exact finite select body
   `IF B<A THEN RETURN(B) FI RETURN(A)`, returning either parameter pointer after
-  an ordinary `RT_F_CMP` call. Separately, the bounded REAL value parser lowers
+  an ordinary `RT_F_CMP` call. Pass K also accepts a bounded single-return body
+  whose expression is one selected binary operation over the two parameters:
+  `+`, `-`, `*`, `/`, `FMin`, `FMax`, `FMod`, or `FHypot`. It emits the result
+  into a hidden four-byte cell before returning its address, which keeps
+  alias-unsafe helpers isolated from both parameters. Separately, the bounded REAL value parser lowers
   `FSign(A)`, `FTrunc(A)`, `FFloor(A)`, `FCeil(A)`, `FRound(A)`, `FFrac(A)`, `FMod(A,B)`, `FHypot(A,B)`, `FMin(A,B)`, and `FMax(A,B)` with named REAL operands in
   assignments, REAL printing, and conditions. Those calls use independently
   selected helpers with complete MATH1 NaN/signed-zero semantics. Neither path

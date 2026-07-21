@@ -1,7 +1,9 @@
 ; Bounded advanced REAL lowering for function control and ternary helpers.
+.macpack longbranch
 
 NATIVE_REAL_FUNCTION_MODE_SELECT = 1
 NATIVE_REAL_FUNCTION_MODE_CLAMP = 2
+NATIVE_REAL_FUNCTION_MODE_BINARY = 3
 
 NATIVE_REAL_FUNCTION_MAIN_CODE_SIZE = 88
 NATIVE_REAL_FUNCTION_CODE_OFFSET = NATIVE_REAL_FUNCTION_MAIN_CODE_SIZE
@@ -30,6 +32,23 @@ NATIVE_REAL_FUNCTION_TARGET_SELECT_STORE_NEXT = 6
 NATIVE_REAL_FUNCTION_TARGET_SELECT_LEFT = 7
 NATIVE_REAL_FUNCTION_TARGET_SELECT_RIGHT = 8
 
+NATIVE_REAL_BINARY_CODE_SIZE = 75
+NATIVE_REAL_BINARY_DATA_OFFSET = NATIVE_REAL_FUNCTION_MAIN_CODE_SIZE + NATIVE_REAL_BINARY_CODE_SIZE
+NATIVE_REAL_BINARY_DATA_SIZE = 24
+NATIVE_REAL_BINARY_RESULT_OFFSET = NATIVE_REAL_BINARY_DATA_OFFSET + 20
+NATIVE_REAL_BINARY_POINTER_OFFSET = NATIVE_REAL_BINARY_DATA_OFFSET + NATIVE_REAL_BINARY_DATA_SIZE
+NATIVE_REAL_BINARY_ROOT_SIZE = NATIVE_REAL_BINARY_POINTER_OFFSET + 2
+
+NATIVE_REAL_BINARY_NAME_V0 = 0
+NATIVE_REAL_BINARY_NAME_V1 = 1
+NATIVE_REAL_BINARY_NAME_V2 = 2
+NATIVE_REAL_BINARY_NAME_V3 = 3
+NATIVE_REAL_BINARY_NAME_V4 = 4
+NATIVE_REAL_BINARY_NAME_DATA = 5
+NATIVE_REAL_BINARY_NAME_RESULT = 6
+NATIVE_REAL_BINARY_NAME_POINTER = 7
+NATIVE_REAL_BINARY_NAME_COUNT = 8
+
 NATIVE_REAL_CLAMP_CODE_SIZE = 147
 NATIVE_REAL_CLAMP_DATA_OFFSET = NATIVE_REAL_CLAMP_CODE_SIZE
 NATIVE_REAL_CLAMP_A_OFFSET = NATIVE_REAL_CLAMP_DATA_OFFSET
@@ -50,6 +69,11 @@ NATIVE_REAL_CLAMP_NAME_COUNT = 6
 native_real_function_detect:
     lda #$00
     sta native_real_function_active
+
+    jsr native_real_binary_detect
+    bcc :+
+    rts
+:
 
     lda #ACTC_OVERLAY_CTX_EXPORT_COUNT_PTR_LO
     jsr load_count_from_context
@@ -222,6 +246,176 @@ native_real_function_detect_no:
     clc
     rts
 
+native_real_binary_detect:
+    lda #ACTC_OVERLAY_CTX_EXPORT_COUNT_PTR_LO
+    jsr load_count_from_context
+    cmp #$02
+    jne native_real_binary_detect_no
+    lda #ACTC_OVERLAY_CTX_MODULE_NAME_PTR_LO
+    jsr load_context_ptr_to_scan_zp
+    jsr scan_zp_is_main_symbol
+    jcc native_real_binary_detect_no
+    ldx #$01
+    lda #ACTC_OVERLAY_CTX_SET_EXPORT_PTR_FN_LO
+    jsr call_indexed_context_function
+    jsr load_resident_export_ptr_to_scan_zp
+    jsr scan_zp_is_main_symbol
+    jcc native_real_binary_detect_no
+
+    ldx #$00
+    lda #ACTC_OVERLAY_CTX_LOAD_PROC_META_FN_LO
+    jsr call_indexed_context_function
+    lda #ACTC_OVERLAY_CTX_PROC_META_WINDOW_PTR_LO
+    jsr load_context_ptr_to_work_zp
+    ldy #$00
+    lda (ACTC_OVERLAY_WORK_ZP),y
+    cmp #(ACTC_PROC_META_FUNCTION | ACTC_PROC_META_REAL_RETURN | 2)
+    jne native_real_binary_detect_no
+    iny
+    lda (ACTC_OVERLAY_WORK_ZP),y
+    cmp #$03
+    jne native_real_binary_detect_no
+    iny
+    lda (ACTC_OVERLAY_WORK_ZP),y
+    jne native_real_binary_detect_no
+
+    ldx #$01
+    lda #ACTC_OVERLAY_CTX_LOAD_PROC_META_FN_LO
+    jsr call_indexed_context_function
+    lda #ACTC_OVERLAY_CTX_PROC_META_WINDOW_PTR_LO
+    jsr load_context_ptr_to_work_zp
+    ldy #$00
+    lda (ACTC_OVERLAY_WORK_ZP),y
+    jne native_real_binary_detect_no
+    ldy #$02
+    lda (ACTC_OVERLAY_WORK_ZP),y
+    jne native_real_binary_detect_no
+
+    lda #ACTC_OVERLAY_CTX_VAR_COUNT_PTR_LO
+    jsr load_count_from_context
+    cmp #$05
+    jne native_real_binary_detect_no
+    lda #ACTC_OVERLAY_CTX_MODULE_VAR_COUNT_PTR_LO
+    jsr load_count_from_context
+    cmp #$03
+    jne native_real_binary_detect_no
+    ldx #$00
+native_real_binary_detect_var_loop:
+    jsr native_real_function_var_x_is_real
+    jcc native_real_binary_detect_no
+    inx
+    cpx #$05
+    bcc native_real_binary_detect_var_loop
+
+    lda #ACTC_OVERLAY_CTX_EXTERN_COUNT_PTR_LO
+    jsr load_count_from_context
+    cmp #$02
+    jne native_real_binary_detect_no
+    lda #ACTC_OVERLAY_CTX_STRING_COUNT_PTR_LO
+    jsr load_count_from_context
+    jne native_real_binary_detect_no
+    lda #ACTC_OVERLAY_CTX_INT_COUNT_PTR_LO
+    jsr load_count_from_context
+    cmp #$04
+    jne native_real_binary_detect_no
+
+    jsr native_real_binary_external_zero_supported
+    jcc native_real_binary_detect_no
+    ldx #$01
+    lda #<native_real_function_external_i_to_f
+    ldy #>native_real_function_external_i_to_f
+    jsr native_real_function_external_x_matches
+    jcc native_real_binary_detect_no
+
+    ldx #$00
+    lda #ACTC_OVERLAY_CTX_SET_BODY_PTR_FN_LO
+    jsr call_indexed_context_function
+    jsr load_resident_body_ptr_to_scan_zp
+    jsr native_real_binary_match_body_pattern
+    jcc native_real_binary_detect_no
+    ldx #$01
+    lda #ACTC_OVERLAY_CTX_SET_BODY_PTR_FN_LO
+    jsr call_indexed_context_function
+    jsr load_resident_body_ptr_to_scan_zp
+    jsr native_real_binary_match_main_body_pattern
+    jcc native_real_binary_detect_no
+
+    ldx #$00
+    jsr native_real_function_load_literal_x
+    lda native_real_function_literal_lo
+    ora native_real_function_literal_hi
+    jne native_real_binary_detect_no
+    ldx #$02
+    jsr native_real_function_load_literal_x
+    lda native_real_function_literal_lo
+    ora native_real_function_literal_hi
+    jne native_real_binary_detect_no
+    ldx #$01
+    jsr native_real_function_load_literal_x
+    lda native_real_function_literal_lo
+    sta native_real_function_left_lo
+    lda native_real_function_literal_hi
+    sta native_real_function_left_hi
+    ldx #$03
+    jsr native_real_function_load_literal_x
+    lda native_real_function_literal_lo
+    sta native_real_function_right_lo
+    lda native_real_function_literal_hi
+    sta native_real_function_right_hi
+
+    lda #NATIVE_REAL_FUNCTION_MODE_BINARY
+    sta native_real_function_active
+    sec
+    rts
+native_real_binary_detect_no:
+    clc
+    rts
+
+native_real_binary_external_zero_supported:
+    ldx #$00
+    lda #<native_real_binary_external_add
+    ldy #>native_real_binary_external_add
+    jsr native_real_function_external_x_matches
+    bcs native_real_binary_external_zero_supported_yes
+    ldx #$00
+    lda #<native_real_binary_external_sub
+    ldy #>native_real_binary_external_sub
+    jsr native_real_function_external_x_matches
+    bcs native_real_binary_external_zero_supported_yes
+    ldx #$00
+    lda #<native_real_binary_external_mul
+    ldy #>native_real_binary_external_mul
+    jsr native_real_function_external_x_matches
+    bcs native_real_binary_external_zero_supported_yes
+    ldx #$00
+    lda #<native_real_binary_external_div
+    ldy #>native_real_binary_external_div
+    jsr native_real_function_external_x_matches
+    bcs native_real_binary_external_zero_supported_yes
+    ldx #$00
+    lda #<native_real_binary_external_min
+    ldy #>native_real_binary_external_min
+    jsr native_real_function_external_x_matches
+    bcs native_real_binary_external_zero_supported_yes
+    ldx #$00
+    lda #<native_real_binary_external_max
+    ldy #>native_real_binary_external_max
+    jsr native_real_function_external_x_matches
+    bcs native_real_binary_external_zero_supported_yes
+    ldx #$00
+    lda #<native_real_binary_external_mod
+    ldy #>native_real_binary_external_mod
+    jsr native_real_function_external_x_matches
+    bcs native_real_binary_external_zero_supported_yes
+    ldx #$00
+    lda #<native_real_binary_external_hypot
+    ldy #>native_real_binary_external_hypot
+    jsr native_real_function_external_x_matches
+    rts
+native_real_binary_external_zero_supported_yes:
+    sec
+    rts
+
 native_real_clamp_detect:
     lda #ACTC_OVERLAY_CTX_MODULE_NAME_PTR_LO
     jsr load_context_ptr_to_scan_zp
@@ -369,6 +563,8 @@ native_real_function_external_x_matches:
     jmp native_real_function_compare_scan_pattern
 
 native_real_function_match_select_body_pattern:
+    lda #10
+    sta native_real_function_capture_expected
     lda #<native_real_function_select_body_pattern
     ldy #>native_real_function_select_body_pattern
     jsr native_real_function_match_body_pattern
@@ -438,6 +634,8 @@ native_real_function_match_select_body_pattern_no:
     rts
 
 native_real_function_match_main_body_pattern:
+    lda #10
+    sta native_real_function_capture_expected
     lda #<native_real_function_main_body_pattern
     ldy #>native_real_function_main_body_pattern
     jsr native_real_function_match_body_pattern
@@ -445,6 +643,7 @@ native_real_function_match_main_body_pattern:
     clc
     rts
 :
+native_real_function_match_main_body_pattern_captured:
     ldx #$00
     ldy #$00
 native_real_function_match_main_body_pattern_pair_loop:
@@ -464,6 +663,78 @@ native_real_function_match_main_body_pattern_pair_loop:
     sec
     rts
 native_real_function_match_main_body_pattern_no:
+    clc
+    rts
+
+native_real_binary_match_body_pattern:
+    lda #6
+    sta native_real_function_capture_expected
+    lda #<native_real_binary_body_pattern
+    ldy #>native_real_binary_body_pattern
+    jsr native_real_function_match_body_pattern
+    bcc native_real_binary_match_body_pattern_no
+
+    lda native_real_function_var_captures+2
+    cmp native_real_function_var_captures+3
+    bne native_real_binary_match_body_pattern_no
+    lda native_real_function_var_captures+4
+    cmp native_real_function_var_captures+5
+    bne native_real_binary_match_body_pattern_no
+
+    lda native_real_function_var_captures
+    cmp #'3'
+    bcc native_real_binary_match_body_pattern_no
+    cmp #'5'
+    bcs native_real_binary_match_body_pattern_no
+    cmp native_real_function_var_captures+1
+    beq native_real_binary_match_body_pattern_no
+    lda native_real_function_var_captures+1
+    cmp #'3'
+    bcc native_real_binary_match_body_pattern_no
+    cmp #'5'
+    bcs native_real_binary_match_body_pattern_no
+
+    lda native_real_function_var_captures+2
+    cmp native_real_function_var_captures
+    beq :+
+    cmp native_real_function_var_captures+1
+    bne native_real_binary_match_body_pattern_no
+:
+    lda native_real_function_var_captures+4
+    cmp native_real_function_var_captures
+    beq :+
+    cmp native_real_function_var_captures+1
+    bne native_real_binary_match_body_pattern_no
+:
+    lda native_real_function_var_captures
+    sec
+    sbc #'0'
+    sta native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_STORE_TOP
+    lda native_real_function_var_captures+1
+    sec
+    sbc #'0'
+    sta native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_STORE_NEXT
+    lda native_real_function_var_captures+2
+    sec
+    sbc #'0'
+    sta native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_LEFT
+    lda native_real_function_var_captures+4
+    sec
+    sbc #'0'
+    sta native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_RIGHT
+    sec
+    rts
+native_real_binary_match_body_pattern_no:
+    clc
+    rts
+
+native_real_binary_match_main_body_pattern:
+    lda #10
+    sta native_real_function_capture_expected
+    lda #<native_real_binary_main_body_pattern
+    ldy #>native_real_binary_main_body_pattern
+    jsr native_real_function_match_body_pattern
+    jcs native_real_function_match_main_body_pattern_captured
     clc
     rts
 
@@ -499,7 +770,7 @@ native_real_function_match_body_pattern_no:
 native_real_function_match_body_pattern_end:
     jsr emit_object_peek_payload_y
     bne native_real_function_match_body_pattern_no
-    cpx #10
+    cpx native_real_function_capture_expected
     bne native_real_function_match_body_pattern_no
     sec
     rts
@@ -606,6 +877,16 @@ native_real_function_emit_debug_offset:
     lda native_real_clamp_debug_offsets,x
     jmp native_real_function_emit_debug_offset_ready
 :
+    cmp #NATIVE_REAL_FUNCTION_MODE_BINARY
+    bne :+
+    lda entry_index_data
+    beq native_real_binary_emit_debug_offset_function
+    lda native_real_function_main_debug_offsets,x
+    bne native_real_function_emit_debug_offset_ready
+native_real_binary_emit_debug_offset_function:
+    lda native_real_binary_debug_offsets,x
+    jmp native_real_function_emit_debug_offset_ready
+:
     lda entry_index_data
     beq native_real_function_emit_debug_offset_function
     lda native_real_function_main_debug_offsets,x
@@ -621,6 +902,10 @@ native_real_function_emit_export_list:
     cmp #NATIVE_REAL_FUNCTION_MODE_CLAMP
     bne :+
     jmp native_real_clamp_emit_export_list
+:
+    cmp #NATIVE_REAL_FUNCTION_MODE_BINARY
+    bne :+
+    jmp native_real_binary_emit_export_list
 :
     lda #$00
     sta word_value_lo
@@ -653,6 +938,41 @@ native_real_function_emit_export_name_loop:
     lda native_real_function_index
     cmp #NATIVE_REAL_FUNCTION_NAME_COUNT
     bcc native_real_function_emit_export_name_loop
+    clc
+    rts
+
+native_real_binary_emit_export_list:
+    lda #$00
+    sta word_value_lo
+    sta word_value_hi
+    lda #NATIVE_REAL_BINARY_ROOT_SIZE
+    ldx #$01
+    jsr emit_machine_export_line
+
+    lda #NATIVE_REAL_FUNCTION_CODE_OFFSET
+    sta word_value_lo
+    lda #$00
+    sta word_value_hi
+    lda #NATIVE_REAL_BINARY_CODE_SIZE
+    ldx #$00
+    jsr emit_machine_export_line
+
+    lda #$00
+    sta native_real_function_index
+native_real_binary_emit_export_name_loop:
+    ldx native_real_function_index
+    jsr native_real_function_set_name_x
+    ldx native_real_function_index
+    lda native_real_binary_name_offsets,x
+    pha
+    lda native_real_binary_name_sizes,x
+    tax
+    pla
+    jsr native_real_function_emit_named_export
+    inc native_real_function_index
+    lda native_real_function_index
+    cmp #NATIVE_REAL_BINARY_NAME_COUNT
+    bcc native_real_binary_emit_export_name_loop
     clc
     rts
 
@@ -711,6 +1031,10 @@ native_real_function_emit_body_marker_list:
     bne :+
     jmp native_real_clamp_emit_body_marker_list
 :
+    cmp #NATIVE_REAL_FUNCTION_MODE_BINARY
+    bne :+
+    jmp native_real_binary_emit_body_marker_list
+:
     lda #<native_real_function_main_body_marker
     ldy #>native_real_function_main_body_marker
     jsr native_real_function_emit_line_ay
@@ -725,6 +1049,24 @@ native_real_function_emit_body_marker_loop:
     jsr native_real_function_emit_line_ay
     dec native_real_function_count
     bne native_real_function_emit_body_marker_loop
+    clc
+    rts
+
+native_real_binary_emit_body_marker_list:
+    lda #<native_real_function_main_body_marker
+    ldy #>native_real_function_main_body_marker
+    jsr native_real_function_emit_line_ay
+    lda #<native_real_function_select_body_marker
+    ldy #>native_real_function_select_body_marker
+    jsr native_real_function_emit_line_ay
+    lda #NATIVE_REAL_BINARY_NAME_COUNT
+    sta native_real_function_count
+native_real_binary_emit_body_marker_loop:
+    lda #<native_real_function_data_body_marker
+    ldy #>native_real_function_data_body_marker
+    jsr native_real_function_emit_line_ay
+    dec native_real_function_count
+    bne native_real_binary_emit_body_marker_loop
     clc
     rts
 
@@ -754,6 +1096,10 @@ native_real_function_emit_machine_code_list:
     cmp #NATIVE_REAL_FUNCTION_MODE_CLAMP
     bne :+
     jmp native_real_clamp_emit_machine_code_list
+:
+    cmp #NATIVE_REAL_FUNCTION_MODE_BINARY
+    bne :+
+    jmp native_real_binary_emit_machine_code_list
 :
     lda #'m'
     jsr emit_char_overlay
@@ -789,6 +1135,53 @@ native_real_function_emit_machine_byte_ready:
     bcc native_real_function_emit_machine_loop
     jsr emit_newline
     jsr native_real_function_emit_reloc_list
+    clc
+    rts
+
+native_real_binary_emit_machine_code_list:
+    lda #'m'
+    jsr emit_char_overlay
+    lda #$00
+    sta native_real_function_index
+native_real_binary_emit_machine_loop:
+    ldy native_real_function_index
+    cpy #130
+    bcc native_real_binary_emit_machine_common
+    tya
+    sec
+    sbc #130
+    tay
+    lda native_real_binary_machine_suffix,y
+    jmp native_real_binary_emit_machine_byte_ready
+native_real_binary_emit_machine_common:
+    lda native_real_function_machine_template,y
+    ldx native_real_function_index
+    cpx #22
+    bne :+
+    lda native_real_function_left_lo
+    jmp native_real_binary_emit_machine_byte_ready
+:
+    cpx #24
+    bne :+
+    lda native_real_function_left_hi
+    jmp native_real_binary_emit_machine_byte_ready
+:
+    cpx #37
+    bne :+
+    lda native_real_function_right_lo
+    jmp native_real_binary_emit_machine_byte_ready
+:
+    cpx #39
+    bne native_real_binary_emit_machine_byte_ready
+    lda native_real_function_right_hi
+native_real_binary_emit_machine_byte_ready:
+    jsr native_real_function_emit_byte
+    inc native_real_function_index
+    lda native_real_function_index
+    cmp #NATIVE_REAL_BINARY_ROOT_SIZE
+    bcc native_real_binary_emit_machine_loop
+    jsr emit_newline
+    jsr native_real_binary_emit_reloc_list
     clc
     rts
 
@@ -954,6 +1347,102 @@ native_real_function_emit_reloc_list:
     ldx #NATIVE_REAL_FUNCTION_NAME_DATA
     jmp native_real_function_emit_named_word_reloc
 
+native_real_binary_emit_reloc_list:
+    lda #3
+    ldx #NATIVE_REAL_BINARY_NAME_POINTER
+    jsr native_real_function_emit_named_word_reloc
+    lda #9
+    ldx #NATIVE_REAL_BINARY_NAME_POINTER
+    jsr native_real_function_emit_named_word_reloc
+    lda #14
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_MAIN_INIT_LEFT
+    ldy #'l'
+    jsr native_real_function_emit_named_byte_reloc
+    lda #18
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_MAIN_INIT_LEFT
+    ldy #'h'
+    jsr native_real_function_emit_named_byte_reloc
+    lda #26
+    ldx #$01
+    jsr native_real_function_emit_import_reloc
+    lda #29
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_MAIN_INIT_RIGHT
+    ldy #'l'
+    jsr native_real_function_emit_named_byte_reloc
+    lda #33
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_MAIN_INIT_RIGHT
+    ldy #'h'
+    jsr native_real_function_emit_named_byte_reloc
+    lda #41
+    ldx #$01
+    jsr native_real_function_emit_import_reloc
+    lda #44
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_MAIN_ARG_LEFT
+    ldy #'l'
+    jsr native_real_function_emit_named_byte_reloc
+    lda #47
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_MAIN_ARG_LEFT
+    ldy #'h'
+    jsr native_real_function_emit_named_byte_reloc
+    lda #50
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_MAIN_ARG_RIGHT
+    ldy #'l'
+    jsr native_real_function_emit_named_byte_reloc
+    lda #53
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_MAIN_ARG_RIGHT
+    ldy #'h'
+    jsr native_real_function_emit_named_byte_reloc
+    lda #56
+    ldx #$00
+    jsr native_real_function_emit_export_reloc
+    lda #67
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_MAIN_RESULT
+    jsr native_real_function_emit_named_word_reloc
+    lda #104
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_STORE_TOP
+    jsr native_real_function_emit_named_word_reloc
+    lda #120
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_STORE_NEXT
+    jsr native_real_function_emit_named_word_reloc
+    lda #131
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_LEFT
+    ldy #'l'
+    jsr native_real_function_emit_named_byte_reloc
+    lda #135
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_LEFT
+    ldy #'h'
+    jsr native_real_function_emit_named_byte_reloc
+    lda #139
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_RIGHT
+    ldy #'l'
+    jsr native_real_function_emit_named_byte_reloc
+    lda #143
+    ldx native_real_function_name_targets+NATIVE_REAL_FUNCTION_TARGET_SELECT_RIGHT
+    ldy #'h'
+    jsr native_real_function_emit_named_byte_reloc
+    lda #147
+    ldx #NATIVE_REAL_BINARY_NAME_RESULT
+    ldy #'l'
+    jsr native_real_function_emit_named_byte_reloc
+    lda #151
+    ldx #NATIVE_REAL_BINARY_NAME_RESULT
+    ldy #'h'
+    jsr native_real_function_emit_named_byte_reloc
+    lda #155
+    ldx #$00
+    jsr native_real_function_emit_import_reloc
+    lda #158
+    ldx #NATIVE_REAL_BINARY_NAME_RESULT
+    ldy #'l'
+    jsr native_real_function_emit_named_byte_reloc
+    lda #160
+    ldx #NATIVE_REAL_BINARY_NAME_RESULT
+    ldy #'h'
+    jsr native_real_function_emit_named_byte_reloc
+    lda #NATIVE_REAL_BINARY_POINTER_OFFSET
+    ldx #NATIVE_REAL_BINARY_NAME_DATA
+    jmp native_real_function_emit_named_word_reloc
+
 native_real_clamp_emit_reloc_list:
     lda #$00
     sta native_real_function_index
@@ -1044,6 +1533,15 @@ native_real_function_emit_reloc_prefix:
     jmp emit_char_overlay
 
 native_real_function_set_name_x:
+    lda native_real_function_active
+    cmp #NATIVE_REAL_FUNCTION_MODE_BINARY
+    bne :+
+    lda native_real_binary_name_ptr_lo,x
+    sta ACTC_OVERLAY_SCAN_ZP
+    lda native_real_binary_name_ptr_hi,x
+    sta ACTC_OVERLAY_SCAN_ZP+1
+    rts
+:
     lda native_real_function_name_ptr_lo,x
     sta ACTC_OVERLAY_SCAN_ZP
     lda native_real_function_name_ptr_hi,x
@@ -1061,6 +1559,10 @@ native_real_function_select_body_pattern:
     .asciiz "S?S?L?U?L?U?u0p0lhL?U?rvL?U?r"
 native_real_function_main_body_pattern:
     .asciiz "p2u1T?S?p4u1T?S?L?U?L?U?C0T?S?r"
+native_real_binary_body_pattern:
+    .asciiz "S?S?L?U?L?U?u0r"
+native_real_binary_main_body_pattern:
+    .asciiz "p1u1T?S?p3u1T?S?L?U?L?U?C0T?S?r"
 native_real_clamp_body_pattern:
     .asciiz "p1u0T?S?p3u0T?S?p5u0T?S?L?U?L?U?L?U?u1T?S?L?U?p6u2r"
 native_real_function_external_cmp:
@@ -1073,6 +1575,22 @@ native_real_clamp_external_clamp:
     .asciiz "rt_f_clamp"
 native_real_clamp_external_print:
     .asciiz "rt_print_f"
+native_real_binary_external_add:
+    .asciiz "rt_f_add"
+native_real_binary_external_sub:
+    .asciiz "rt_f_sub"
+native_real_binary_external_mul:
+    .asciiz "rt_f_mul"
+native_real_binary_external_div:
+    .asciiz "rt_f_div"
+native_real_binary_external_min:
+    .asciiz "rt_f_min"
+native_real_binary_external_max:
+    .asciiz "rt_f_max"
+native_real_binary_external_mod:
+    .asciiz "rt_f_mod"
+native_real_binary_external_hypot:
+    .asciiz "rt_f_hypot"
 
 native_real_function_main_body_marker:
     .asciiz "b u0u1M"
@@ -1097,6 +1615,8 @@ native_real_function_name_data:
     .asciiz "__idata"
 native_real_function_name_pointer:
     .asciiz "__iptr"
+native_real_binary_name_result:
+    .asciiz "__fresult"
 
 native_real_clamp_name_data:
     .asciiz "__idata"
@@ -1121,10 +1641,27 @@ native_real_function_name_ptr_hi:
     .byte >native_real_function_name_v2,>native_real_function_name_v3
     .byte >native_real_function_name_v4,>native_real_function_name_data
     .byte >native_real_function_name_pointer
+native_real_binary_name_ptr_lo:
+    .byte <native_real_function_name_v0,<native_real_function_name_v1
+    .byte <native_real_function_name_v2,<native_real_function_name_v3
+    .byte <native_real_function_name_v4,<native_real_function_name_data
+    .byte <native_real_binary_name_result,<native_real_function_name_pointer
+native_real_binary_name_ptr_hi:
+    .byte >native_real_function_name_v0,>native_real_function_name_v1
+    .byte >native_real_function_name_v2,>native_real_function_name_v3
+    .byte >native_real_function_name_v4,>native_real_function_name_data
+    .byte >native_real_binary_name_result,>native_real_function_name_pointer
 native_real_function_name_offsets:
     .byte 163,167,171,175,179,163,183
 native_real_function_name_sizes:
     .byte 4,4,4,4,4,20,2
+native_real_binary_name_offsets:
+    .byte NATIVE_REAL_BINARY_DATA_OFFSET,NATIVE_REAL_BINARY_DATA_OFFSET+4
+    .byte NATIVE_REAL_BINARY_DATA_OFFSET+8,NATIVE_REAL_BINARY_DATA_OFFSET+12
+    .byte NATIVE_REAL_BINARY_DATA_OFFSET+16,NATIVE_REAL_BINARY_DATA_OFFSET
+    .byte NATIVE_REAL_BINARY_RESULT_OFFSET,NATIVE_REAL_BINARY_POINTER_OFFSET
+native_real_binary_name_sizes:
+    .byte 4,4,4,4,4,NATIVE_REAL_BINARY_DATA_SIZE,4,2
 
 native_real_clamp_name_ptr_lo:
     .byte <native_real_clamp_name_data,<native_real_clamp_name_a
@@ -1145,6 +1682,8 @@ native_real_function_select_debug_offsets:
     .byte 88,109,130,130,138,138,146,149,151,151,153,153,157,158,158,158,162
 native_real_function_main_debug_offsets:
     .byte 21,25,13,25,36,40,28,40,43,46,49,52,55,66,66,72
+native_real_binary_debug_offsets:
+    .byte 88,109,130,130,138,138,154,157
 native_real_clamp_debug_offsets:
     .byte 0,17,20,20,20,37,40,40,40,57,60,60,60
     .byte 73,73,86,86,99,112,115,115,115,128,128,128,131
@@ -1171,6 +1710,16 @@ native_real_function_machine_template:
     .byte $85,$05,$20,$00,$00,$C9,$FF,$D0,$05,$A9,$00,$A2,$00,$60,$A9,$00
     .byte $A2,$00,$60,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
     .byte $00,$00,$00,$00,$00,$00,$00,$00,$00
+
+; Bytes 0..129 are shared with the compare/select function template. This
+; suffix adds helper operands, a non-aliasing hidden destination, and its data.
+native_real_binary_machine_suffix:
+    .byte $A9,$00,$85,$02,$A9,$00,$85,$03,$A9,$00,$85,$04,$A9,$00,$85,$05
+    .byte $A9,$00,$85,$06,$A9,$00,$85,$07,$20,$00,$00,$A9,$00,$A2,$00,$60
+    .byte $EA
+    .byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+    .byte $00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+.assert (* - native_real_binary_machine_suffix) = (NATIVE_REAL_BINARY_ROOT_SIZE - 130), error, "binary REAL function suffix size"
 
 native_real_clamp_machine_template:
     .byte $A2,$00,$BD,$00,$00,$85,$02,$E8,$BD,$00,$00,$85,$03,$A9,$00,$A2
@@ -1225,3 +1774,5 @@ native_real_function_import_index:
     .byte $00
 native_real_function_pattern_ptr:
     .word $0000
+native_real_function_capture_expected:
+    .byte $00

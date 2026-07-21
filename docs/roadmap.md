@@ -1571,6 +1571,22 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
 - Fixed ALINK import discovery for paged objects by stabilizing body-selector
   records before recursive module lookups. An 11-import object regression now
   crosses the source-window boundary.
-- Current inventories are 1,341 broad and 298 compiled-runtime cases. Pass 6
+- At that checkpoint inventories were 1,341 broad and 298 compiled-runtime cases. Pass 6
   is 8,093 bytes with 99 bytes free under its 96-byte reserve. Native MATH1 now
   exposes fifteen link-selected calls and lacks 28 public routines.
+
+## 2026-07-21 Native Binary REAL Function Return
+
+- Generalized body collection and preallocation so a REAL `RETURN(...)` uses
+  the same bounded value parser as assignments and conditions without growing
+  capacity-constrained pass 6.
+- Pass K now emits a two-REAL-parameter function returning one selected binary
+  arithmetic, min/max, remainder, or hypotenuse result through a hidden
+  non-aliasing four-byte cell.
+- Added a shared `RETURN(FHypot(A,B))` fixture plus exact OBJ, ALINK closure,
+  sibling-pruning, Linux ACTC/ALINK, and live native VICE checks. Both products
+  produce binary32 5.0 from the same portable source.
+- Current inventories are 1,342 broad direct-PRG and 174 non-runtime
+  source-backed shapes; the compiled-runtime oracle remains 298. Pass K is
+  5,877 bytes with 2,315 bytes free. General REAL trees, locals, nested calls,
+  and the remaining 28 MATH1 routines are still pending.

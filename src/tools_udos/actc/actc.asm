@@ -1354,6 +1354,19 @@ actc_overlay_jsr_entry:
     ldy #>actc_overlay_context
     rts
 
+actc_overlay_jsr_aux_entry:
+    sec
+    lda ACTC_OVERLAY_EXEC_BASE+ACTC_OVERLAY_HEADER_AUX_ENTRY_LO
+    sbc #$01
+    sta actc_overlay_entry_minus_one
+    lda ACTC_OVERLAY_EXEC_BASE+ACTC_OVERLAY_HEADER_AUX_ENTRY_HI
+    sbc #$00
+    pha
+    lda actc_overlay_entry_minus_one
+    pha
+    lda #$00
+    rts
+
 init_module_name:
     ldx #svc_retptr
     jsr svc_program_get_cmdline_len
@@ -7146,7 +7159,11 @@ emit_function_return_from_scan_y_or_fail:
     lda #'('
     jsr source_reader_consume_expected_token_from_scan_y
     bcs emit_function_return_fail
+.if ACTC_USE_BODY_OVERLAY
+    jsr actc_overlay_jsr_aux_entry
+.else
     jsr emit_runtime_real_value_from_scan_y_or_fail
+.endif
     bcs emit_function_return_fail
     jsr skip_inline_spaces_at_scan_y
     lda #')'

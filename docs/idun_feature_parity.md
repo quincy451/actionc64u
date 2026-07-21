@@ -7,6 +7,9 @@ Generated applications in both products remain self-contained C64 PRGs built
 from OBJ1 modules. ALINK selects only reachable OBJ1 modules; code already
 placed in a selected application object is not presently discarded.
 
+Status date: 2026-07-21. Full cross-product parity is not yet complete; the
+matrix and ordered implementation plan below are the authoritative gap list.
+
 ## Parity Rules
 
 - Shared Action syntax, library APIs, OBJ1 records, runtime results, PRG layout
@@ -51,7 +54,7 @@ not parity artifacts.
 | Program-owned overlay sections | `OVERLAY`/`ENDOVERLAY` and relocated `OverlayCall` | No native source lowering | Native compiler gap; ACTC tool overlays are not equivalent |
 | Program argument entry | `MAIN(argc,argv)` through the Idun target service | `MAIN()` and UDOS command-tail workflow | OS-specific contracts; expose equivalent user arguments without copying the Idun upload ABI |
 | IEEE-754 binary32 arithmetic and exceptional values | Standalone modules | Standalone modules plus native support modules | Parity at runtime |
-| General REAL source expressions, calls, and returns | Full binary32 compiler path with intrinsic `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, and `FHypot` | Core operations, direct `FSign`/`FTrunc`/`FFloor`/`FCeil`/`FRound`/`FFrac`/`FMod`/`FHypot`/`FMin`/`FMax` on named REAL values, a constrained `FClamp` ternary root, and constrained zero-, one-, and two-parameter native function shapes | Native compiler gap; these builtin semantics are complete, but arbitrary expression trees, calls, and returns are not |
+| General REAL source expressions, calls, and returns | Full binary32 compiler path with intrinsic `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, and `FHypot` | Core operations, direct `FSign`/`FTrunc`/`FFloor`/`FCeil`/`FRound`/`FFrac`/`FMod`/`FHypot`/`FMin`/`FMax` on named REAL values, a constrained `FClamp` ternary root, and constrained zero-, one-, and two-parameter native function shapes including one selected-binary return | Native compiler gap; these builtin semantics and the bounded binary-return shape are complete, but arbitrary expression trees, calls, and returns are not |
 | INPUT1 joystick/two-button mouse API | 19 declarations | 19 declarations | Parity; physical checks remain |
 | DBF1 API | 20 declarations | 20 declarations | Parity; physical REU/disk checks remain |
 | SIDSPR1 API | 37 declarations | 37 declarations | Parity; physical SID/display checks remain |
@@ -67,6 +70,46 @@ not parity artifacts.
 | Graphics resource editors and ACTEDIT F8 | `actsprite`, `actbitmap`, F8 | Not implemented | Native implementation gap |
 | Linux/APK deployment | Static AArch64 and signed APKs | Not applicable | Idun-specific |
 | UDOS disk/DNP release | Not applicable | Native release image | UDOS-specific |
+
+## Concrete Native Gaps
+
+The 28 missing MATH1 routines are `FExp`, `FLn`, `FLog2`, `FLog10`,
+`FPow`, `FSin`, `FCos`, `FTan`, `FATan`, `FATan2`, `FASin`,
+`FACos`, `FSec`, `FCsc`, `FCot`, `FASec`, `FACsc`, `FACot`,
+`FVersin`, `FHaversin`, `FSinh`, `FCosh`, `FTanh`, `FASinh`,
+`FACosh`, `FATanh`, `DegToRad`, and `RadToDeg`. They require general
+REAL function lowering first, then dependency-sized OBJ modules so unused
+routines remain absent from the linked PRG.
+
+Native GFX1 is missing 45 high-level routines: `GfxUseBank`,
+`GfxUseScreen`, `GfxUseBitmap`, `GfxUseSprites`, `GfxHires`,
+`GfxMulticolor`, `GfxBitmapClear`, `GfxScreenClear`, `ClipSet`,
+`ClipReset`, `Plot`, `Unplot`, `PlotXor`, `Point`, `MPlot`,
+`MPoint`, `GfxCellColors`, `GfxMCellColors`, `HLineDraw`,
+`HLineUnplot`, `VLineDraw`, `LineDraw`, `RectangleDraw`,
+`RectangleFill`, `RectangleClear`, `SquareDraw`, `SquareFill`,
+`CircleDraw`, `CircleFill`, `TriangleDraw`, `BitmapStamp`,
+`BitmapDrawResource`, `BitmapErase`, `BitmapMove`, `MBitmapStamp`,
+`MBitmapDrawResource`, `MBitmapErase`, `MBitmapMove`,
+`SpriteDefaultColor`, `SpriteIsMulticolor`, `SpritePlace`, `SpriteMove`,
+`SpriteShow`, `SpriteHide`, and `SpriteSharedColors`. The seven low-level
+sprite aliases exposed by Idun GFX1 already exist in the native
+SIDSPR1/compiler surface and are not separate 6502 implementation gaps.
+
+The remaining language/runtime gaps are general arrays, pointers, records,
+length-prefixed strings, indirect parameters, typed nested calls and returns,
+bounded recursive frames, application REU arrays, program-owned overlays,
+resource declarations/embedding, and a UDOS command-tail implementation of the
+portable argument-entry contract. The remaining workflow gaps are native
+sprite/bitmap editors with ACTEDIT F8, a UDOS formatter/help path, and the
+optional profiler decision. Physical C64U input, display, SID, REU, and disk
+acceptance remains required after implementation.
+
+Linux processes, POSIX paths, SQLite, sockets, AArch64/APK packaging, and the
+Idun target protocol are deliberately not native gaps. Conversely, UDOS
+resident services, compiler overlays, REU compiler workspace, and D64/DNP
+release media are deliberately not Idun gaps.
+
 
 ## Native Work Order
 
@@ -89,7 +132,7 @@ module selected only when reachable. Idun lowers `FTrunc`, `FFloor`, `FCeil`, `F
 same shared helpers and keeps portable source implementations for the other
 MATH1 routines because its host compiler can lower those bodies directly.
 
-The first item now has eleven tested checkpoints. Native pass A accepts two named
+The first item now has twelve tested checkpoints. Native pass A accepts two named
 REAL arguments after their immediate `REAL(integer)` initializers, copies both
 values into distinct parameter storage, and returns either named parameter by
 pointer. Dedicated pass K then lowers the exact finite comparison/select form
@@ -132,7 +175,14 @@ print storage independently, so those roles need not follow declaration order.
 Its 199-byte selected helper validates all three inputs and bound order, then
 uses the ordinary comparison/minimum/maximum closure. This establishes the
 ternary ABI and complete portable clamp semantics without claiming arbitrary
-three-argument expression lowering. General REAL expression trees, nested
+three-argument expression lowering. Pass K now also lowers a bounded
+two-REAL-parameter function whose single return expression selects `+`, `-`,
+`*`, `/`, `FMin`, `FMax`, `FMod`, or `FHypot`. It uses a hidden four-byte
+result cell so helper output never aliases either parameter. The shared
+`RETURN(FHypot(A,B))` fixture compiles in both products; native ALINK selects
+only the twelve-module conversion/hypotenuse closure, and its direct PRG writes
+binary32 5.0 in VICE. This closes that exact function-return shape, not general
+expression lowering. General REAL expression trees, nested
 calls, and the rest of MATH1 remain incomplete.
 
 Remaining work is dependency ordered:
@@ -261,9 +311,9 @@ make sync-native-check NATIVE_ACTION_ROOT=/path/to/actionc64u
 
 ## Validation Snapshot
 
-The 2026-07-20 current cross-product baseline passed:
+The 2026-07-21 current cross-product baseline passed:
 
-- 799 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
+- 801 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
   ALINK closure, IEEE-754, ACTEDIT, ACTDBG, Linux compatibility, export, and
   release-image checks;
 - 133 UDOS integration tests, with one intentional embedded-AUTOEXEC capacity
@@ -525,11 +575,22 @@ fixture, focused native direct PRG, and complete native MATH1 runtime matrix
 prove end-to-end behavior, dependency closure, and sibling pruning. The same
 slice fixes ALINK paged-object import discovery by stabilizing each body
 selector before recursive lookups can reload the source window; an 11-import
-fixture exercises that boundary. Current inventories are 1,341 broad
+fixture exercises that boundary. At that checkpoint inventories were 1,341 broad
 direct-PRG shapes, 173 non-runtime source-backed object-emission shapes, and
 298 compiled-runtime relocation-oracle cases. Native pass 6 is 8,093 bytes
 with 99 bytes free under its 96-byte growth reserve; the native MATH1 gap is
 now 28 public routines.
+
+The next native compiler slice generalizes REAL function returns through the
+body-overlay auxiliary parser entry. Pass K accepts the bounded selected-binary
+return described above and allocates a hidden non-aliasing result cell. The
+shared `real_function_binary_hypot.act` fixture compiles and links through Idun,
+while native ACTC/ALINK and VICE prove the same source and result with unused
+MATH1 siblings staged but not loaded. Current inventories are 1,342 broad
+direct-PRG shapes, 174 non-runtime source-backed object-emission shapes, and
+298 compiled-runtime relocation-oracle cases. Pass K is 5,877 bytes with
+2,315 bytes free in its 8 KiB window; pass 6 and the 28-routine MATH1 gap are
+unchanged.
 
 Pass 1 now contains only the streamed module-header validator. Moving the
 transform into `ACTC_OVLI.BIN` reduced pass 1 to 788 bytes. Integer folding,
@@ -543,9 +604,9 @@ hard-limited to `$A000-$BFFF`; UDOS live state at `$C000+` is forbidden.
 Linker-allocated pass BSS is limited to `$8000-$9DFF`; ASMBLOCK's transfer page,
 label index, and emitter state occupy the reserved `$9E00-$9F1E` range. Pass J
 is 7,901 bytes with 291 bytes free under its 256-byte reserve; pass A is 7,418
-bytes with 774 bytes free under its 768-byte reserve; pass K is 4,594 bytes with
-3,598 bytes free. The complete
-210-test overlay suite and 198-test source-cache suite pass with this layout.
+bytes with 774 bytes free under its 768-byte reserve; pass K is 5,877 bytes with
+2,315 bytes free. The complete
+211-test overlay suite and 198-test source-cache suite pass with this layout.
 
 Shipped and ordinary harness builds default to
 `ACTC_ENABLE_REAL_CONST_EVALUATOR=1`. The legacy all-resident body, layout, and

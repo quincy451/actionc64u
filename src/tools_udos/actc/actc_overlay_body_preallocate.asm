@@ -136,7 +136,7 @@ preallocate_body_externals_overlay_not_raw_block:
     lda #<pattern_return
     ldy #>pattern_return
     jsr symbol_buffer_matches_local_const
-    bcc preallocate_body_externals_overlay_scan_after_symbol
+    bcc preallocate_body_externals_overlay_return_statement
     ldy symbol_end_y_local
     lda #ACTC_OVERLAY_CTX_SKIP_INLINE_SPACES_FN_LO
     jsr call_context_function
@@ -148,6 +148,10 @@ preallocate_body_externals_overlay_not_raw_block:
     jsr preallocate_match_scan_char_from_y_overlay
     bcc preallocate_body_externals_overlay_assignment
     jmp preallocate_body_externals_overlay_skip_line
+preallocate_body_externals_overlay_return_statement:
+    jsr preallocate_real_return_external_from_declared_overlay
+    bcc preallocate_body_externals_overlay_skip_line
+    jmp preallocate_body_externals_overlay_scan_after_symbol
 preallocate_body_externals_overlay_assignment:
     lda symbol_end_y_local
     sta assignment_target_end_y_local
@@ -525,6 +529,40 @@ preallocate_real_print_value_external_from_scan_y_overlay_done:
     rts
 preallocate_real_print_value_external_from_scan_y_overlay_miss:
     ldy assignment_value_start_y_local
+    sec
+    rts
+
+preallocate_real_return_external_from_declared_overlay:
+    ldy symbol_end_y_local
+    sty symbol_start_y_local
+    lda #ACTC_OVERLAY_CTX_SAVE_SOURCE_MARK_FN_LO
+    jsr call_context_function
+    lda #ACTC_OVERLAY_CTX_SKIP_INLINE_SPACES_FN_LO
+    jsr call_context_function
+    lda #'('
+    jsr preallocate_consume_scan_char_from_y_overlay
+    bcs preallocate_real_return_external_from_declared_overlay_miss
+    lda #ACTC_OVERLAY_CTX_SKIP_INLINE_SPACES_FN_LO
+    jsr call_context_function
+    jsr preallocate_real_print_value_external_from_scan_y_overlay
+    bcs preallocate_real_return_external_from_declared_overlay_miss
+    lda #ACTC_OVERLAY_CTX_SKIP_INLINE_SPACES_FN_LO
+    jsr call_context_function
+    lda #')'
+    jsr preallocate_consume_scan_char_from_y_overlay
+    bcs preallocate_real_return_external_from_declared_overlay_miss
+    lda #ACTC_OVERLAY_CTX_SKIP_INLINE_SPACES_FN_LO
+    jsr call_context_function
+    lda #ACTC_OVERLAY_CTX_REQUIRE_LINE_END_FN_LO
+    jsr call_context_function
+    bcs preallocate_real_return_external_from_declared_overlay_miss
+    clc
+    rts
+preallocate_real_return_external_from_declared_overlay_miss:
+    lda #ACTC_OVERLAY_CTX_RESTORE_SOURCE_MARK_FN_LO
+    jsr call_context_function
+    ldy symbol_start_y_local
+    sty symbol_end_y_local
     sec
     rts
 

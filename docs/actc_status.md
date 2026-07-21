@@ -158,8 +158,8 @@ Current state:
   Function-aware pass G is 6,645 bytes with 1,547 bytes free under a 512-byte
   gate. Universal mixed pass H is 8,064 bytes with exactly 128 bytes free under a
   128-byte gate. Fixed-address and register-machine pass J is 7,901 bytes with
-  291 bytes free under a 256-byte gate. REAL function/ternary pass K is 4,594
-  bytes with 3,598 bytes free in its 8 KiB window. Native REAL emitter pass A
+  291 bytes free under a 256-byte gate. REAL function/ternary pass K is 5,877
+  bytes with 2,315 bytes free in its 8 KiB window. Native REAL emitter pass A
   is 7,418 bytes with 774 bytes free under its 768-byte growth reserve.
   Passes H and J share pass 9's typed-parameter bind prologue, so runtime helper calls
   inside supported functions retain the word-return ABI. Pass F is 6,709 bytes
@@ -253,6 +253,14 @@ Current state:
   return operands. Canonical and permuted declaration/parameter orders therefore
   emit the same bounded layout with role-correct named relocations. General
   function expression/control lowering and MATH1 remain outside this pass.
+- Pass K also owns a bounded selected-binary REAL return. A two-REAL-parameter
+  function may return one `+`, `-`, `*`, `/`, `FMin`, `FMax`, `FMod`, or
+  `FHypot` expression over its parameters. The generated function writes a
+  hidden four-byte result cell, invokes only the selected import, and returns
+  that cell by A/X pointer. The shared FHypot fixture links its complete
+  transitive closure, prunes staged sibling helpers, and writes binary32 5.0 in
+  VICE. Arbitrary trees, nested calls, locals, and multiple statements remain
+  outside this bounded emitter.
 - The bounded REAL value parser also recognizes `FSign(A)`, `FTrunc(A)`, `FFloor(A)`, `FCeil(A)`, `FRound(A)`, `FFrac(A)`, `FMod(A,B)`, `FHypot(A,B)`,
   `FMin(A,B)`, and `FMax(A,B)` for named REAL operands in assignment, print, and condition
   positions. ACTC emits ordinary imports for the selected helper. The

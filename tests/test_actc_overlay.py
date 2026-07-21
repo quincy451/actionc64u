@@ -2215,6 +2215,69 @@ class TestActcOverlay(unittest.TestCase):
             obj,
         )
 
+    def test_real_function_returns_selected_binary_helper_result(self) -> None:
+        for function_name, runtime_module, expression in (
+            ("ADD", "rt_f_add", "A+B"),
+            ("SUBTRACT", "rt_f_sub", "A-B"),
+            ("MULTIPLY", "rt_f_mul", "A*B"),
+            ("DIVIDE", "rt_f_div", "A/B"),
+            ("SMALLER", "rt_f_min", "FMin(A,B)"),
+            ("LARGER", "rt_f_max", "FMax(B,A)"),
+            ("REMAINDER", "rt_f_mod", "FMod(A,B)"),
+            ("LENGTH", "rt_f_hypot", "FHypot(A,B)"),
+        ):
+            with self.subTest(function_name=function_name):
+                obj = self.compile_overlay_object(
+                    "MODULE MAIN\r"
+                    "REAL LEFT\r"
+                    "REAL RIGHT\r"
+                    "REAL RESULT\r"
+                    f"REAL FUNC {function_name}(REAL A,B)\r"
+                    f"RETURN({expression})\r"
+                    "PROC MAIN()\r"
+                    "LEFT=REAL(3)\r"
+                    "RIGHT=REAL(4)\r"
+                    f"RESULT={function_name}(LEFT,RIGHT)\r"
+                    "RETURN\r",
+                    f"actc-real-function-{function_name.lower()}",
+                )
+
+                self.assertEqual(self.last_emit_overlay_pass, [20])
+                self.assertIn(
+                    "x main 0 189\n"
+                    f"x {function_name.lower()} 88 75\n"
+                    "x __v0 163 4\n"
+                    "x __v1 167 4\n"
+                    "x __v2 171 4\n"
+                    "x __v3 175 4\n"
+                    "x __v4 179 4\n"
+                    "x __idata 163 24\n"
+                    "x __fresult 183 4\n"
+                    "x __iptr 187 2\n",
+                    obj,
+                )
+                self.assertIn("b u0u1M\nb u0M\n", obj)
+                self.assertIn("r 26 u1\n", obj)
+                self.assertIn("r 41 u1\n", obj)
+                self.assertIn("r 147 l x __fresult\nr 151 h x __fresult\n", obj)
+                self.assertIn("r 155 u0\n", obj)
+                self.assertIn("r 158 l x __fresult\nr 160 h x __fresult\n", obj)
+                self.assertIn("u rt_i_to_f\n", obj)
+                self.assertIn(f"u {runtime_module}\n", obj)
+                for sibling in (
+                    "rt_f_add",
+                    "rt_f_sub",
+                    "rt_f_mul",
+                    "rt_f_div",
+                    "rt_f_min",
+                    "rt_f_max",
+                    "rt_f_mod",
+                    "rt_f_hypot",
+                ):
+                    if sibling != runtime_module:
+                        self.assertNotIn(f"u {sibling}\n", obj)
+                self.assertNotRegex(obj, r"(?m)^b .*S[0-9]")
+
     def test_asmblock_emits_symbolic_immediate_byte_relocations(self) -> None:
         obj = self.compile_overlay_object(
             "MODULE MAIN\r"
@@ -11281,6 +11344,9 @@ class TestActcOverlay(unittest.TestCase):
         self.assertEqual(load_base, 0xA000)
         self.assertEqual(entry, 0xA000 + 14)
         self.assertEqual(length, len(data))
+        real_value_entry = data[12] | (data[13] << 8)
+        self.assertGreaterEqual(real_value_entry, entry)
+        self.assertLess(real_value_entry, load_base + length)
 
     def test_body_preallocate_overlay_builds_with_expected_header(self) -> None:
         self.require_toolchain()

@@ -28,7 +28,9 @@ actc_overlay_header:
     .word ACTC_OVERLAY_EXEC_BASE
     .word actc_overlay_entry
     .word actc_overlay_end - actc_overlay_header
-    .word $0000
+    ; The resident REAL-return shim re-enters the loaded body overlay here so
+    ; RETURN expressions use the same parser as assignments and conditions.
+    .word emit_runtime_real_value_local_or_fail
 
 actc_overlay_entry:
     stx ACTC_OVERLAY_CONTEXT_ZP

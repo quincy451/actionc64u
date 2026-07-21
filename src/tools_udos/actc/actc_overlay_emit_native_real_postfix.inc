@@ -28,6 +28,7 @@ NRP_HELPER_COUNT = 20
 native_real_postfix_detect:
     lda #$00
     sta nrp_active
+    sta nrp_rejected_call_graph
     sta nrp_program_mode
     lda #ACTC_OVERLAY_CTX_EXPORT_COUNT_PTR_LO
     jsr load_count_from_context
@@ -532,14 +533,20 @@ nrp_parse_local_call:
     lda nrp_program_mode
     cmp #NRP_PROGRAM_REAL_FUNCTION
     jne nrp_parse_body_fail
-    lda nrp_proc_index
-    cmp nrp_function_count
-    jne nrp_parse_body_fail
     jsr nrp_read_selector
     jcc nrp_parse_body_fail
     cmp nrp_function_count
-    jcs nrp_parse_body_fail
+    jcs nrp_parse_local_call_rejected
     sta nrp_call_export_index
+    lda nrp_proc_index
+    cmp nrp_function_count
+    beq nrp_parse_local_call_allowed
+    jcs nrp_parse_body_fail
+    ; Static frames are safe only for declaration-order DAG edges.
+    cmp nrp_call_export_index
+    jcc nrp_parse_local_call_rejected
+    jeq nrp_parse_local_call_rejected
+nrp_parse_local_call_allowed:
     jsr nrp_pop_real_to_operand2
     jcc nrp_parse_body_fail
     jsr nrp_pop_real_to_operand1
@@ -564,6 +571,10 @@ nrp_parse_local_call:
     jsr nrp_push_value
     jcc nrp_parse_body_fail
     jmp nrp_parse_body_loop
+nrp_parse_local_call_rejected:
+    lda #$01
+    sta nrp_rejected_call_graph
+    jmp nrp_parse_body_fail
 
 nrp_parse_param_bind:
     jsr nrp_read_selector
@@ -1703,6 +1714,7 @@ nrp_name_kind: .res 1
 nrp_name_index: .res 1
 nrp_import_index: .res 1
 nrp_call_export_index: .res 1
+nrp_rejected_call_graph: .res 1
 nrp_literal_index: .res 1
 nrp_literal_lo: .res 1
 nrp_literal_hi: .res 1

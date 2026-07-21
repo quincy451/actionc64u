@@ -8836,6 +8836,53 @@ class TestActcOverlay(unittest.TestCase):
         )
         self.assertNotIn("u rt_f_clamp\n", obj)
 
+    def test_real_function_can_call_an_earlier_function(self) -> None:
+        source = (
+            self.root / "tests" / "parity" / "real_function_call_chain_postfix.act"
+        ).read_text(encoding="ascii").replace("\n", "\r")
+        obj = self.compile_overlay_object(
+            source,
+            "actc-overlay-real-function-call-chain",
+            extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [21])
+        self.assertRegex(obj, r"(?m)^x main 0 \d+$")
+        self.assertRegex(obj, r"(?m)^x length \d+ \d+$")
+        self.assertRegex(obj, r"(?m)^x chain \d+ \d+$")
+        self.assertEqual(len(re.findall(r"(?m)^r \d+ x length$", obj)), 1)
+        self.assertEqual(len(re.findall(r"(?m)^r \d+ x chain$", obj)), 1)
+        self.assertIn(
+            "u rt_f_abs\nu rt_f_hypot\nu rt_f_max\n"
+            "u rt_i_to_f\nu rt_print_f\n",
+            obj,
+        )
+        self.assertNotIn("u rt_f_min\n", obj)
+
+    def test_real_function_forward_call_is_rejected(self) -> None:
+        console = self.compile_overlay_object(
+            "MODULE MAIN\r"
+            "REAL LEFT\r"
+            "REAL RIGHT\r"
+            "REAL RESULT\r"
+            "REAL FUNC FIRST(REAL A,B)\r"
+            "REAL TEMP\r"
+            "TEMP=SECOND(A,B)\r"
+            "RETURN(TEMP)\r"
+            "REAL FUNC SECOND(REAL A,B)\r"
+            "RETURN(A)\r"
+            "PROC MAIN()\r"
+            "LEFT=REAL(3)\r"
+            "RIGHT=REAL(4)\r"
+            "RESULT=FIRST(LEFT,RIGHT)\r"
+            "RETURN\r",
+            "actc-overlay-reject-forward-real-function-call",
+            extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+            expected_exit_status=1,
+        )
+
+        self.assertIn("EMIT OVL FAIL", console)
+
     def test_native_real_emitter_owns_math1_clamp_call(self) -> None:
         obj = self.compile_overlay_object(
             "MODULE MAIN\r"

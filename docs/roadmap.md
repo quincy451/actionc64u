@@ -1686,3 +1686,22 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   5,636 bytes with 2,556 bytes free. Function-to-function calls, reentrant
   local frames, control flow, mixed types, arbitrary signatures, and recursive
   frames remain pending.
+
+## 2026-07-21 Native Declaration-Order REAL Call Chain
+
+- Extended pass L's two-function ABI with one safe function-to-function edge.
+  `MAIN` may call either function, and the later function may assign the earlier
+  function's A/X result pointer into a bounded REAL local before continuing its
+  return tree.
+- Static parameter/local storage remains nonreentrant. Pass L therefore accepts
+  only strictly earlier function selectors and now hard-fails forward, self, or
+  cyclic edges instead of allowing the generic emitter to claim them.
+- Added `real_function_call_chain_postfix.act` to both parity trees. Native ACTC
+  emits ordinary `MAIN -> CHAIN` and `CHAIN -> LENGTH` OBJ1 relocations; ALINK
+  needs no function-specific behavior. The direct PRG prints `5`, and VICE
+  verifies binary32 5.0 in both `RESULT` and `CHAIN.BASE`.
+- Idun ACTC/ALINK compiles, links, and executes the same fixture. Current native
+  inventories are 1,348 broad direct-PRG and 180 non-runtime source-backed
+  shapes; the compiled-runtime oracle remains 298. Pass L is 5,667 bytes with
+  2,525 bytes free. Reentrant frames, control flow, nested call expressions,
+  mixed types, arbitrary signatures, and recursion remain pending.

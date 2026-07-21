@@ -825,13 +825,16 @@ Base-36 pass L, `ACTC_OVLL.BIN`, now turns the bounded child-first stream into
 ordinary executable OBJ1 for a straight-line module-REAL subset. It retains
 native line offsets, emits `__idata`-anchored source-variable debug records,
 allocates private four-byte temporaries, and supports 16-bit export and
-relocation offsets. It also lowers up to two independent nonrecursive
-two-REAL-parameter functions called directly by `MAIN`: caller-pushed pointers
+relocation offsets. It also lowers up to two nonrecursive two-REAL-parameter
+functions: caller-pushed pointers
 are reverse-bound to per-function static parameter cells, A/X returns the
 selected result pointer, and bounded all-REAL locals use ordinary static OBJ1
-storage plus DBG1 local records. Nested expression, function-call, local-storage,
-and two-callee PRGs pass ACTC, ALINK, DBG validation, and VICE execution while
-loading only reachable runtime modules. Its 5,636-byte image leaves 2,556 bytes
-in `$A000-$BFFF`. Function-to-function calls, reentrant local frames, control
-flow, mixed types, arbitrary signatures, and recursion remain the next compiler
+storage plus DBG1 local records. `MAIN` may call either function; a later
+function may assign an earlier function's result before using it in a nested
+return tree. Forward, self, and cyclic edges are rejected before generic
+emission. Nested expression, local-storage, two-callee, and declaration-order
+call-chain PRGs pass ACTC, ALINK, DBG validation, and VICE execution while
+loading only reachable runtime modules. Its 5,667-byte image leaves 2,525 bytes
+in `$A000-$BFFF`. Reentrant local frames, control flow, nested call expressions,
+mixed types, arbitrary signatures, and recursion remain the next compiler
 dependency.

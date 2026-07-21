@@ -161,7 +161,7 @@ Current state:
   128-byte gate. Fixed-address and register-machine pass J is 7,901 bytes with
   291 bytes free under a 256-byte gate. REAL function/ternary pass K is 5,877
   bytes with 2,315 bytes free in its 8 KiB window. Nested REAL postfix pass L
-  is 5,636 bytes with 2,556 bytes free. Native REAL emitter pass A
+  is 5,667 bytes with 2,525 bytes free. Native REAL emitter pass A
   is 7,418 bytes with 774 bytes free under its 768-byte growth reserve.
   Passes H and J share pass 9's typed-parameter bind prologue, so runtime helper calls
   inside supported functions retain the word-return ABI. Pass F is 6,709 bytes
@@ -337,14 +337,16 @@ Current state:
   calls are integer-to-REAL conversion, `PrintR`/`PrintRE`, the maintained
   unary and binary REAL helpers, and `FClamp`; stack depth is eight, temporary
   count is 16, and debug-operation count is 64 per procedure. In addition to
-  one `MAIN`, pass L accepts up to two independent nonrecursive
-  two-REAL-parameter functions called directly by `MAIN`, with bounded all-REAL
-  locals, no control flow, and nested REAL return trees. The caller pushes
+  one `MAIN`, pass L accepts up to two nonrecursive two-REAL-parameter functions
+  with bounded all-REAL locals, no control flow, and nested REAL return trees.
+  `MAIN` may call either function, and a later function may assign an earlier
+  function's result to a local. The caller pushes
   argument pointers, each callee reverse-binds them to disjoint static parameter
-  cells, and A/X returns a result pointer. Five direct PRGs prove nested
+  cells, and A/X returns a result pointer. Six direct PRGs prove nested
   expression trees, both root-to-function selectors, function-local storage,
-  and reachable-only runtime objects. Function-to-function calls, reentrant
-  local frames, control flow, mixed declarations, arbitrary signatures, and
+  one declaration-order function edge, and reachable-only runtime objects.
+  Forward, self, and cyclic edges are rejected. Reentrant local frames, control
+  flow, nested call expressions, mixed declarations, arbitrary signatures, and
   recursive frames remain unsupported.
 
 Current focus:

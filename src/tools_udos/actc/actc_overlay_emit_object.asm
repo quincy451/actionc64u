@@ -97,6 +97,8 @@ actc_overlay_entry:
 .if ACTC_EMIT_NATIVE_REAL_POSTFIX_ONLY
     jsr native_real_postfix_detect
     bcs :+
+    lda nrp_rejected_call_graph
+    bne actc_overlay_fail
     ldy #ACTC_OVERLAY_CTX_STATUS
     lda #ACTC_OVERLAY_STATUS_NOT_APPLICABLE
     sta (ACTC_OVERLAY_CONTEXT_ZP),y

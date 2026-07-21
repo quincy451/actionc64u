@@ -355,10 +355,31 @@ PROC MAIN()
 ```
 
 ACTC emits ordinary relocations for every store and load of `ARG`; ALINK does
-not interpret the function body. Other statement sequences, general variable
-or expression arguments, arbitrary REAL return expressions, nested or
-recursive REAL calls, and external REAL functions are not yet part of this
-native path.
+not interpret the function body. This early named-storage path remains bounded.
+
+Pass L provides a broader all-REAL straight-line form with up to two functions,
+exactly two REAL parameters per function, bounded REAL locals, and nested REAL
+return trees. `MAIN` may call either function. The later function may call the
+earlier one as the complete right side of a REAL assignment:
+
+```action
+REAL FUNC LENGTH(REAL A,B)
+  RETURN(FHypot(FAbs(A),FAbs(B)))
+
+REAL FUNC CHAIN(REAL A,B)
+  REAL BASE
+  BASE=LENGTH(A,B)
+  RETURN(FMax(BASE,FAbs(A)))
+```
+
+The call uses ordinary OBJ1 export relocation and returns a four-byte result
+pointer in A/X. The local assignment copies that result before the caller
+continues. Because parameters and locals are currently static, function edges
+must point to an earlier declaration. ACTC rejects forward, self, and cyclic
+edges instead of falling back to generic object emission. Reentrant frames,
+control flow in these functions, nested calls inside another call expression,
+mixed parameter types, arbitrary signatures, recursive calls, and external REAL
+functions are not yet part of this native path.
 
 ## Dynamic Word Arithmetic
 

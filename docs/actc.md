@@ -70,14 +70,17 @@ Current contract:
   selected helpers with complete MATH1 NaN/signed-zero semantics. Pass L also
   accepts bounded nested combinations of those helpers plus `FAbs`, `FSqrt`,
   arithmetic, and `FClamp` in a straight-line module-REAL program. It also
-  accepts up to two independent nonrecursive two-REAL-parameter functions
-  called directly by `MAIN` when each function returns a nested expression from
-  that same helper set. Each function may declare bounded REAL locals, which
-  use disjoint ordinary OBJ1 data storage and DBG1 local-variable records. It
-  emits executable machine OBJ1
+  accepts up to two nonrecursive two-REAL-parameter functions called directly
+  by `MAIN` when each function returns a nested expression from that same helper
+  set. A later function may also assign an earlier function's result to a REAL
+  local and use that local in its return tree. Each function may declare bounded
+  REAL locals, which use disjoint ordinary OBJ1 data storage and DBG1
+  local-variable records. It emits executable machine OBJ1
   with private temporaries, a pointer argument ABI, and selective imports.
-  This is not frame-backed/reentrant local storage, control-flow,
-  function-to-function-call, arbitrary-signature, or recursive-frame lowering.
+  Static storage makes declaration order part of this bounded ABI: forward,
+  self, and cyclic function edges are rejected. This is not frame-backed or
+  reentrant local storage, control-flow, arbitrary-signature, nested call-
+  expression, or recursive-frame lowering.
   Pass K additionally owns a bounded four-REAL root that initializes three
   named values with `REAL(integer)`, assigns one named destination from
   `FClamp(value,lower,upper)`, prints a named value, and returns. The body

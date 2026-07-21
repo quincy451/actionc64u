@@ -168,16 +168,17 @@ The overlay artifacts share one stable execution ABI:
   execution window.
 - `tools/build_actc_overlay_emit_native_real_postfix_object.sh` builds
   `ACTC_OVLL.BIN`, pass id `21`. It consumes bounded postfix REAL operations
-  for one module-only `MAIN` or up to two bounded two-REAL-parameter functions
-  called directly by `MAIN`, and emits ordinary machine/data/export/import,
+  for one module-only `MAIN` or up to two bounded two-REAL-parameter functions,
+  and emits ordinary machine/data/export/import,
   relocation, line, and variable records. The function form uses caller-pushed
   argument pointers, reverse-bound static parameter cells, an A/X result
-  pointer, and bounded all-REAL local storage with DBG1 local records; it
-  remains explicitly nonrecursive, has no function-to-function calls, and has
-  no control flow. Its private
+  pointer, and bounded all-REAL local storage with DBG1 local records. `MAIN`
+  may call either function, and a later function may assign the result of an
+  earlier function. Forward, self, and cyclic edges are hard errors; the pass
+  remains explicitly nonrecursive and has no control flow. Its private
   four-byte temporaries and every export/relocation offset are 16-bit; an
   overlapping `__idata` aggregate anchors only source variables in DBG1. The
-  5,636-byte image leaves 2,556 bytes free in the 8 KiB execution window.
+  5,667-byte image leaves 2,525 bytes free in the 8 KiB execution window.
 - `tools/build_actc_overlay_emit_native_object.sh` builds
   `build/udos_tools/ACTC_OVL8.BIN`, pass id `8`. In addition to straight-line
   word expressions and integer IF/DO control flow, it owns two word FOR loop

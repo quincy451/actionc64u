@@ -1586,7 +1586,29 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
 - Added a shared `RETURN(FHypot(A,B))` fixture plus exact OBJ, ALINK closure,
   sibling-pruning, Linux ACTC/ALINK, and live native VICE checks. Both products
   produce binary32 5.0 from the same portable source.
-- Current inventories are 1,342 broad direct-PRG and 174 non-runtime
-  source-backed shapes; the compiled-runtime oracle remains 298. Pass K is
+- At that checkpoint inventories were 1,342 broad direct-PRG and 174
+  non-runtime source-backed shapes; the compiled-runtime oracle remained 298. Pass K is
   5,877 bytes with 2,315 bytes free. General REAL trees, locals, nested calls,
   and the remaining 28 MATH1 routines are still pending.
+
+## 2026-07-21 Native Nested REAL Postfix Emission
+
+- Added base-36 pass L, `ACTC_OVLL.BIN`, to lower the bounded child-first REAL
+  stream produced by passes 6 and 7 into ordinary executable OBJ1 machine
+  records. ALINK performs only normal reachability, placement, and relocation.
+- The pass supports one `MAIN`, module REAL storage, integer conversion,
+  assignment, `PrintR`/`PrintRE`, the maintained unary and binary REAL helpers,
+  and ternary `FClamp`. It requires a genuinely nested helper result so the
+  older specialized emitters retain their established simple forms.
+- Internal variable and temporary exports use 16-bit offsets. An overlapping
+  `__idata` export anchors source-variable records in DBG1 without exposing
+  compiler temporaries as Action variables.
+- Exact compiler tests and direct ALINK/VICE probes cover
+  `FMin(FMax(A,B),C)` and `FClamp(FAbs(A),FMin(B,C),FMax(A,C))`; both print `2`
+  and select only their reachable runtime closure. The clamp case places
+  temporary exports at offsets 256, 260, and 264.
+- Current inventories are 1,344 broad direct-PRG and 176 non-runtime
+  source-backed shapes; the compiled-runtime oracle remains 298. Pass L is
+  4,195 bytes with 3,997 bytes free. General REAL functions, locals, control
+  flow, mixed-type expressions, arbitrary calls, and recursive frames remain
+  pending.

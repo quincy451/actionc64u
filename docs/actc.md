@@ -67,8 +67,12 @@ Current contract:
   alias-unsafe helpers isolated from both parameters. Separately, the bounded REAL value parser lowers
   `FSign(A)`, `FTrunc(A)`, `FFloor(A)`, `FCeil(A)`, `FRound(A)`, `FFrac(A)`, `FMod(A,B)`, `FHypot(A,B)`, `FMin(A,B)`, and `FMax(A,B)` with named REAL operands in
   assignments, REAL printing, and conditions. Those calls use independently
-  selected helpers with complete MATH1 NaN/signed-zero semantics. Neither path
-  is general REAL expression, control-flow, nested-call, or return lowering.
+  selected helpers with complete MATH1 NaN/signed-zero semantics. Pass L also
+  accepts bounded nested combinations of those helpers plus `FAbs`, `FSqrt`,
+  arithmetic, and `FClamp` in a one-procedure straight-line module-REAL program.
+  It emits executable machine OBJ1 with private temporaries and selective
+  imports. This is not general REAL function, local, control-flow, arbitrary-
+  call, or return lowering.
   Pass K additionally owns a bounded four-REAL root that initializes three
   named values with `REAL(integer)`, assigns one named destination from
   `FClamp(value,lower,upper)`, prints a named value, and returns. The body

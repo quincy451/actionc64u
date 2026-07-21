@@ -42,11 +42,13 @@ the Idun target protocol are intentional Idun mechanisms, not code to port into
 UDOS. Native PRGs, overlays, REU compiler workspace, UDOS services, and DNP/D64
 media are the corresponding intentional native mechanisms.
 
-The active native dependency is general REAL lowering. Passes 6 and 7 now have
-bounded recursive operand traversal: collection emits postfix operations and
-preallocation selects helper imports in that same child-first order. The
-machine-object emitter still owns fixed shapes. Nested REAL source therefore
-remains a tracked gap until native machine records and direct-PRG tests land.
+The active native dependency is general REAL lowering. Passes 6 and 7 collect
+and preallocate bounded REAL operands in child-first postfix order. New pass L
+now consumes that stream for a one-procedure, module-REAL-only, straight-line
+subset and emits ordinary machine, relocation, data, line, and variable OBJ1
+records. Nested unary, binary, and `FClamp` expressions in that subset run as
+direct ALINK PRGs. General functions, control flow, locals, mixed types, arrays,
+pointers, strings, calls, and frames remain tracked native gaps.
 
 ## Parity Rules
 
@@ -92,7 +94,7 @@ not parity artifacts.
 | Program-owned overlay sections | `OVERLAY`/`ENDOVERLAY` and relocated `OverlayCall` | No native source lowering | Native compiler gap; ACTC tool overlays are not equivalent |
 | Program argument entry | `MAIN(argc,argv)` through the Idun target service | `MAIN()` and UDOS command-tail workflow | OS-specific contracts; expose equivalent user arguments without copying the Idun upload ABI |
 | IEEE-754 binary32 arithmetic and exceptional values | Standalone modules | Standalone modules plus native support modules | Parity at runtime |
-| General REAL source expressions, calls, and returns | Full binary32 compiler path with intrinsic `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, and `FHypot` | Core operations, direct `FSign`/`FTrunc`/`FFloor`/`FCeil`/`FRound`/`FFrac`/`FMod`/`FHypot`/`FMin`/`FMax` on named REAL values, a constrained `FClamp` ternary root, and constrained zero-, one-, and two-parameter native function shapes including one selected-binary return | Native compiler gap; these builtin semantics and the bounded binary-return shape are complete, but arbitrary expression trees, calls, and returns are not |
+| General REAL source expressions, calls, and returns | Full binary32 compiler path with intrinsic `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, and `FHypot` | Core operations, bounded nested straight-line trees over module REAL values, and constrained zero-, one-, and two-parameter native function shapes including one selected-binary return | Partial parity; pass L covers nested unary/binary/`FClamp` trees in one `MAIN`, but functions, locals, control flow, mixed types, arbitrary calls, and frames remain gaps |
 | INPUT1 joystick/two-button mouse API | 19 declarations | 19 declarations | Parity; physical checks remain |
 | DBF1 API | 20 declarations | 20 declarations | Parity; physical REU/disk checks remain |
 | SIDSPR1 API | 37 declarations | 37 declarations | Parity; physical SID/display checks remain |
@@ -351,7 +353,7 @@ make sync-native-check NATIVE_ACTION_ROOT=/path/to/actionc64u
 
 The 2026-07-21 current cross-product baseline passed:
 
-- 801 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
+- 805 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
   ALINK closure, IEEE-754, ACTEDIT, ACTDBG, Linux compatibility, export, and
   release-image checks;
 - 133 UDOS integration tests, with one intentional embedded-AUTOEXEC capacity
@@ -624,19 +626,26 @@ body-overlay auxiliary parser entry. Pass K accepts the bounded selected-binary
 return described above and allocates a hidden non-aliasing result cell. The
 shared `real_function_binary_hypot.act` fixture compiles and links through Idun,
 while native ACTC/ALINK and VICE prove the same source and result with unused
-MATH1 siblings staged but not loaded. Current inventories are 1,342 broad
-direct-PRG shapes, 174 non-runtime source-backed object-emission shapes, and
-298 compiled-runtime relocation-oracle cases. Pass K is 5,877 bytes with
+MATH1 siblings staged but not loaded. At that checkpoint inventories were
+1,342 broad direct-PRG shapes, 174 non-runtime source-backed object-emission
+shapes, and 298 compiled-runtime relocation-oracle cases. Pass K is 5,877 bytes with
 2,315 bytes free in its 8 KiB window. The following internal parser preparation
 lets pass 6 collect bounded nested REAL operands without changing the runnable
 source contract; it is 8,094 bytes with 98 bytes free under the 96-byte gate.
 Pass 7 now preallocates the same tree in postfix helper order; it is 6,587 bytes
 with 1,605 bytes free. A mixed unary/binary/ternary regression starts its outer
 helper at source byte 1,270 and proves the tree across the production 1,280-byte
-source-window boundary. The generic emitter can preserve that tree in
-transitional `b` metadata, but general native machine emission is still
-required before the source slice is runnable. The 28-routine MATH1 gap is
-unchanged.
+source-window boundary. Pass L now lowers those postfix trees to executable
+OBJ1 for one `MAIN`, up to 16 module REAL variables, 16 temporary REAL cells,
+an eight-value expression stack, and 64 debug offsets. It accepts integer-to-
+REAL conversion, REAL assignment/print, the supported unary and binary MATH1
+helpers, and `FClamp`; it emits `__idata` plus source-variable debug records so
+ACTDBG sidecars remain usable. Focused ALINK/VICE cases execute
+`FMin(FMax(A,B),C)` and `FClamp(FAbs(A),FMin(B,C),FMax(A,C))`, print `2`, prove
+16-bit internal export offsets, and prune unreferenced helpers. Current
+inventories are 1,344 broad direct-PRG shapes, 176 non-runtime source-backed
+object-emission shapes, and 298 compiled-runtime relocation-oracle cases. Pass
+L is 4,195 bytes with 3,997 bytes free. The 28-routine MATH1 gap is unchanged.
 
 Pass 1 now contains only the streamed module-header validator. Moving the
 transform into `ACTC_OVLI.BIN` reduced pass 1 to 788 bytes. Integer folding,
@@ -652,7 +661,7 @@ label index, and emitter state occupy the reserved `$9E00-$9F1E` range. Pass J
 is 7,901 bytes with 291 bytes free under its 256-byte reserve; pass A is 7,418
 bytes with 774 bytes free under its 768-byte reserve; pass K is 5,877 bytes with
 2,315 bytes free. The complete
-211-test overlay suite and 198-test source-cache suite pass with this layout.
+213-test overlay suite and 198-test source-cache suite pass with this layout.
 
 Shipped and ordinary harness builds default to
 `ACTC_ENABLE_REAL_CONST_EVALUATOR=1`. The legacy all-resident body, layout, and

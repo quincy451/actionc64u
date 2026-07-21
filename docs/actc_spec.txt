@@ -148,6 +148,14 @@ Current machine-code emission slices:
   address. ALINK also closes comparison's `RT_F_SPECIAL.OBJ` dependency. This
   form does not define `FMin` NaN behavior and must decline any other function
   body before opening OBJ output.
+- Dedicated native pass L accepts a single parameterless `MAIN` containing only
+  module REAL storage and a bounded straight-line postfix expression stream.
+  It lowers nested maintained unary/binary helpers and `FClamp`, assignments,
+  integer-to-REAL conversions, and REAL printing to ordinary machine OBJ1.
+  The limits are 15 module values, 16 four-byte temporaries, an eight-value
+  expression stack, and 64 debug operations. Functions, locals, strings,
+  control flow, mixed declaration types, and arbitrary calls are not part of
+  this pass.
 
 Non-responsibilities
 

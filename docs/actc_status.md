@@ -41,7 +41,8 @@ Current state:
   `ACTC_OVLG.BIN`; compact units containing bodyless numeric absolute-address
   declarations or fixed register-entry machine bodies run in `ACTC_OVLJ.BIN`;
   the bounded two-REAL-parameter finite comparison/select function runs in
-  `ACTC_OVLK.BIN`;
+  `ACTC_OVLK.BIN`; bounded nested straight-line REAL trees run in
+  `ACTC_OVLL.BIN`;
   units that combine fixed-address calls,
   `=*(...)`, inline assembly, and runtime-argument calls run in the universal
   `ACTC_OVLH.BIN`;
@@ -159,7 +160,8 @@ Current state:
   gate. Universal mixed pass H is 8,064 bytes with exactly 128 bytes free under a
   128-byte gate. Fixed-address and register-machine pass J is 7,901 bytes with
   291 bytes free under a 256-byte gate. REAL function/ternary pass K is 5,877
-  bytes with 2,315 bytes free in its 8 KiB window. Native REAL emitter pass A
+  bytes with 2,315 bytes free in its 8 KiB window. Nested REAL postfix pass L
+  is 4,195 bytes with 3,997 bytes free. Native REAL emitter pass A
   is 7,418 bytes with 774 bytes free under its 768-byte growth reserve.
   Passes H and J share pass 9's typed-parameter bind prologue, so runtime helper calls
   inside supported functions retain the word-return ABI. Pass F is 6,709 bytes
@@ -328,6 +330,16 @@ Current state:
   `ACTC_ENABLE_REAL_CONST_EVALUATOR=0`; their ABI-compatible callback rejects
   `REAL CONST`. Production and ordinary harness builds default to the complete
   evaluator.
+- Pass L consumes the bounded child-first REAL stream from passes 6 and 7 for
+  one-procedure, module-REAL-only, straight-line programs. It emits machine
+  bytes, 16-bit named/import relocations, `__idata`, source-variable records,
+  native line records, and compiler-private four-byte temporaries. The supported
+  calls are integer-to-REAL conversion, `PrintR`/`PrintRE`, the maintained
+  unary and binary REAL helpers, and `FClamp`; stack depth is eight, temporary
+  count is 16, and debug-operation count is 64. Two direct PRGs prove nested
+  binary and unary/binary/ternary trees, output `2`, and prune unrelated runtime
+  objects. Functions, locals, control flow, mixed declarations, and arbitrary
+  calls deliberately decline to other passes or fail as unsupported.
 
 Current focus:
 

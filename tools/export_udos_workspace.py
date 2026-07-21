@@ -134,6 +134,7 @@ def export_udos_tools(root: Path, image_root: Path, bin_dir: Path) -> None:
         ("build_actc_overlay_preprocess.sh", "ACTC_OVLI.BIN"),
         ("build_actc_overlay_emit_native_fixed_object.sh", "ACTC_OVLJ.BIN"),
         ("build_actc_overlay_emit_native_real_function_object.sh", "ACTC_OVLK.BIN"),
+        ("build_actc_overlay_emit_native_real_postfix_object.sh", "ACTC_OVLL.BIN"),
         ("build_alink_udos.sh", "ALINK.PRG"),
         ("build_actdbg_udos.sh", "ACTDBG.PRG"),
         ("build_actdbg_overlay_optional_ui.sh", "ACTDBG_OVL1.BIN"),

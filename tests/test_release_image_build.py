@@ -125,6 +125,7 @@ class TestReleaseImageBuild(unittest.TestCase):
             "ACTC_OVLI.BIN",
             "ACTC_OVLJ.BIN",
             "ACTC_OVLK.BIN",
+            "ACTC_OVLL.BIN",
         ]:
             self.assertTrue((action_root / complete_workspace_entry).is_file())
 

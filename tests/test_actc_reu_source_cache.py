@@ -2693,6 +2693,7 @@ class TestActcReuSourceCache(unittest.TestCase):
             "actc_overlay_emit_native_object.asm",
             "actc_overlay_emit_native_real_control_object.asm",
             "actc_overlay_emit_native_real_function_object.asm",
+            "actc_overlay_emit_native_real_postfix_object.asm",
             "actc_overlay_emit_native_real_while_object.asm",
             "actc_overlay_emit_native_runtime_condition_object.asm",
             "actc_overlay_emit_native_runtime_sequence_object.asm",

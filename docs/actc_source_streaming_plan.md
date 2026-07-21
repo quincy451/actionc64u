@@ -820,3 +820,13 @@ special-value support; its direct PRG verifies 2.0/1.0 parameter copies and a
 the finite function's module/parameter naming; they produce 5.0 and 1.0,
 respectively. General REAL expression/control lowering remains the next compiler
 dependency.
+
+Base-36 pass L, `ACTC_OVLL.BIN`, now turns the bounded child-first stream into
+ordinary executable OBJ1 for a one-procedure, module-REAL-only, straight-line
+subset. It retains native line offsets, emits `__idata`-anchored source-variable
+debug records, allocates private four-byte temporaries, and supports 16-bit
+export and relocation offsets. Nested binary and mixed unary/binary/ternary
+direct PRGs pass ACTC, ALINK, DBG validation, and VICE execution while loading
+only reachable runtime modules. Its 4,195-byte image leaves 3,997 bytes in
+`$A000-$BFFF`. General functions, local frames, control flow, mixed types, and
+arbitrary calls remain the next compiler dependency.

@@ -36,10 +36,15 @@ ACTC_EMIT_NATIVE_FIXED_ONLY = 0
 .ifndef ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
 ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY = 0
 .endif
+.ifndef ACTC_EMIT_NATIVE_REAL_POSTFIX_ONLY
+ACTC_EMIT_NATIVE_REAL_POSTFIX_ONLY = 0
+.endif
 
 ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE = ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ONLY + ACTC_EMIT_NATIVE_RUNTIME_NESTED_ONLY
 
-.if ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
+.if ACTC_EMIT_NATIVE_REAL_POSTFIX_ONLY
+ACTC_EMIT_OVERLAY_PASS = ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_OBJECT
+.elseif ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
 ACTC_EMIT_OVERLAY_PASS = ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_FUNCTION_OBJECT
 .elseif ACTC_EMIT_NATIVE_FIXED_ONLY
 ACTC_EMIT_OVERLAY_PASS = ACTC_OVERLAY_PASS_EMIT_NATIVE_FIXED_OBJECT
@@ -89,7 +94,16 @@ actc_overlay_entry:
     lda #ACTC_EMIT_OVERLAY_PASS
     sta (ACTC_OVERLAY_CONTEXT_ZP),y
 
-.if ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
+.if ACTC_EMIT_NATIVE_REAL_POSTFIX_ONLY
+    jsr native_real_postfix_detect
+    bcs :+
+    ldy #ACTC_OVERLAY_CTX_STATUS
+    lda #ACTC_OVERLAY_STATUS_NOT_APPLICABLE
+    sta (ACTC_OVERLAY_CONTEXT_ZP),y
+    clc
+    rts
+:
+.elseif ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
     jsr native_real_function_detect
     bcs :+
     ldy #ACTC_OVERLAY_CTX_STATUS
@@ -336,7 +350,9 @@ emit_debug_body_op_list_op_loop:
     lda body_debug_count_local
     cmp body_debug_index_data
     beq emit_debug_body_op_list_next_proc
-.if ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
+.if ACTC_EMIT_NATIVE_REAL_POSTFIX_ONLY
+    lda #'L'
+.elseif ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
     lda #'L'
 .elseif ACTC_EMIT_NATIVE_ONLY
     lda #'L'
@@ -360,7 +376,9 @@ emit_debug_body_op_list_op_loop:
     jsr emit_small_decimal
     lda #' '
     jsr emit_char_overlay
-.if ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
+.if ACTC_EMIT_NATIVE_REAL_POSTFIX_ONLY
+    jsr native_real_postfix_emit_debug_offset
+.elseif ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
     jsr native_real_function_emit_debug_offset
 .elseif ACTC_EMIT_NATIVE_ONLY
     jsr native_int_load_debug_offset
@@ -614,7 +632,9 @@ emit_debug_var_type_for_x:
     rts
 
 emit_export_list:
-.if ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
+.if ACTC_EMIT_NATIVE_REAL_POSTFIX_ONLY
+    jmp native_real_postfix_emit_export_list
+.elseif ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
     jmp native_real_function_emit_export_list
 .elseif ACTC_EMIT_NATIVE_ONLY
     jmp emit_native_integer_export_list
@@ -821,7 +841,9 @@ emit_machine_export_line:
 .endif
 
 emit_body_ops_list:
-.if ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
+.if ACTC_EMIT_NATIVE_REAL_POSTFIX_ONLY
+    jmp native_real_postfix_emit_body_marker_list
+.elseif ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
     jmp native_real_function_emit_body_marker_list
 .elseif ACTC_EMIT_NATIVE_ONLY
     jsr emit_native_integer_body_marker_list
@@ -908,7 +930,9 @@ emit_body_ops_list_done:
 .endif
 
 emit_machine_code_list:
-.if ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
+.if ACTC_EMIT_NATIVE_REAL_POSTFIX_ONLY
+    jmp native_real_postfix_emit_machine_code_list
+.elseif ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY
     jmp native_real_function_emit_machine_code_list
 .elseif ACTC_EMIT_NATIVE_ONLY
     jsr emit_native_integer_machine_code_list
@@ -953,7 +977,7 @@ emit_machine_code_list_done:
     clc
     rts
 
-.if (ACTC_EMIT_NATIVE_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_WHILE_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE = 0) .and (ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY = 0)
+.if (ACTC_EMIT_NATIVE_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_WHILE_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE = 0) .and (ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_POSTFIX_ONLY = 0)
 emit_machine_external_call_sequence_code_list:
     lda #'m'
     jsr emit_char_overlay
@@ -1886,7 +1910,7 @@ emit_lower_scan_zp_string_loop:
 emit_lower_scan_zp_string_done:
     rts
 
-.if (ACTC_EMIT_NATIVE_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_WHILE_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE = 0) .and (ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY = 0)
+.if (ACTC_EMIT_NATIVE_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_WHILE_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE = 0) .and (ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_POSTFIX_ONLY = 0)
 is_empty_main_machine_object:
     lda #ACTC_OVERLAY_CTX_EXPORT_COUNT_PTR_LO
     jsr load_count_from_context
@@ -1967,7 +1991,7 @@ scan_zp_is_main_symbol_no:
     clc
     rts
 
-.if (ACTC_EMIT_NATIVE_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_WHILE_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE = 0) .and (ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY = 0)
+.if (ACTC_EMIT_NATIVE_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_WHILE_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE = 0) .and (ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_POSTFIX_ONLY = 0)
 scan_zp_is_return_body:
     ldy #$00
     jsr emit_object_peek_payload_y
@@ -2085,7 +2109,7 @@ external_import_selector_to_index_no:
     clc
     rts
 
-.if (ACTC_EMIT_NATIVE_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_WHILE_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE = 0) .and (ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY = 0)
+.if (ACTC_EMIT_NATIVE_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_WHILE_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE = 0) .and (ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_POSTFIX_ONLY = 0)
 emit_count_external_call_sequence_body:
     ldy #$00
     sty body_debug_count_local
@@ -2394,6 +2418,10 @@ emit_object_selector_overlay_digit:
 .include "actc_overlay_emit_native_real_function.inc"
 .endif
 
+.if ACTC_EMIT_NATIVE_REAL_POSTFIX_ONLY
+.include "actc_overlay_emit_native_real_postfix.inc"
+.endif
+
 .if ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY
 .include "actc_overlay_emit_native_real_control.inc"
 .endif
@@ -2576,7 +2604,7 @@ emit_object_peek_payload_y:
     lda (ACTC_OVERLAY_SCAN_ZP),y
     rts
 
-.if (ACTC_EMIT_NATIVE_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_WHILE_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE = 0) .and (ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY = 0)
+.if (ACTC_EMIT_NATIVE_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_CONTROL_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_WHILE_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_CONDITION_ONLY = 0) .and (ACTC_EMIT_NATIVE_RUNTIME_SEQUENCE_ACTIVE = 0) .and (ACTC_EMIT_NATIVE_REAL_FUNCTION_ONLY = 0) .and (ACTC_EMIT_NATIVE_REAL_POSTFIX_ONLY = 0)
 empty_main_machine_record:
     .asciiz "m A9 A5 8D D0 03 A9 00 85 02 85 03 A2 02 4C 0F CF"
 external_call_sequence_epilogue_bytes:

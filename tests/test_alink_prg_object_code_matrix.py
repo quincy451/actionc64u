@@ -169,6 +169,52 @@ class TestAlinkPrgObjectCodeMatrix(unittest.TestCase):
             ],
         )
 
+    def test_real_postfix_binary_case_covers_nested_runtime_closure(self) -> None:
+        sys.path.insert(0, str(self.workspace / "udos" / "tools"))
+        import run_action_alink_prg_probe as probe
+
+        case = probe.DIRECT_PRG_CASES["actc_real_postfix_nested_binary_linked"]
+        fragments = "".join(case["expected_object_fragments"])
+
+        self.assertIn("X=FMin(FMax(A,B),C)", case["source"])
+        self.assertIn("x __idata 170 16\n", fragments)
+        self.assertIn("x __rt4 202 4\n", fragments)
+        self.assertIn("r 103 u1\n", fragments)
+        self.assertIn("r 130 u2\n", fragments)
+        self.assertEqual(
+            case["expected_alink_loads"],
+            [
+                "LIB/RT_I_TO_F.OBJ",
+                "LIB/RT_F_MAX.OBJ",
+                "LIB/RT_F_CMP.OBJ",
+                "LIB/RT_F_SPECIAL.OBJ",
+                "LIB/RT_F_MIN.OBJ",
+                "LIB/RT_PRINT_F.OBJ",
+            ],
+        )
+        self.assertIn("LIB/RT_F_CLAMP.OBJ", case["unexpected_alink_loads"])
+        self.assertTrue(case["expected_tail_from_compiled_object"])
+        self.assertEqual(case["screen_fragments"], ["2"])
+
+    def test_real_postfix_clamp_case_covers_wide_exports_and_runtime_closure(self) -> None:
+        sys.path.insert(0, str(self.workspace / "udos" / "tools"))
+        import run_action_alink_prg_probe as probe
+
+        case = probe.DIRECT_PRG_CASES["actc_real_postfix_nested_clamp_linked"]
+        fragments = "".join(case["expected_object_fragments"])
+
+        self.assertIn("X=FClamp(FAbs(A),FMin(B,C),FMax(A,C))", case["source"])
+        self.assertIn("x __idata 224 16\n", fragments)
+        self.assertIn("x __rt4 256 4\n", fragments)
+        self.assertIn("x __rt6 264 4\n", fragments)
+        self.assertIn("r 184 u4\n", fragments)
+        self.assertEqual(case["expected_alink_loads"][0], "LIB/RT_I_TO_F.OBJ")
+        self.assertIn("LIB/RT_F_CLAMP.OBJ", case["expected_alink_loads"])
+        self.assertIn("LIB/RT_F_SPECIAL.OBJ", case["expected_alink_loads"])
+        self.assertIn("LIB/RT_F_SQRT.OBJ", case["unexpected_alink_loads"])
+        self.assertTrue(case["expected_tail_from_compiled_object"])
+        self.assertEqual(case["screen_fragments"], ["2"])
+
     def test_real_function_nonfixed_storage_case_covers_captured_indexes(self) -> None:
         sys.path.insert(0, str(self.workspace / "udos" / "tools"))
         import run_action_alink_prg_probe as probe

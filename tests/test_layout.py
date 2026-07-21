@@ -137,13 +137,14 @@ class TestRepoLayout(unittest.TestCase):
         self.assertIn("The constant foundation is complete", parity)
         self.assertIn("round-to-nearest, ties-to-even", parity)
         self.assertIn("Dedicated pass K", parity)
-        self.assertIn("1,338 broad", parity)
+        self.assertIn("1,339 broad", parity)
         self.assertIn("173 non-runtime source-backed object-emission shapes", parity)
-        self.assertIn("295 compiled-runtime", parity)
-        self.assertIn("twelve link-selected callable builtins", parity)
-        self.assertIn("remaining 31 MATH1 routines", parity)
+        self.assertIn("296 compiled-runtime", parity)
+        self.assertIn("thirteen link-selected callable builtins", parity)
+        self.assertIn("remaining 30 MATH1 routines", parity)
         self.assertIn("RT_F_FLOOR.OBJ", parity)
         self.assertIn("RT_F_ROUND.OBJ", parity)
+        self.assertIn("RT_F_FRAC.OBJ", parity)
         self.assertIn("799 native ActionC64U unittests", parity)
         self.assertIn("152 Idun/Alpine unittests", parity)
         self.assertIn("137 Idun ASan/UBSan tests", parity)
@@ -273,6 +274,7 @@ class TestRepoLayout(unittest.TestCase):
             "rt_f_floor",
             "rt_f_ceil",
             "rt_f_round",
+            "rt_f_frac",
             "rt_f_min",
             "rt_f_max",
             "rt_f_clamp",

@@ -810,6 +810,10 @@ preallocate_real_unary_print_external_from_scan_y_overlay:
     ldy #>pattern_fround
     jsr symbol_buffer_matches_local_const
     bcc preallocate_real_unary_print_external_from_scan_y_overlay_fround
+    lda #<pattern_ffrac
+    ldy #>pattern_ffrac
+    jsr symbol_buffer_matches_local_const
+    bcc preallocate_real_unary_print_external_from_scan_y_overlay_ffrac
     sec
     rts
 preallocate_real_unary_print_external_from_scan_y_overlay_fabs:
@@ -832,6 +836,9 @@ preallocate_real_unary_print_external_from_scan_y_overlay_fceil:
     bne preallocate_real_unary_print_external_from_scan_y_overlay_operator
 preallocate_real_unary_print_external_from_scan_y_overlay_fround:
     lda #'r'
+    bne preallocate_real_unary_print_external_from_scan_y_overlay_operator
+preallocate_real_unary_print_external_from_scan_y_overlay_ffrac:
+    lda #'f'
 preallocate_real_unary_print_external_from_scan_y_overlay_operator:
     sta real_operator_local
     ldy symbol_end_y_local
@@ -1476,6 +1483,10 @@ preallocate_real_unary_operator_assignment_external_from_scan_y_overlay:
     ldy #>pattern_fround
     jsr symbol_buffer_matches_local_const
     bcc preallocate_real_unary_operator_assignment_external_from_scan_y_overlay_fround
+    lda #<pattern_ffrac
+    ldy #>pattern_ffrac
+    jsr symbol_buffer_matches_local_const
+    bcc preallocate_real_unary_operator_assignment_external_from_scan_y_overlay_ffrac
     sec
     rts
 preallocate_real_unary_operator_assignment_external_from_scan_y_overlay_fabs:
@@ -1498,6 +1509,9 @@ preallocate_real_unary_operator_assignment_external_from_scan_y_overlay_fceil:
     bne preallocate_real_unary_operator_assignment_external_from_scan_y_overlay_operator
 preallocate_real_unary_operator_assignment_external_from_scan_y_overlay_fround:
     lda #'r'
+    bne preallocate_real_unary_operator_assignment_external_from_scan_y_overlay_operator
+preallocate_real_unary_operator_assignment_external_from_scan_y_overlay_ffrac:
+    lda #'f'
 preallocate_real_unary_operator_assignment_external_from_scan_y_overlay_operator:
     sta real_operator_local
     ldy symbol_end_y_local
@@ -1931,6 +1945,10 @@ preallocate_declared_symbol_is_reserved_call_keyword_overlay:
     ldy #>pattern_fround
     jsr symbol_buffer_matches_local_const
     bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
+    lda #<pattern_ffrac
+    ldy #>pattern_ffrac
+    jsr symbol_buffer_matches_local_const
+    bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
     sec
     rts
 preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes:
@@ -2161,6 +2179,8 @@ pattern_fceil:
     .asciiz "FCEIL"
 pattern_fround:
     .asciiz "FROUND"
+pattern_ffrac:
+    .asciiz "FFRAC"
 pattern_fmin:
     .asciiz "FMIN"
 pattern_fmax:

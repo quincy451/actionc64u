@@ -1519,6 +1519,22 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
 - Exact host verification, 116-vector Idun VICE execution, and the focused
   native direct-PRG case prove ties-away behavior, `round -> trunc` closure,
   and pruning of staged sibling helpers.
-- Current inventories are 1,338 broad and 295 compiled-runtime cases. Pass 6
-  is 8,074 bytes with 118 bytes free under its 96-byte reserve. Native MATH1
-  now exposes twelve link-selected calls and lacks 31 public routines.
+- At that checkpoint inventories were 1,338 broad and 295 compiled-runtime
+  cases. Pass 6 was 8,074 bytes with 118 bytes free under its 96-byte reserve.
+  Native MATH1 exposed twelve link-selected calls and lacked 31 public routines.
+
+## 2026-07-20 Native MATH1 Fractional Part
+
+- Added `RT_F_FRAC.OBJ`, a 93-byte binary32 helper that imports
+  `RT_F_TRUNC.OBJ` and `RT_F_SUB.OBJ` and computes `value-FTrunc(value)`.
+  Its private operand/temporary storage makes aliased source and destination
+  pointers safe.
+- Native ACTC recognizes `FFrac(A)` in assignment, direct-print, and
+  REAL-condition positions. Idun ACTC constant-folds constant calls and
+  selects the same shared OBJ only for dynamic calls.
+- Exact host verification, 116-vector Idun VICE execution, and the focused
+  native direct-PRG case prove signed finite fractions, integral cancellation,
+  exceptional-value policy, full dependency closure, and sibling pruning.
+- Current inventories are 1,339 broad and 296 compiled-runtime cases. Pass 6
+  is 8,085 bytes with 107 bytes free under its 96-byte reserve. Native MATH1
+  now exposes thirteen link-selected calls and lacks 30 public routines.

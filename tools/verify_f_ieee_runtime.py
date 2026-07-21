@@ -18,6 +18,7 @@ from generate_math_runtime import (
     compare_module,
     clamp_module,
     floor_module,
+    frac_module,
     link_runtime_builders,
     minmax_module,
     multiply_module,
@@ -335,6 +336,10 @@ def expected_round(value: int) -> int:
     return truncated
 
 
+def expected_frac(value: int) -> int:
+    return expected_addsub(value, expected_trunc(value), True)
+
+
 def expected_clamp(value: int, lower: int, upper: int) -> int:
     if is_nan(value) or is_nan(lower) or is_nan(upper):
         return CANONICAL_QNAN
@@ -372,6 +377,14 @@ def runtime_builders(operation: str):
         return [ceil_module(), floor_module(), trunc_module()]
     if operation == "round":
         return [round_module(), trunc_module()]
+    if operation == "frac":
+        return [
+            frac_module(),
+            trunc_module(),
+            addsub_wrapper_module("rt_f_sub", True),
+            addsub_core_module(),
+            special,
+        ]
     if operation in ("min", "max"):
         return [
             minmax_module(f"rt_f_{operation}", maximum=operation == "max"),
@@ -474,7 +487,7 @@ def verification_clamp_cases(
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/min/max/clamp code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/min/max/clamp code against exact IEEE "
             "binary32"
         )
     )
@@ -527,6 +540,7 @@ def main() -> int:
             "floor",
             "ceil",
             "round",
+            "frac",
             "min",
             "max",
             "clamp",
@@ -579,6 +593,8 @@ def main() -> int:
                     expected = expected_ceil(left)
                 elif operation == "round":
                     expected = expected_round(left)
+                elif operation == "frac":
+                    expected = expected_frac(left)
                 elif operation == "clamp":
                     expected = expected_clamp(left, right, case[2])
                 else:
@@ -595,7 +611,7 @@ def main() -> int:
                 f"rt_f_{operation} {len(image)} linked bytes: "
                 f"{len(operation_cases)} exact edge/random cases passed"
             )
-            if operation in ("sign", "trunc", "floor", "ceil", "round"):
+            if operation in ("sign", "trunc", "floor", "ceil", "round", "frac"):
                 alias_completed = subprocess.run(
                     [str(harness_path), str(runtime_path), "alias"],
                     input="".join(
@@ -622,6 +638,8 @@ def main() -> int:
                         else expected_ceil(left)
                         if operation == "ceil"
                         else expected_round(left)
+                        if operation == "round"
+                        else expected_frac(left)
                     )
                     if actual != expected:
                         raise SystemExit(

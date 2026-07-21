@@ -4346,6 +4346,7 @@ class TestActcOverlay(unittest.TestCase):
             "REAL U\r"
             "REAL V\r"
             "REAL W\r"
+            "REAL X\r"
             "PROC MAIN()\r"
             "R=FABS(A)\r"
             "Q=FSQRT(A)\r"
@@ -4354,6 +4355,7 @@ class TestActcOverlay(unittest.TestCase):
             "U=FFLOOR(A)\r"
             "V=FCEIL(A)\r"
             "W=FROUND(A)\r"
+            "X=FFRAC(A)\r"
             "RETURN\r",
             "actc-overlay-preallocation-body-mode-real-unary-assignments",
             {"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
@@ -4367,6 +4369,7 @@ class TestActcOverlay(unittest.TestCase):
             "rt_f_floor",
             "rt_f_ceil",
             "rt_f_round",
+            "rt_f_frac",
         )
         for runtime_import in runtime_imports:
             self.assertIn(f"u {runtime_import}\n", obj)
@@ -4377,6 +4380,7 @@ class TestActcOverlay(unittest.TestCase):
         self.assertNotIn("u ffloor\n", obj)
         self.assertNotIn("u fceil\n", obj)
         self.assertNotIn("u fround\n", obj)
+        self.assertNotIn("u ffrac\n", obj)
 
     def test_actc_preallocation_body_overlay_mode_maps_real_binary_assignments(self) -> None:
         obj = self.compile_overlay_object(
@@ -8253,6 +8257,15 @@ class TestActcOverlay(unittest.TestCase):
                 "00",
                 "p1u0T0S0L0U0u1T1S1L1U1p2u2r",
             ),
+            (
+                "ffrac",
+                "A=REAL(7)\rX=FFrac(A)\r",
+                "rt_i_to_f",
+                "rt_f_frac",
+                "07",
+                "00",
+                "p1u0T0S0L0U0u1T1S1L1U1p2u2r",
+            ),
         )
         for name, statements, convert_module, unary_module, value_lo, value_hi, compact_body in cases:
             with self.subTest(name=name):
@@ -8369,6 +8382,19 @@ class TestActcOverlay(unittest.TestCase):
                 "IF FRound(A)<B THEN\rPrintE(\"OK\")\rFI\rRETURN\r",
                 ("rt_f_round", "rt_f_cmp"),
             ),
+            (
+                "frac-print-position",
+                "MODULE MAIN\rREAL A\rPROC MAIN()\r"
+                "A=REAL(7)\rPrintRE(FFrac(A))\rRETURN\r",
+                ("rt_f_frac", "rt_print_f"),
+            ),
+            (
+                "frac-condition-position",
+                "MODULE MAIN\rREAL A\rREAL B\rPROC MAIN()\r"
+                "A=REAL(7)\rB=REAL(8)\r"
+                "IF FFrac(A)<B THEN\rPrintE(\"OK\")\rFI\rRETURN\r",
+                ("rt_f_frac", "rt_f_cmp"),
+            ),
         )
         for name, source, expected_modules in position_cases:
             with self.subTest(name=name):
@@ -8386,6 +8412,7 @@ class TestActcOverlay(unittest.TestCase):
                     "rt_f_floor",
                     "rt_f_ceil",
                     "rt_f_round",
+                    "rt_f_frac",
                     "rt_f_min",
                     "rt_f_max",
                 ):

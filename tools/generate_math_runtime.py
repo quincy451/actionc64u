@@ -992,6 +992,66 @@ def round_module() -> ObjectBuilder:
     return b
 
 
+def frac_module() -> ObjectBuilder:
+    """Build the signed fractional part as value - trunc(value)."""
+    b = ObjectBuilder("rt_f_frac")
+
+    def load_local_pointer(low: str, high: str, destination: int) -> None:
+        b.local_reference(0xAD, low)  # LDA pointer low
+        b.zero_page(0x85, destination)
+        b.local_reference(0xAD, high)  # LDA pointer high
+        b.zero_page(0x85, destination + 1)
+
+    # Preserve the caller's destination and operand outside zero page because
+    # both dependencies own the shared arithmetic scratch area. Keeping the
+    # inputs private also makes source/destination aliasing safe.
+    b.zero_page(0xA5, 0x06)
+    b.local_reference(0x8D, "dp")
+    b.zero_page(0xA5, 0x07)
+    b.local_reference(0x8D, "dph")
+    b.immediate(0xA0, 0x00)
+    b.label("save")
+    b.emit(0xB1, 0x02)  # LDA ($02),Y
+    b.local_reference(0x99, "src")  # STA src,Y
+    b.emit(0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "save")
+
+    load_local_pointer("sp", "sph", 0x02)
+    load_local_pointer("tp", "tph", 0x06)
+    b.jsr("rt_f_trunc")
+
+    load_local_pointer("sp", "sph", 0x02)
+    load_local_pointer("tp", "tph", 0x04)
+    load_local_pointer("dp", "dph", 0x06)
+    b.jsr("rt_f_sub")
+    b.emit(0x60)
+
+    b.label("sp")
+    source_pointer_offset = len(b.code)
+    b.emit(0x00)
+    b.label("sph")
+    b.emit(0x00)
+    b.local_relocations.append((source_pointer_offset, "src"))
+    b.label("tp")
+    trunc_pointer_offset = len(b.code)
+    b.emit(0x00)
+    b.label("tph")
+    b.emit(0x00)
+    b.local_relocations.append((trunc_pointer_offset, "trunc"))
+    b.label("dp")
+    b.emit(0x00)
+    b.label("dph")
+    b.emit(0x00)
+    b.label("src")
+    b.emit(0x00, 0x00, 0x00, 0x00)
+    b.label("trunc")
+    b.emit(0x00, 0x00, 0x00, 0x00)
+
+    b.export("rt_f_frac")
+    return b
+
+
 def float_to_int_module() -> ObjectBuilder:
     """Build finite binary32 to signed 16-bit truncation toward zero."""
     b = ObjectBuilder("rt_f_to_i")
@@ -2986,6 +3046,7 @@ def main() -> int:
             floor_module(),
             ceil_module(),
             round_module(),
+            frac_module(),
             minmax_module("rt_f_min", maximum=False),
             minmax_module("rt_f_max", maximum=True),
             clamp_module(),

@@ -94,6 +94,11 @@ Current status:
   integral REAL32 through `$06/$07`, and imports `rt_f_trunc.obj`. Halfway cases
   round away from zero; NaN payloads, infinities, signed zero, and integral
   values are preserved. Source and destination may alias.
+- `rt_f_frac.obj` reads a REAL32 value through `$02/$03`, writes its signed
+  fractional part through `$06/$07`, and imports `rt_f_trunc.obj` plus
+  `rt_f_sub.obj`. It implements `value-FTrunc(value)`, is safe when source and
+  destination alias, and inherits the shared IEEE subtraction policy for
+  exceptional values.
 - `rt_f_sqrt.obj` reads a REAL32 value through zero page `$02/$03`, writes the
   result through `$06/$07`, and handles every non-negative normal,
   subnormal, and signed-zero value using an exact 48-bit scaled radicand and

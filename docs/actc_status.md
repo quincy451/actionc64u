@@ -253,7 +253,7 @@ Current state:
   return operands. Canonical and permuted declaration/parameter orders therefore
   emit the same bounded layout with role-correct named relocations. General
   function expression/control lowering and MATH1 remain outside this pass.
-- The bounded REAL value parser also recognizes `FSign(A)`, `FTrunc(A)`, `FFloor(A)`, `FCeil(A)`, `FRound(A)`,
+- The bounded REAL value parser also recognizes `FSign(A)`, `FTrunc(A)`, `FFloor(A)`, `FCeil(A)`, `FRound(A)`, `FFrac(A)`,
   `FMin(A,B)`, and `FMax(A,B)` for named REAL operands in assignment, print, and condition
   positions. ACTC emits ordinary imports for the selected helper. The
   dependency-free 123-byte sign helper canonicalizes NaN, preserves signed

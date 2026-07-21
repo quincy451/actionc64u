@@ -871,6 +871,127 @@ def ceil_module() -> ObjectBuilder:
     return b
 
 
+def round_module() -> ObjectBuilder:
+    """Build binary32 round-to-nearest with halfway cases away from zero."""
+    b = ObjectBuilder("rt_f_round")
+
+    count = 0x08
+    mask = 0x09
+    source_copy = 0x0A
+
+    # Preserve the source before truncation so aliased source/destination
+    # pointers are safe and integral or exceptional inputs can be returned
+    # without reconstructing their payload bits.
+    b.immediate(0xA0, 0x00)  # LDY #0
+    b.label("save_loop")
+    b.emit(0xB1, 0x02)  # LDA ($02),Y
+    b.emit(0x99, source_copy, 0x00)  # STA source_copy,Y
+    b.emit(0xC8)  # INY
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "save_loop")
+
+    b.jsr("rt_f_trunc")
+
+    # Truncation is bit-identical for signed zero, integral values, infinities,
+    # and NaNs. Returning here also avoids the large-integral error caused by
+    # implementing round as floor(value + 0.5) unconditionally.
+    b.immediate(0xA0, 0x00)
+    b.label("compare_loop")
+    b.emit(0xB9, source_copy, 0x00)
+    b.emit(0xD1, 0x06)  # CMP ($06),Y
+    b.branch(0xD0, "fractional")
+    b.emit(0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "compare_loop")
+    b.label("done")
+    b.emit(0x60)
+
+    # Reconstruct the biased exponent from the saved source.
+    b.label("fractional")
+    b.immediate(0xA0, 0x03)
+    b.emit(0xB9, source_copy, 0x00)
+    b.immediate(0x29, 0x7F)
+    b.emit(0x0A)  # ASL
+    b.zero_page(0x85, count)
+    b.emit(0x88)  # DEY
+    b.emit(0xB9, source_copy, 0x00)
+    b.immediate(0x29, 0x80)
+    b.branch(0xF0, "exponent_ready")
+    b.zero_page(0xE6, count)
+
+    b.label("exponent_ready")
+    b.zero_page(0xA5, count)
+    b.immediate(0xC9, 0x7E)  # abs(value) < 0.5
+    b.branch(0x90, "done")
+    b.branch(0xF0, "write_signed_one")  # abs(value) is in [0.5, 1)
+
+    # For exponents 127..149, bit (149-exponent) is the 0.5 place.
+    b.immediate(0xA9, 0x95)  # 149
+    b.emit(0x38)  # SEC
+    b.zero_page(0xE5, count)
+    b.zero_page(0x85, count)
+    b.immediate(0xA0, 0x00)
+    b.label("select_half_byte")
+    b.zero_page(0xA5, count)
+    b.immediate(0xC9, 0x08)
+    b.branch(0x90, "select_half_bit")
+    b.emit(0x38)
+    b.immediate(0xE9, 0x08)
+    b.zero_page(0x85, count)
+    b.emit(0xC8)
+    b.branch(0xD0, "select_half_byte")
+
+    b.label("select_half_bit")
+    b.immediate(0xA9, 0x01)
+    b.zero_page(0xA6, count)  # LDX count
+    b.branch(0xF0, "half_mask_ready")
+    b.label("shift_half_bit")
+    b.emit(0x0A)  # ASL
+    b.emit(0xCA)  # DEX
+    b.branch(0xD0, "shift_half_bit")
+    b.label("half_mask_ready")
+    b.zero_page(0x85, mask)
+    b.emit(0x39, source_copy, 0x00)  # AND source_copy,Y
+    b.branch(0xF0, "done")
+
+    # The halfway bit and every larger fraction round away from zero. Move the
+    # mask one place left to obtain one integer unit at this exponent, then add
+    # it to the already-truncated magnitude.
+    b.zero_page(0xA5, mask)
+    b.emit(0x0A)  # ASL
+    b.branch(0xD0, "unit_mask_ready")
+    b.emit(0xC8)  # INY
+    b.immediate(0xA9, 0x01)
+    b.label("unit_mask_ready")
+    b.zero_page(0x85, mask)
+    b.emit(0x18)  # CLC
+    b.emit(0xB1, 0x06)
+    b.zero_page(0x65, mask)
+    b.emit(0x91, 0x06)
+    b.branch(0x90, "done")
+    b.label("carry_unit")
+    b.emit(0xC8)
+    b.emit(0xB1, 0x06)
+    b.immediate(0x69, 0x00)
+    b.emit(0x91, 0x06)
+    b.branch(0xB0, "carry_unit")
+    b.emit(0x60)
+
+    b.label("write_signed_one")
+    b.immediate(0xA0, 0x00)
+    b.immediate(0xA9, 0x00)
+    b.emit(0x91, 0x06, 0xC8, 0x91, 0x06, 0xC8)
+    b.immediate(0xA9, 0x80)
+    b.emit(0x91, 0x06, 0xC8)
+    b.emit(0xB9, source_copy, 0x00)
+    b.immediate(0x29, 0x80)
+    b.immediate(0x09, 0x3F)
+    b.emit(0x91, 0x06, 0x60)
+
+    b.export("rt_f_round")
+    return b
+
+
 def float_to_int_module() -> ObjectBuilder:
     """Build finite binary32 to signed 16-bit truncation toward zero."""
     b = ObjectBuilder("rt_f_to_i")
@@ -2864,6 +2985,7 @@ def main() -> int:
             trunc_module(),
             floor_module(),
             ceil_module(),
+            round_module(),
             minmax_module("rt_f_min", maximum=False),
             minmax_module("rt_f_max", maximum=True),
             clamp_module(),

@@ -2858,6 +2858,8 @@ pattern_ffloor:
     .asciiz "FFLOOR"
 pattern_fceil:
     .asciiz "FCEIL"
+pattern_fround:
+    .asciiz "FROUND"
 pattern_fmin:
     .asciiz "FMIN"
 pattern_fmax:
@@ -2870,6 +2872,7 @@ real_value_pattern_table_local:
     .word pattern_ftrunc
     .word pattern_ffloor
     .word pattern_fceil
+    .word pattern_fround
     .word pattern_fmin
     .word pattern_fmax
 real_value_pattern_table_local_end:
@@ -2886,6 +2889,8 @@ real_unary_pattern_table_local:
     .byte 'o'
     .word pattern_fceil
     .byte 'l'
+    .word pattern_fround
+    .byte 'r'
 real_unary_pattern_table_local_end:
 pattern_fclamp:
     .asciiz "FCLAMP"

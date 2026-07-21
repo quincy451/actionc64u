@@ -90,6 +90,10 @@ Current status:
   `rt_f_trunc.obj`). It preserves signed zero, infinities, NaN payloads, and
   integral values; finite nonintegers round toward positive infinity. Source
   and destination may alias.
+- `rt_f_round.obj` reads a REAL32 value through `$02/$03`, writes the nearest
+  integral REAL32 through `$06/$07`, and imports `rt_f_trunc.obj`. Halfway cases
+  round away from zero; NaN payloads, infinities, signed zero, and integral
+  values are preserved. Source and destination may alias.
 - `rt_f_sqrt.obj` reads a REAL32 value through zero page `$02/$03`, writes the
   result through `$06/$07`, and handles every non-negative normal,
   subnormal, and signed-zero value using an exact 48-bit scaled radicand and

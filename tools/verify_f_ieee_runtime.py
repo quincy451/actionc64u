@@ -21,6 +21,7 @@ from generate_math_runtime import (
     link_runtime_builders,
     minmax_module,
     multiply_module,
+    round_module,
     sign_module,
     special_value_module,
     trunc_module,
@@ -319,6 +320,21 @@ def expected_ceil(value: int) -> int:
     return expected_floor(value ^ 0x80000000) ^ 0x80000000
 
 
+def expected_round(value: int) -> int:
+    truncated = expected_trunc(value)
+    if truncated == value:
+        return value
+    exponent = (value >> 23) & 0xFF
+    if exponent < 126:
+        return value & 0x80000000
+    if exponent == 126:
+        return (value & 0x80000000) | 0x3F800000
+    fractional_bits = 150 - exponent
+    if value & (1 << (fractional_bits - 1)):
+        return truncated + (1 << fractional_bits)
+    return truncated
+
+
 def expected_clamp(value: int, lower: int, upper: int) -> int:
     if is_nan(value) or is_nan(lower) or is_nan(upper):
         return CANONICAL_QNAN
@@ -354,6 +370,8 @@ def runtime_builders(operation: str):
         return [floor_module(), trunc_module()]
     if operation == "ceil":
         return [ceil_module(), floor_module(), trunc_module()]
+    if operation == "round":
+        return [round_module(), trunc_module()]
     if operation in ("min", "max"):
         return [
             minmax_module(f"rt_f_{operation}", maximum=operation == "max"),
@@ -391,6 +409,21 @@ def verification_cases(random_count: int, seed: int) -> list[tuple[int, int]]:
         0xFFC00001,
     ]
     cases = [(left, right) for left in edges for right in edges]
+    # Unary rounding needs explicit half-way, near-half, and large-integral
+    # values that are too sparse to rely on the random 32-bit stream to hit.
+    round_edges = [
+        0x3E800000,  # 0.25
+        0x3F400000,  # 0.75
+        0x3FC00000,  # 1.5
+        0x40200000,  # 2.5
+        0x4AFFFFFF,  # 8388607.5
+        0x4B000001,  # 8388609, integral despite unit spacing
+    ]
+    cases.extend(
+        (value, 0)
+        for magnitude in round_edges
+        for value in (magnitude, magnitude | 0x80000000)
+    )
     randomizer = random.Random(seed)
     cases.extend(
         (randomizer.getrandbits(32), randomizer.getrandbits(32))
@@ -441,7 +474,7 @@ def verification_clamp_cases(
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/min/max/clamp code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/min/max/clamp code against exact IEEE "
             "binary32"
         )
     )
@@ -493,6 +526,7 @@ def main() -> int:
             "trunc",
             "floor",
             "ceil",
+            "round",
             "min",
             "max",
             "clamp",
@@ -543,6 +577,8 @@ def main() -> int:
                     expected = expected_floor(left)
                 elif operation == "ceil":
                     expected = expected_ceil(left)
+                elif operation == "round":
+                    expected = expected_round(left)
                 elif operation == "clamp":
                     expected = expected_clamp(left, right, case[2])
                 else:
@@ -559,7 +595,7 @@ def main() -> int:
                 f"rt_f_{operation} {len(image)} linked bytes: "
                 f"{len(operation_cases)} exact edge/random cases passed"
             )
-            if operation in ("sign", "trunc", "floor", "ceil"):
+            if operation in ("sign", "trunc", "floor", "ceil", "round"):
                 alias_completed = subprocess.run(
                     [str(harness_path), str(runtime_path), "alias"],
                     input="".join(
@@ -584,6 +620,8 @@ def main() -> int:
                         else expected_floor(left)
                         if operation == "floor"
                         else expected_ceil(left)
+                        if operation == "ceil"
+                        else expected_round(left)
                     )
                     if actual != expected:
                         raise SystemExit(

@@ -42,6 +42,7 @@ class TestMathRuntime(unittest.TestCase):
             "trunc",
             "floor",
             "ceil",
+            "round",
             "min",
             "max",
             "clamp",

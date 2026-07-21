@@ -12738,6 +12738,14 @@ find_or_store_rt_f_ceil_external:
     jsr copy_const_ptr_to_declared_module_name
     jmp find_or_store_external_from_declared
 
+find_or_store_rt_f_round_external:
+    lda #<runtime_symbol_rt_f_round
+    sta const_ptr
+    lda #>runtime_symbol_rt_f_round
+    sta const_ptr+1
+    jsr copy_const_ptr_to_declared_module_name
+    jmp find_or_store_external_from_declared
+
 find_or_store_rt_f_min_external:
     lda #<runtime_symbol_rt_f_min
     sta const_ptr
@@ -12820,6 +12828,9 @@ find_or_store_real_operator_external_from_a:
 :   cmp #'l'
     bne :+
     jmp find_or_store_rt_f_ceil_external
+:   cmp #'r'
+    bne :+
+    jmp find_or_store_rt_f_round_external
 :   cmp #'<'
     bne :+
     jmp find_or_store_rt_f_min_external
@@ -16212,6 +16223,8 @@ runtime_symbol_rt_f_floor:
     .asciiz "RT_F_FLOOR"
 runtime_symbol_rt_f_ceil:
     .asciiz "RT_F_CEIL"
+runtime_symbol_rt_f_round:
+    .asciiz "RT_F_ROUND"
 runtime_symbol_rt_f_min:
     .asciiz "RT_F_MIN"
 runtime_symbol_rt_f_max:

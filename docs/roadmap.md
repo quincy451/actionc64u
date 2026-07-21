@@ -1500,6 +1500,25 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   for dynamic expressions, and no longer compiles the portable MATH1 ceiling
   body. Exact host checks, 116 Idun VICE vectors, and a focused native direct
   PRG prove complete semantics and `ceil -> floor -> trunc` closure.
-- Current inventories are 1,337 broad and 294 compiled-runtime cases. Pass 6
-  is 8,062 bytes with 130 bytes free after compacting unary dispatch. Native
-  MATH1 now exposes eleven link-selected calls and lacks 32 public routines.
+- At that checkpoint inventories were 1,337 broad and 294 compiled-runtime
+  cases. Pass 6 was 8,062 bytes with 130 bytes free after compacting unary
+  dispatch. Native MATH1 exposed eleven link-selected calls and lacked 32
+  public routines.
+
+## 2026-07-20 Native MATH1 Round
+
+- Added `RT_F_ROUND.OBJ`, a 152-byte binary32 helper that imports only
+  `RT_F_TRUNC.OBJ`. It rounds nearest with halfway cases away from zero,
+  preserves NaN payloads, infinities, signed zero, and integral values, and is
+  safe for aliased source/destination pointers.
+- The helper inspects binary32 exponent/fraction bits rather than adding or
+  subtracting 0.5, so large integral values such as 8,388,609 are not changed.
+- Native ACTC recognizes `FRound(A)` in assignment, direct-print, and
+  REAL-condition positions. Idun ACTC constant-folds constant calls and selects
+  the same shared OBJ for dynamic calls.
+- Exact host verification, 116-vector Idun VICE execution, and the focused
+  native direct-PRG case prove ties-away behavior, `round -> trunc` closure,
+  and pruning of staged sibling helpers.
+- Current inventories are 1,338 broad and 295 compiled-runtime cases. Pass 6
+  is 8,074 bytes with 118 bytes free under its 96-byte reserve. Native MATH1
+  now exposes twelve link-selected calls and lacks 31 public routines.

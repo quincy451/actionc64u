@@ -15,7 +15,7 @@ The exponent bias is `127`.
 
 Supported forms include decimal literals, exponent notation, arithmetic
 operators, comparisons, `REAL(x)`, `INT(r)`, and the bounded named-value
-`FSign`, `FTrunc`, `FFloor`, `FCeil`, `FMin`, `FMax`, and `FClamp` calls.
+`FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FMin`, `FMax`, and `FClamp` calls.
 
 Rules:
 
@@ -33,6 +33,9 @@ Rules:
   preserves signed zero, infinities, NaN payloads, and integral values
 - `FCeil(value)` rounds finite nonintegers toward positive infinity and
   preserves signed zero, infinities, NaN payloads, and integral values
+- `FRound(value)` rounds finite nonintegers to the nearest integer with halfway
+  cases away from zero and preserves signed zero, infinities, NaN payloads,
+  and integral values
 - `FClamp(value,lower,upper)` returns canonical quiet NaN if any argument is
   NaN or if `lower>upper`; otherwise it returns
   `FMin(FMax(value,lower),upper)` with the selected operand bits preserved
@@ -69,6 +72,7 @@ The linker-level REAL runtime surface uses stable helper symbols:
 - `rt_f_trunc`
 - `rt_f_floor`
 - `rt_f_ceil`
+- `rt_f_round`
 - `rt_f_min`
 - `rt_f_max`
 - `rt_f_clamp`
@@ -141,6 +145,10 @@ The first implemented target-side helper ABI is intentionally narrow:
   finite nonintegers toward positive infinity. It preserves signed zero,
   infinities, NaN payloads, and integral values, supports aliased pointers, and
   imports `rt_f_floor` plus its transitive `rt_f_trunc` dependency
+- `rt_f_round` reads through `$02/$03`, writes through `$06/$07`, and rounds
+  finite nonintegers to the nearest integral REAL32 with halfway cases away
+  from zero. It preserves signed zero, infinities, NaN payloads, and integral
+  values, supports aliased pointers, and imports only `rt_f_trunc`
 - `rt_f_min` and `rt_f_max` read source REAL32 pointers from `$02/$03` and
   `$04/$05`, write through `$06/$07`, and preserve the selected operand's exact
   representation. One NaN is ignored, two NaNs select the right operand, and
@@ -197,6 +205,7 @@ Examples:
 - `FTrunc(r)` imports only `rt_f_trunc`
 - `FFloor(r)` imports `rt_f_floor` plus transitive `rt_f_trunc`
 - `FCeil(r)` imports `rt_f_ceil` plus transitive `rt_f_floor` and `rt_f_trunc`
+- `FRound(r)` imports `rt_f_round` plus transitive `rt_f_trunc`
 - `FMin(a,b)` imports `rt_f_min` and its comparison closure
 - `FMax(a,b)` imports `rt_f_max` and its comparison closure
 - `FClamp(value,lower,upper)` imports `rt_f_clamp` plus its
@@ -234,7 +243,7 @@ implemented REAL32 helper surface. It defines all eight portable MATH1
 constants, which ACTC folds without target storage or runtime imports, and
 documents the core source forms that ACTC already recognizes directly:
 `REAL(x)`, `INT(x)`, REAL arithmetic/comparison operators, `FAbs`, `FSqrt`,
-`FSign`, `FTrunc`, `FFloor`, `FCeil`, `FMin`, `FMax`, `FClamp`, and `PrintR` / `PrintRE`.
+`FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FMin`, `FMax`, `FClamp`, and `PrintR` / `PrintRE`.
 
 `SRC/MATH1_DEMO.ACT` validates the exported-library path by compiling a small
 REAL absolute-value program through ACTC, linking it with ALINK, and running
@@ -247,7 +256,8 @@ implemented.
 
 The core REAL32 runtime helpers now implement default IEEE-754 binary32 value
 semantics for addition, subtraction, multiplication, division, square root,
-comparison, sign, minimum/maximum/clamp selection, and signed decimal printing across
+comparison, sign, truncation/floor/ceiling/rounding, minimum/maximum/clamp
+selection, and signed decimal printing across
 finite values, subnormals, signed zeroes, infinities, and NaNs. REAL-to-INT
 remains the language conversion
 defined above: out-of-range or non-finite input returns zero. The helpers

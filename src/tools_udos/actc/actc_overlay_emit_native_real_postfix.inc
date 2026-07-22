@@ -1,7 +1,8 @@
 ; Nested REAL postfix lowering to ordinary OBJ1 machine records.
 .macpack longbranch
 
-NRP_ENABLE_EXTENDED_CONTROL = ACTC_EMIT_NATIVE_REAL_POSTFIX_EXTENDED_CONTROL_ONLY
+NRP_ENABLE_EARLY_RETURN = ACTC_EMIT_NATIVE_REAL_POSTFIX_EARLY_RETURN_ONLY
+NRP_ENABLE_EXTENDED_CONTROL = ACTC_EMIT_NATIVE_REAL_POSTFIX_EXTENDED_CONTROL_ONLY + NRP_ENABLE_EARLY_RETURN
 NRP_ENABLE_MULTI_CONTROL = ACTC_EMIT_NATIVE_REAL_POSTFIX_MULTI_CONTROL_ONLY + NRP_ENABLE_EXTENDED_CONTROL
 NRP_ENABLE_CONTROL = ACTC_EMIT_NATIVE_REAL_POSTFIX_CONTROL_ONLY + NRP_ENABLE_MULTI_CONTROL
 
@@ -55,6 +56,9 @@ native_real_postfix_detect:
     sta nrp_program_mode
     sta nrp_call_edges
     sta nrp_call_edges+1
+.if NRP_ENABLE_EARLY_RETURN
+    sta nrp_early_return_seen
+.endif
 .if NRP_ENABLE_CONTROL
 .if NRP_ENABLE_MULTI_CONTROL
     sta nrp_multi_control_seen
@@ -310,7 +314,10 @@ native_real_postfix_analyze_done:
     jsr nrp_validate_call_graph
     jcc native_real_postfix_detect_no
 :
-.if NRP_ENABLE_MULTI_CONTROL
+.if NRP_ENABLE_EARLY_RETURN
+    lda nrp_early_return_seen
+    jeq native_real_postfix_detect_no
+.elseif NRP_ENABLE_MULTI_CONTROL
     lda nrp_multi_control_seen
     jeq native_real_postfix_detect_no
 .elseif NRP_ENABLE_CONTROL
@@ -1028,7 +1035,10 @@ nrp_parse_return:
     lda nrp_pending_load
     ora nrp_pending_store
 .if NRP_ENABLE_CONTROL
+.if NRP_ENABLE_EARLY_RETURN
+.else
     ora nrp_control_depth
+.endif
 .endif
     jne nrp_parse_body_fail
     lda nrp_program_mode
@@ -1044,9 +1054,26 @@ nrp_parse_return:
     jne nrp_parse_body_fail
     jsr nrp_pop_real_to_operand1
     jcc nrp_parse_body_fail
+.if NRP_ENABLE_EARLY_RETURN
+    jsr nrp_emit_return_pointer
+    jsr nrp_read_body
+    tax
+    lda nrp_control_depth
+    beq nrp_parse_return_terminal
+    txa
+    jeq nrp_parse_body_fail
+    dec nrp_body_pos
+    lda #$01
+    sta nrp_early_return_seen
+    jmp nrp_parse_body_loop
+nrp_parse_return_terminal:
+    txa
+    jne nrp_parse_body_fail
+.else
     jsr nrp_read_body
     jne nrp_parse_body_fail
     jsr nrp_emit_return_pointer
+.endif
     lda #$01
     sta nrp_saw_return
     sec
@@ -2544,6 +2571,9 @@ nrp_pending_store: .res 1
 nrp_pending_value: .res 1
 nrp_nested: .res 1
 nrp_saw_return: .res 1
+.if NRP_ENABLE_EARLY_RETURN
+nrp_early_return_seen: .res 1
+.endif
 nrp_param_base: .res 1
 nrp_expected_var_index: .res 1
 nrp_function_param_base: .res NRP_FUNCTION_MAX

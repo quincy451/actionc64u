@@ -863,4 +863,15 @@ depth four. Its four-slot label indexing remains ordinary OBJ1 metadata. The
 and N remain byte-identical. Recursive/reentrant local frames, loops, early
 returns, more than four controls, deeper control nesting, unrestricted
 user-call argument trees and nested call expressions, mixed types, arbitrary
-signatures, and recursion remain the next compiler dependency.
+signatures, and recursion remained the next compiler dependency at that
+checkpoint.
+
+Base-36 pass P, `ACTC_OVLP.BIN`, claims a supported REAL function only when a
+`RETURN(expr)` occurs inside an open bounded `IF`/`ELSE`. The emitted pointer
+return ends the live path immediately, while compilation continues through the
+remaining body operations to close internal labels and verify a required
+terminal fallback return. One-control and depth-four fixtures exercise early
+true, early else, and fallback paths. The 7,147-byte image leaves 1,045 bytes
+under the 1 KiB reserve while passes L through O remain byte-identical. Loops,
+controls beyond four, deeper nesting, unrestricted call trees, mixed types,
+arbitrary signatures, and recursive/reentrant frames remain pending.

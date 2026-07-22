@@ -1842,3 +1842,25 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
 - Loops, early returns, controls beyond four or depth four,
   recursive/reentrant frames, mixed types, arbitrary signatures, and recursion
   remain pending.
+
+## 2026-07-22 Bounded REAL Function Early Returns
+
+- Added pass P, `ACTC_OVLP.BIN` (id 25), as the early-return build of the
+  shared postfix REAL emitter. It accepts immediate `RETURN(expr)` exits inside
+  the existing four-control/depth-four bound and requires a terminal fallback
+  return so programs outside that contract remain available to later passes.
+- Added byte-identical `real_function_early_return_if_postfix.act` and
+  `real_function_early_return_four_deep_postfix.act` fixtures. Rebuilt release
+  artifacts launch directly in VICE and print `33` and `154`; exact memory
+  checks cover the immediate true/else exits and terminal fallback path. Idun
+  ACTC/ALINK executes both sources with identical results.
+- Passes L through O remain byte-identical. Pass P is 7,147 bytes with 1,045
+  bytes free under its 1 KiB gate and has SHA-256
+  `7b32fc5bd2e84120572ae25e097ec6004297e3d502922d32d5384e17ad29394e`.
+- Current native inventories are 1,358 broad direct-PRG and 190 non-runtime
+  source-backed shapes; the native unittest inventory is 840, the overlay suite
+  is 234 tests, the source-cache suite is 198 tests, and the compiled-runtime
+  oracle remains 298.
+- Loops, controls beyond four or depth four, unrestricted call-expression
+  trees, recursive/reentrant frames, mixed types, arbitrary signatures, and
+  recursion remain pending.

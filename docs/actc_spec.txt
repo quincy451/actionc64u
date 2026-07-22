@@ -158,10 +158,11 @@ Current machine-code emission slices:
   nonnested `IF`/`ELSE` per function. Pass N accepts at most two conditionals per
   function, either sequentially or nested to depth two. Pass O claims a third
   conditional and accepts at most four controls per function, either
-  sequentially or nested to depth four. All three use all six REAL relations
-  through `RT_F_CMP.OBJ`, relocatable internal false/end code labels, and one
-  terminal return. Strings, mixed declaration types, arbitrary signatures,
-  loops, early returns, more than four controls, deeper control nesting, and
+  sequentially or nested to depth four. Pass P adds `RETURN(expr)` inside those
+  bounded `IF`/`ELSE` arms while still requiring a terminal fallback return.
+  These passes use all six REAL relations through `RT_F_CMP.OBJ` and relocatable
+  internal false/end code labels. Strings, mixed declaration types, arbitrary
+  signatures, loops, more than four controls, deeper control nesting, and
   recursive/reentrant calls are not part of these passes.
 
 Non-responsibilities

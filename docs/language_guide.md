@@ -426,8 +426,13 @@ format to four controls per function and nesting depth four. Four is the
 documented native bound because a fully formed function must also fit the
 64-operation debug bank; the compiler does not advertise unreachable slots.
 
-Loops, returns inside either arm, more than four controls, deeper control
-nesting, recursive/reentrant frames, unrestricted user-call argument trees and
+Pass P accepts `RETURN(expr)` inside any of those bounded `IF`/`ELSE` arms. The
+return value pointer is produced immediately and the machine routine exits;
+ACTC continues parsing only to validate and relocate the remaining labels. A
+terminal fallback `RETURN(expr)` after the controls is still required.
+
+Loops, more than four controls, deeper control nesting,
+recursive/reentrant frames, unrestricted user-call argument trees and
 nested call expressions, mixed parameter types, arbitrary signatures,
 recursive calls, and external REAL functions are not yet part of this native
 path.

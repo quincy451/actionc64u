@@ -165,7 +165,8 @@ Current state:
   is 6,124 bytes with 2,068 bytes free. Function-control pass M is 6,998 bytes
   with 1,194 bytes free under its dedicated 1 KiB gate. Two-control pass N is
   7,120 bytes with 1,072 bytes free under the same gate. Four-control pass O is
-  7,123 bytes with 1,069 bytes free. Native REAL emitter
+  7,123 bytes with 1,069 bytes free. Conditional-early-return pass P is 7,147
+  bytes with 1,045 bytes free. Native REAL emitter
   pass A is 7,418 bytes with 774 bytes free under its 768-byte growth reserve.
   Passes H and J share pass 9's typed-parameter bind prologue, so runtime helper calls
   inside supported functions retain the word-return ABI. Pass F is 6,709 bytes
@@ -365,10 +366,12 @@ Current state:
   outer-false paths. Pass O claims a third conditional and supports up to four
   controls per function or nesting depth four. Its direct PRGs print `43` and
   `154`, proving all four sequential slots plus deep true, deep false, and outer
-  false paths. Recursive/reentrant frames, loops, early returns, more than four
-  controls, deeper nesting, unrestricted user-call argument trees and nested
-  call expressions, mixed declarations, arbitrary signatures, and recursive
-  frames remain unsupported.
+  false paths. Pass P adds immediate pointer returns inside one-control and
+  depth-four `IF`/`ELSE` bodies while retaining a terminal fallback; its direct
+  PRGs print `33` and `154`. Recursive/reentrant frames, loops, controls beyond
+  four, deeper nesting, unrestricted user-call argument trees and nested call
+  expressions, mixed declarations, arbitrary signatures, and recursive frames
+  remain unsupported.
 
 Current focus:
 

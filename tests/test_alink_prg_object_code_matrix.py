@@ -833,6 +833,78 @@ class TestAlinkPrgObjectCodeMatrix(unittest.TestCase):
         self.assertNotIn("LIB/RT_F_HYPOT.OBJ", case["expected_alink_loads"])
         self.assertTrue(case["expected_tail_from_compiled_object"])
 
+    def test_real_function_early_return_if_uses_parameter_pointer_relocations(self) -> None:
+        sys.path.insert(0, str(self.workspace / "udos" / "tools"))
+        import run_action_alink_prg_probe as probe
+
+        shape = "actc_real_function_early_return_if_postfix_linked"
+        case = probe.DIRECT_PRG_CASES[shape]
+        fragments = "".join(case["expected_object_fragments"])
+        fixture = (
+            self.workspace
+            / "actionc64u"
+            / "tests"
+            / "parity"
+            / "real_function_early_return_if_postfix.act"
+        ).read_text(encoding="ascii")
+
+        self.assertEqual(case["source"].replace("\r", "\n"), fixture)
+        self.assertIn(f"\t{shape} \\\n", self.make_text)
+        self.assertIn("x __rf00 243 1\n", fragments)
+        for relocation in (
+            "r 236 x __rf00\n",
+            "r 239 l x __rv4\n",
+            "r 241 h x __rv4\n",
+            "r 244 l x __rv5\n",
+            "r 246 h x __rv5\n",
+        ):
+            self.assertIn(relocation, fragments)
+        self.assertEqual(case["screen_fragments"], ["33"])
+        self.assertEqual(case["store_check_addr"], 0x1100)
+        self.assertIn("LIB/RT_F_CMP.OBJ", case["expected_alink_loads"])
+        self.assertNotIn("LIB/RT_F_MIN.OBJ", case["expected_alink_loads"])
+        self.assertTrue(case["expected_tail_from_compiled_object"])
+
+    def test_real_function_early_return_four_deep_uses_then_else_and_fallback_returns(self) -> None:
+        sys.path.insert(0, str(self.workspace / "udos" / "tools"))
+        import run_action_alink_prg_probe as probe
+
+        shape = "actc_real_function_early_return_four_deep_postfix_linked"
+        case = probe.DIRECT_PRG_CASES[shape]
+        fragments = "".join(case["expected_object_fragments"])
+        fixture = (
+            self.workspace
+            / "actionc64u"
+            / "tests"
+            / "parity"
+            / "real_function_early_return_four_deep_postfix.act"
+        ).read_text(encoding="ascii")
+
+        self.assertEqual(case["source"].replace("\r", "\n"), fixture)
+        self.assertIn(f"\t{shape} \\\n", self.make_text)
+        for export in (
+            "x __rf00 503 1\n",
+            "x __rf01 503 1\n",
+            "x __rf02 503 1\n",
+            "x __rf03 498 1\n",
+            "x __re03 503 1\n",
+        ):
+            self.assertIn(export, fragments)
+        for relocation in (
+            "r 491 l x __rv5\n",
+            "r 493 h x __rv5\n",
+            "r 499 l x __rv6\n",
+            "r 501 h x __rv6\n",
+            "r 504 l x __rv6\n",
+            "r 506 h x __rv6\n",
+        ):
+            self.assertIn(relocation, fragments)
+        self.assertEqual(case["screen_fragments"], ["154"])
+        self.assertEqual(case["store_check_addr"], 0x1204)
+        self.assertIn("LIB/RT_F_CMP.OBJ", case["expected_alink_loads"])
+        self.assertNotIn("LIB/RT_F_HYPOT.OBJ", case["expected_alink_loads"])
+        self.assertTrue(case["expected_tail_from_compiled_object"])
+
     def test_full_range_multiply_probe_forces_staged_root_object_path(self) -> None:
         sys.path.insert(0, str(self.workspace / "udos" / "tools"))
         import run_action_alink_prg_probe as probe

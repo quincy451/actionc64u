@@ -62,8 +62,10 @@ the same terminal-return ABI. Pass N permits at most two controls per function,
 either sequentially or nested to depth two, and preserves independent
 relocatable false/end labels. Pass O claims the third conditional and permits
 at most four controls per function, either sequentially or nested to depth
-four. Self and mutual cycles are rejected. Loops, early returns, more than four
-controls, deeper nesting, unrestricted user-call
+four. Pass P permits immediate `RETURN(expr)` exits inside those bounded
+controls while requiring a terminal fallback return for every function. Self
+and mutual cycles are rejected. Loops, more than four controls, deeper nesting,
+unrestricted user-call
 argument trees and nested call expressions, recursive/reentrant local
 frames, mixed types, arrays, pointers,
 strings, arbitrary signatures, and recursive frames remain tracked native gaps.
@@ -107,12 +109,12 @@ not parity artifacts.
 | Raw bracketed machine-code bodies | Constants, symbols, current address, routine addresses | Byte/word/character/sum constants plus preprocessed `DEFINE`, storage, local-routine, and current-address relocations | Core parity; linked external routine-symbol expressions remain a native compiler/address gap |
 | Numeric literals in call arguments | Decimal, hexadecimal, and binary forms | Same three 16-bit forms through streamed SourceReader tokens | Parity; object, REU-window, and live VICE proofs pass |
 | Arrays, pointers, records, and indirect parameters | Dynamically sized compiler metadata and typed target operations | Not part of the maintained native direct-machine core | Native compiler gap |
-| Typed functions and recursive frames | BYTE/CARD/INT/REAL, nested calls, direct/mutual recursion | Scalar nonrecursive word functions plus constrained REAL forms, including up to two nested two-REAL-parameter callees with bounded static REAL locals, acyclic calls in either declaration direction with caller-cell stack preservation, bounded calls as intrinsic or local-call operands, and up to four sequential or depth-four nested conditionals per function | Native compiler/ABI gap beyond the bounded pass-L/M/N/O call ABI |
+| Typed functions and recursive frames | BYTE/CARD/INT/REAL, nested calls, direct/mutual recursion | Scalar nonrecursive word functions plus constrained REAL forms, including up to two nested two-REAL-parameter callees with bounded static REAL locals, acyclic calls in either declaration direction with caller-cell stack preservation, bounded calls as intrinsic or local-call operands, up to four sequential or depth-four nested conditionals per function, and immediate returns inside those controls with a required terminal fallback | Native compiler/ABI gap beyond the bounded pass-L/M/N/O/P call ABI |
 | Application REU arrays | `REU BYTE ARRAY` plus 8/16-bit accessors | Runtime helpers exist, but native ACTC has no declaration/access lowering | Native compiler gap; compiler REU workspace is not equivalent |
 | Program-owned overlay sections | `OVERLAY`/`ENDOVERLAY` and relocated `OverlayCall` | No native source lowering | Native compiler gap; ACTC tool overlays are not equivalent |
 | Program argument entry | `MAIN(argc,argv)` through the Idun target service | `MAIN()` and UDOS command-tail workflow | OS-specific contracts; expose equivalent user arguments without copying the Idun upload ABI |
 | IEEE-754 binary32 arithmetic and exceptional values | Standalone modules | Standalone modules plus native support modules | Parity at runtime |
-| General REAL source expressions, calls, and returns | Full binary32 compiler path with intrinsic `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FMin`, and `FMax` | Core operations, bounded nested straight-line trees over module REAL values, and up to two nested two-REAL-parameter functions with bounded static REAL locals, frame-preserved acyclic calls, and at most four sequential or depth-four nested conditionals per function | Partial parity; recursive/reentrant locals, loops, early returns, controls beyond the four-control/depth-four bound, unrestricted user-call argument trees and nested calls, mixed types, arbitrary signatures/calls, and recursive frames remain gaps |
+| General REAL source expressions, calls, and returns | Full binary32 compiler path with intrinsic `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FMin`, and `FMax` | Core operations, bounded nested straight-line trees over module REAL values, and up to two nested two-REAL-parameter functions with bounded static REAL locals, frame-preserved acyclic calls, at most four sequential or depth-four nested conditionals per function, and immediate returns inside those controls with a terminal fallback | Partial parity; recursive/reentrant locals, loops, controls beyond the four-control/depth-four bound, unrestricted user-call argument trees and nested calls, mixed types, arbitrary signatures/calls, and recursive frames remain gaps |
 | INPUT1 joystick/two-button mouse API | 19 declarations | 19 declarations | Parity; physical checks remain |
 | DBF1 API | 20 declarations | 20 declarations | Parity; physical REU/disk checks remain |
 | SIDSPR1 API | 37 declarations | 37 declarations | Parity; physical SID/display checks remain |
@@ -294,8 +296,13 @@ plus outer-false paths through ordinary OBJ1 closure. Pass O adds byte-identical
 `real_function_four_sequential_if_postfix.act` and
 `real_function_four_deep_if_postfix.act` fixtures. They print `43` and `154`,
 proving all four slots plus depth-four deep-true, deep-false, and outer-false
-paths. Reentrant local frames, loops, early returns, more than four controls,
-deeper nesting, unrestricted
+paths. Pass P adds byte-identical
+`real_function_early_return_if_postfix.act` and
+`real_function_early_return_four_deep_postfix.act` fixtures. They print `33`
+and `154`, proving immediate exits from a simple conditional and from both arms
+of a depth-four conditional while preserving the terminal fallback path.
+Reentrant local frames, loops, more than four controls, deeper nesting,
+unrestricted
 user-call argument trees and nested call expressions, mixed types, arbitrary
 signatures, recursive frames, and the rest of MATH1 remain incomplete.
 
@@ -342,7 +349,7 @@ remaining parity and acceptance work. Items 1 through 10 are implementation
 work; item 11 is the final emulated and physical acceptance phase.
 
 The native D64 is intentionally a valid UDOS boot plus standalone ALINK disk.
-The complete ACTC compiler, passes 0 through O, development tools, libraries,
+The complete ACTC compiler, passes 0 through P, development tools, libraries,
 examples, and assets live in `ACTION.DNP`, the primary C64 Ultimate workspace.
 New native parity work targets the DNP and must not produce a partial compiler
 on the capacity-constrained D64.
@@ -427,7 +434,7 @@ make sync-native-check NATIVE_ACTION_ROOT=/path/to/actionc64u
 
 The 2026-07-22 current cross-product baseline passed:
 
-- 835 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
+- 840 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
   ALINK closure, IEEE-754, ACTEDIT, ACTDBG, Linux compatibility, export, and
   release-image checks;
 - 133 UDOS integration tests, with one intentional embedded-AUTOEXEC capacity
@@ -761,12 +768,15 @@ of one nonnested REAL-function `IF`/`ELSE`. Pass M maps `A<B` through
 products print `34`. Pass N then runs two sequential controls and a depth-two
 nested pair through the shared fixtures; both products print `43` and `143`.
 Pass O then runs four sequential controls and a depth-four nested function;
-both products print `43` and `154`. Current inventories are 1,356 broad
-direct-PRG shapes, 188 non-runtime
+both products print `43` and `154`. Pass P then runs immediate returns from a
+single conditional and both arms of a depth-four conditional; both products
+print `33` and `154`. Current inventories are 1,358 broad direct-PRG shapes,
+190 non-runtime
 source-backed object-emission shapes, and 298 compiled-runtime relocation-oracle
 cases. Pass L is 6,124 bytes with 2,068 bytes free; pass M is 6,998 bytes with
 1,194 bytes free; pass N is 7,120 bytes with 1,072 bytes free under its 1 KiB
 gate; pass O is 7,123 bytes with 1,069 bytes free under the same gate. The
+pass-P image is 7,147 bytes with 1,045 bytes free under the same gate. The
 28-routine MATH1 gap is unchanged.
 
 Pass 1 now contains only the streamed module-header validator. Moving the
@@ -783,7 +793,7 @@ label index, and emitter state occupy the reserved `$9E00-$9F1E` range. Pass J
 is 7,901 bytes with 291 bytes free under its 256-byte reserve; pass A is 7,418
 bytes with 774 bytes free under its 768-byte reserve; pass K is 5,877 bytes with
 2,315 bytes free. The complete
-231-test overlay suite and 198-test source-cache suite pass with this layout.
+234-test overlay suite and 198-test source-cache suite pass with this layout.
 
 Shipped and ordinary harness builds default to
 `ACTC_ENABLE_REAL_CONST_EVALUATOR=1`. The legacy all-resident body, layout, and

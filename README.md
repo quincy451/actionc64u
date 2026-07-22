@@ -97,14 +97,14 @@ ALINK also writes `BIN/MAIN.DBG`. It is used only when launching
 The lower-level default linker gate is `make -C ../udos vice-action-alink`,
 which now verifies `ALINK.PRG -> BIN/MAIN.PRG`.
 The broad linker matrix is `make -C ../udos vice-action-alink-prg-matrix`,
-which currently enumerates 1356 direct-PRG object/link shapes.
-The non-runtime source-backed matrix contains 188 native ACTC/ALINK/VICE
+which currently enumerates 1358 direct-PRG object/link shapes.
+The non-runtime source-backed matrix contains 190 native ACTC/ALINK/VICE
 shapes, including canonical and permuted-storage versions of the shared finite
 two-REAL-parameter comparison fixture plus a reordered second-parameter return
 fixture, a nested REAL function-call fixture, its REAL-local extension, and the
 two-function call-chain, nested local-call-expression, nested user-call-argument,
-frame-preserved forward-call, and bounded single, two-control, four-sequential,
-and depth-four function-control extensions in `tests/parity`.
+frame-preserved forward-call, bounded single/two/four-control forms, and
+conditional early-return extensions through depth four in `tests/parity`.
 The MATH1 runtime matrix additionally launches link-selected `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`,
 `FMin`, `FMax`, and canonical plus permuted-storage `FClamp` programs and verifies that
 each prunes unreferenced helpers.

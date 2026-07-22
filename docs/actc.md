@@ -99,9 +99,11 @@ Current contract:
   two, and emits independent relocatable false/end labels for each instance.
   Pass O separately claims the third control and accepts up to four controls
   per function, either sequentially or nested to depth four, within the shared
-  64-operation debug bank. Loops, early returns, more than four controls,
-  deeper nesting, and recursive/reentrant functions remain outside the bounded
-  function path.
+  64-operation debug bank. Pass P separately claims a `RETURN(expr)` inside a
+  supported function `IF`/`ELSE`, emits an immediate pointer return, and then
+  continues parsing solely to close ordinary OBJ1 labels. A terminal fallback
+  return remains required. Loops, more than four controls, deeper nesting, and
+  recursive/reentrant functions remain outside the bounded function path.
   Pass K additionally owns a bounded four-REAL root that initializes three
   named values with `REAL(integer)`, assigns one named destination from
   `FClamp(value,lower,upper)`, prints a named value, and returns. The body

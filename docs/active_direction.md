@@ -107,9 +107,12 @@ The backward and forward direct-PRG fixtures return the expected values in both
 products through ordinary OBJ1 relocations. Pass M now adds one nonnested
 `IF`/`ELSE` per supported REAL function using `rt_f_cmp` and relocatable
 internal code labels; its shared fixture executes both paths and prints `34`.
+Pass N separately accepts a second conditional, either sequentially or nested
+to depth two; shared direct-PRG fixtures print `43` and `143` while retaining
+ordinary OBJ1 closure and relocation.
 Self and mutual cycles remain rejected until recursive/reentrant frames are
-added, and sequential/nested function controls, loops, and early returns remain
-the next control-flow work.
+added, and loops, early returns, more than two controls, and deeper nesting
+remain the next control-flow work.
 Bounded named-REAL `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FMin`, `FMax`, and `FClamp` calls now have
 complete portable call semantics through independently link-selected helpers.
 The pass-K clamp root captures initializer, argument, destination, and print
@@ -142,10 +145,10 @@ Treat `vice-action-alink` as the default direct-native linker gate that emits
 `BIN/MAIN.PRG`.
 Treat `vice-action-actc-alink-launch` as the helper-free higher-level default.
 Treat `vice-action-actc-alink-launch-object-emission-matrix` as the all
-source-backed ACTC object-emission launch matrix; it currently enumerates 184
+source-backed ACTC object-emission launch matrix; it currently enumerates 186
 non-runtime, non-object-code source shapes.
 Treat `vice-action-alink-prg-matrix` as the broad direct-PRG object/link matrix;
-it currently enumerates 1352 shape probes.
+it currently enumerates 1354 shape probes.
 Treat `vice-action-alink-prg-object-code-matrices` as the focused direct
 object-code graph, behavior, and rejection gate.
 Treat `vice-action-actc-alink-launch-runtime-matrices` as the focused

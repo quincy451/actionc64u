@@ -93,7 +93,12 @@ Current contract:
   code labels. Both arms may use the supported REAL expression/helper set and
   join at one terminal `RETURN`. Sequential/nested controls, loops, returns
   inside either arm, and recursive/reentrant functions are still outside this
-  bounded form.
+  bounded pass-M form. Pass N is a separate build of the same emitter that
+  claims functions containing a second conditional. It accepts at most two
+  `IF`/`ELSE` instances per function, either sequentially or nested to depth
+  two, and emits independent relocatable false/end labels for each instance.
+  Loops, early returns, more than two controls, deeper nesting, and
+  recursive/reentrant functions remain outside the bounded function path.
   Pass K additionally owns a bounded four-REAL root that initializes three
   named values with `REAL(integer)`, assigns one named destination from
   `FClamp(value,lower,upper)`, prints a named value, and returns. The body

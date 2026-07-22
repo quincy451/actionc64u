@@ -415,11 +415,17 @@ REAL FUNC PICK(REAL A,B)
 ```
 
 All six REAL relations use `rt_f_cmp`; the false and end destinations are
-ordinary relocatable OBJ1 code labels. Sequential or nested controls, loops,
-returns inside either arm, recursive/reentrant frames, unrestricted user-call
-argument trees and nested call expressions, mixed parameter types, arbitrary
-signatures, recursive calls, and external REAL functions are not yet part of
-this native path.
+ordinary relocatable OBJ1 code labels. Pass N extends this form to at most two
+conditionals per function. They may appear sequentially or one may be nested
+inside either arm of the other, up to depth two. Each conditional receives an
+independent `__rfNN` false label and `__reNN` end label, so ALINK sees only
+ordinary OBJ1 exports and relocations.
+
+Loops, returns inside either arm, more than two controls, deeper control
+nesting, recursive/reentrant frames, unrestricted user-call argument trees and
+nested call expressions, mixed parameter types, arbitrary signatures,
+recursive calls, and external REAL functions are not yet part of this native
+path.
 
 ## Dynamic Word Arithmetic
 

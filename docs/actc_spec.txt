@@ -155,11 +155,12 @@ Current machine-code emission slices:
   integer-to-REAL conversions, and REAL printing to ordinary machine OBJ1.
   The limits include 16 four-byte temporaries, an eight-value expression stack,
   and 64 debug operations per procedure. Pass M extends this form with one
-  nonnested `IF`/`ELSE` per function, all six REAL relations through
-  `RT_F_CMP.OBJ`, relocatable internal false/end code labels, and one terminal
-  return. Strings, mixed declaration types, arbitrary signatures, sequential or
-  nested function controls, loops, early returns, and recursive/reentrant calls
-  are not part of these passes.
+  nonnested `IF`/`ELSE` per function. Pass N accepts at most two conditionals per
+  function, either sequentially or nested to depth two. Both use all six REAL
+  relations through `RT_F_CMP.OBJ`, relocatable internal false/end code labels,
+  and one terminal return. Strings, mixed declaration types, arbitrary
+  signatures, loops, early returns, more than two controls, deeper control
+  nesting, and recursive/reentrant calls are not part of these passes.
 
 Non-responsibilities
 

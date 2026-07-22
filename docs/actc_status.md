@@ -163,8 +163,9 @@ Current state:
   291 bytes free under a 256-byte gate. REAL function/ternary pass K is 5,877
   bytes with 2,315 bytes free in its 8 KiB window. Nested REAL postfix pass L
   is 6,124 bytes with 2,068 bytes free. Function-control pass M is 6,998 bytes
-  with 1,194 bytes free under its dedicated 1 KiB gate. Native REAL emitter pass A
-  is 7,418 bytes with 774 bytes free under its 768-byte growth reserve.
+  with 1,194 bytes free under its dedicated 1 KiB gate. Two-control pass N is
+  7,120 bytes with 1,072 bytes free under the same gate. Native REAL emitter
+  pass A is 7,418 bytes with 774 bytes free under its 768-byte growth reserve.
   Passes H and J share pass 9's typed-parameter bind prologue, so runtime helper calls
   inside supported functions retain the word-return ABI. Pass F is 6,709 bytes
   with 1,483 bytes free under a 1,264-byte gate.
@@ -357,10 +358,13 @@ Current state:
   six REAL relations through `rt_f_cmp`, relocatable internal false/end labels,
   supported expressions in both arms, and one terminal return. Its direct PRG
   executes both paths and prints `34`. Self and mutual cycles are rejected.
-  Recursive/reentrant frames, sequential/nested function control, loops, early
-  returns, unrestricted user-call argument trees and nested call expressions,
-  mixed declarations, arbitrary signatures, and recursive frames remain
-  unsupported.
+  Pass N separately claims a second conditional and supports at most two per
+  function, either sequentially or nested to depth two. Its direct PRGs print
+  `43` and `143`, proving both sequential decisions and inner true/false plus
+  outer-false paths. Recursive/reentrant frames, loops, early returns, more than
+  two controls, deeper nesting, unrestricted user-call argument trees and
+  nested call expressions, mixed declarations, arbitrary signatures, and
+  recursive frames remain unsupported.
 
 Current focus:
 

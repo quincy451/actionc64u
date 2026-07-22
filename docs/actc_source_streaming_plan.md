@@ -847,7 +847,14 @@ emitter. It claims only a supported REAL function containing one nonnested
 branches to internal `__rfN` and `__reN` OBJ1 code exports. Both arms may contain
 the supported REAL expression operations and converge on one terminal return.
 Its 6,998-byte image leaves 1,194 bytes under a 1 KiB reserve without consuming
-pass L's 2 KiB margin. Recursive/reentrant local frames, sequential or nested
-function controls, loops, early returns, unrestricted user-call argument trees
-and nested call expressions, mixed types, arbitrary signatures, and recursion
-remain the next compiler dependency.
+pass L's 2 KiB margin.
+
+Base-36 pass N, `ACTC_OVLN.BIN`, separately claims the same bounded function
+form when at least one function contains a second conditional. It supports at
+most two conditionals per function, either sequentially or nested to depth two,
+with a distinct false/end export pair per control. Its 7,120-byte image leaves
+1,072 bytes under the same 1 KiB reserve while passes L and M remain
+byte-identical. Recursive/reentrant local frames, loops, early returns, more
+than two controls, deeper control nesting, unrestricted user-call argument
+trees and nested call expressions, mixed types, arbitrary signatures, and
+recursion remain the next compiler dependency.

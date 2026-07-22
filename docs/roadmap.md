@@ -1792,3 +1792,26 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   compiled-runtime oracle remains 298. Sequential/nested function controls,
   loops, early returns, recursive/reentrant frames, mixed types, arbitrary
   signatures, and recursion remain pending.
+
+## 2026-07-22 Bounded Sequential/Nested REAL Function Control
+
+- Added pass N, `ACTC_OVLN.BIN`, as a separate two-control build of the shared
+  postfix REAL emitter. Pass N claims a supported program only when at least one
+  REAL function contains a second conditional. Each function may contain at
+  most two conditionals, either sequentially or nested to depth two.
+- Each control receives independent `__rfNN` and `__reNN` code exports. The
+  nested fixture intentionally produces non-monotonic export offsets, proving
+  that ALINK resolves generic OBJ1 exports and relocations rather than assuming
+  source or label order.
+- Added byte-identical `real_function_sequential_if_else_postfix.act` and
+  `real_function_nested_if_else_postfix.act` fixtures to native and Idun test
+  trees. Their direct PRGs print `43` and `143`; the nested case covers inner
+  true, inner false, and outer false paths.
+- Passes L and M remain byte-identical at 6,124 and 6,998 bytes. Pass N is 7,120
+  bytes with 1,072 bytes free under its dedicated 1 KiB capacity gate.
+- Current native inventories are 1,354 broad direct-PRG and 186 non-runtime
+  source-backed shapes; the native unittest inventory is 830, the overlay suite
+  is 228 tests, the source-cache suite is 198 tests, and the compiled-runtime
+  oracle remains 298. Loops, early returns, more than two controls, deeper
+  nesting, recursive/reentrant frames, mixed types, arbitrary signatures, and
+  recursion remain pending.

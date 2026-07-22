@@ -162,7 +162,7 @@ Current state:
   128-byte gate. Fixed-address and register-machine pass J is 7,901 bytes with
   291 bytes free under a 256-byte gate. REAL function/ternary pass K is 5,877
   bytes with 2,315 bytes free in its 8 KiB window. Nested REAL postfix pass L
-  is 5,667 bytes with 2,525 bytes free. Native REAL emitter pass A
+  is 5,670 bytes with 2,522 bytes free. Native REAL emitter pass A
   is 7,418 bytes with 774 bytes free under its 768-byte growth reserve.
   Passes H and J share pass 9's typed-parameter bind prologue, so runtime helper calls
   inside supported functions retain the word-return ABI. Pass F is 6,709 bytes
@@ -341,17 +341,19 @@ Current state:
   one `MAIN`, pass L accepts up to two nonrecursive two-REAL-parameter functions
   with bounded all-REAL locals, no control flow, and nested REAL return trees.
   `MAIN` may call either function, and a later function may assign an earlier
-  function's result to a local or feed it directly to a supported intrinsic
-  return tree. The caller pushes
+  function's result to a local, feed it directly to a supported intrinsic
+  return tree, or pass bounded calls to the earlier function as arguments to
+  another call. The caller pushes
   argument pointers, each callee reverse-binds them to disjoint static parameter
-  cells, and A/X returns a result pointer. Seven direct PRGs prove nested
+  cells, and A/X returns a result pointer. Eight direct PRGs prove nested
   expression trees, both root-to-function selectors, function-local storage,
-  one declaration-order function edge, a nested local-call operand, and
-  reachable-only runtime objects.
+  one declaration-order function edge, a nested local-call operand, nested
+  user-call arguments with independent result spills, and reachable-only
+  runtime objects.
   Forward, self, and cyclic edges are rejected. Reentrant local frames, control
-  flow, user calls as arguments to other user calls, unrestricted nested call
-  expressions, mixed declarations, arbitrary signatures, and recursive frames
-  remain unsupported.
+  flow, unrestricted user-call argument trees and nested call expressions,
+  mixed declarations, arbitrary signatures, and recursive frames remain
+  unsupported.
 
 Current focus:
 

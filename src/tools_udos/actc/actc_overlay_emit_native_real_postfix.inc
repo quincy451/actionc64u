@@ -551,6 +551,8 @@ nrp_parse_local_call_allowed:
     jcc nrp_parse_body_fail
     jsr nrp_pop_real_to_operand1
     jcc nrp_parse_body_fail
+    ; A temporary consumed by another local call requires Pass L ownership.
+    jsr nrp_mark_nested_operands_2
     lda nrp_operand1_kind
     sta nrp_name_kind
     lda nrp_operand1_index

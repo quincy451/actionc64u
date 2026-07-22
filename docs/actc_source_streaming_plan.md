@@ -830,12 +830,13 @@ functions: caller-pushed pointers
 are reverse-bound to per-function static parameter cells, A/X returns the
 selected result pointer, and bounded all-REAL locals use ordinary static OBJ1
 storage plus DBG1 local records. `MAIN` may call either function; a later
-function may assign an earlier function's result or use the call directly as an
-operand in a supported intrinsic return tree. Forward, self, and cyclic edges
+function may assign an earlier function's result, use the call directly as an
+operand in a supported intrinsic return tree, or pass bounded calls to that
+earlier function as arguments to another call. Forward, self, and cyclic edges
 are rejected before generic emission. Nested expression, local-storage,
-two-callee, declaration-order call-chain, and nested local-call-expression PRGs
-pass ACTC, ALINK, DBG validation, and VICE execution while
-loading only reachable runtime modules. Its 5,667-byte image leaves 2,525 bytes
-in `$A000-$BFFF`. Reentrant local frames, control flow, user calls as arguments
-to other user calls, unrestricted nested call expressions, mixed types,
+two-callee, declaration-order call-chain, nested local-call-expression, and
+nested user-call-argument PRGs pass ACTC, ALINK, DBG validation, and VICE
+execution while loading only reachable runtime modules. Its 5,670-byte image
+leaves 2,522 bytes in `$A000-$BFFF`. Reentrant local frames, control flow,
+unrestricted user-call argument trees and nested call expressions, mixed types,
 arbitrary signatures, and recursion remain the next compiler dependency.

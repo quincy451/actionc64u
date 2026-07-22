@@ -1728,3 +1728,25 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   free. Reentrant frames, control flow, user calls as arguments to other user
   calls, unrestricted nested calls, mixed types, arbitrary signatures, and
   recursion remain pending.
+
+## 2026-07-21 Native Nested REAL User-Call Arguments
+
+- Extended pass L ownership detection to recognize a local-call temporary used
+  by another local call. Existing resident argument parsing and pass-7 recursive
+  preallocation already preserve outer call state and traverse both arguments;
+  pass L now claims the body and copies every returned A/X pointer into a distinct
+  private four-byte temporary before evaluating the next call.
+- Added the shared `real_function_user_call_arguments_postfix.act` fixture. Its
+  later `CHAIN` function returns `LOWER(LOWER(A,A),LOWER(B,B))`, exercising three
+  calls to the earlier `LOWER` function without aliasing its static parameter or
+  result cells. Native ACTC emits ordinary OBJ1 relocations, ALINK selects only
+  `FMin`, conversion, and printing, and the direct PRG prints binary32 `3`.
+- VICE verifies 3.0 and 4.0 in the two inner spills and 3.0 in the outer spill and
+  module result. Idun ACTC/ALINK compiles, links, and executes the byte-identical
+  fixture with the same result.
+- Current native inventories are 1,350 broad direct-PRG and 182 non-runtime
+  source-backed shapes; the native unittest inventory is 819 and the
+  compiled-runtime oracle remains 298. Pass L is 5,670 bytes with 2,522 bytes
+  free, while pass 7 remains 6,678 bytes with 1,514 bytes free. Reentrant frames,
+  control flow, unrestricted user-call argument trees and nested calls, mixed
+  types, arbitrary signatures, and recursion remain pending.

@@ -8890,6 +8890,36 @@ class TestActcOverlay(unittest.TestCase):
         self.assertNotIn("u fmax\n", obj)
         self.assertNotIn("u rt_f_min\n", obj)
 
+    def test_real_function_calls_can_feed_another_local_call(self) -> None:
+        source = (
+            self.root
+            / "tests"
+            / "parity"
+            / "real_function_user_call_arguments_postfix.act"
+        ).read_text(encoding="ascii").replace("\n", "\r")
+        obj = self.compile_overlay_object(
+            source,
+            "actc-overlay-real-function-user-call-arguments",
+            extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [21])
+        self.assertIn(
+            "x main 0 383\n"
+            "x lower 119 74\n"
+            "x chain 193 134\n"
+            "x __idata 327 28\n",
+            obj,
+        )
+        self.assertEqual(len(re.findall(r"(?m)^r \d+ x lower$", obj)), 3)
+        self.assertEqual(len(re.findall(r"(?m)^r \d+ x chain$", obj)), 1)
+        self.assertIn("r 259 x __rt4\n", obj)
+        self.assertIn("r 288 x __rt5\n", obj)
+        self.assertIn("r 317 x __rt6\n", obj)
+        self.assertIn("u rt_f_min\nu rt_i_to_f\nu rt_print_f\n", obj)
+        self.assertNotIn("u rt_f_max\n", obj)
+        self.assertNotIn("u rt_f_hypot\n", obj)
+
     def test_real_function_forward_call_is_rejected(self) -> None:
         console = self.compile_overlay_object(
             "MODULE MAIN\r"

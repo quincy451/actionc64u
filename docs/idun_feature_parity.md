@@ -53,10 +53,11 @@ machine, relocation, data, line, and variable OBJ1 records. Besides one
 `MAIN`, it now supports up to two nonrecursive two-REAL-parameter functions
 whose nested REAL return trees are called directly by `MAIN`. Each function may
 use bounded all-REAL static locals with DBG1 local records. The later function
-may assign the earlier function's result or use that call directly in a
-supported intrinsic return tree; forward, self, and cyclic edges are rejected.
-Control flow, user calls as arguments to other user calls, unrestricted nested
-call expressions, reentrant local frames, mixed types, arrays, pointers,
+may assign the earlier function's result, use that call directly in a supported
+intrinsic return tree, or use bounded calls to the earlier function as arguments
+to another such call; forward, self, and cyclic edges are rejected. Control
+flow, unrestricted user-call argument trees and nested call expressions,
+reentrant local frames, mixed types, arrays, pointers,
 strings, arbitrary signatures, and recursive frames remain tracked native gaps.
 
 ## Parity Rules
@@ -98,12 +99,12 @@ not parity artifacts.
 | Raw bracketed machine-code bodies | Constants, symbols, current address, routine addresses | Byte/word/character/sum constants plus preprocessed `DEFINE`, storage, local-routine, and current-address relocations | Core parity; linked external routine-symbol expressions remain a native compiler/address gap |
 | Numeric literals in call arguments | Decimal, hexadecimal, and binary forms | Same three 16-bit forms through streamed SourceReader tokens | Parity; object, REU-window, and live VICE proofs pass |
 | Arrays, pointers, records, and indirect parameters | Dynamically sized compiler metadata and typed target operations | Not part of the maintained native direct-machine core | Native compiler gap |
-| Typed functions and recursive frames | BYTE/CARD/INT/REAL, nested calls, direct/mutual recursion | Scalar nonrecursive word functions plus constrained REAL forms, including up to two nested two-REAL-parameter callees with bounded static REAL locals, a declaration-order call edge, and that earlier call as a supported intrinsic operand | Native compiler/ABI gap beyond the bounded pass-L call ABI |
+| Typed functions and recursive frames | BYTE/CARD/INT/REAL, nested calls, direct/mutual recursion | Scalar nonrecursive word functions plus constrained REAL forms, including up to two nested two-REAL-parameter callees with bounded static REAL locals, a declaration-order call edge, and bounded calls to that earlier function as intrinsic or local-call operands | Native compiler/ABI gap beyond the bounded pass-L call ABI |
 | Application REU arrays | `REU BYTE ARRAY` plus 8/16-bit accessors | Runtime helpers exist, but native ACTC has no declaration/access lowering | Native compiler gap; compiler REU workspace is not equivalent |
 | Program-owned overlay sections | `OVERLAY`/`ENDOVERLAY` and relocated `OverlayCall` | No native source lowering | Native compiler gap; ACTC tool overlays are not equivalent |
 | Program argument entry | `MAIN(argc,argv)` through the Idun target service | `MAIN()` and UDOS command-tail workflow | OS-specific contracts; expose equivalent user arguments without copying the Idun upload ABI |
 | IEEE-754 binary32 arithmetic and exceptional values | Standalone modules | Standalone modules plus native support modules | Parity at runtime |
-| General REAL source expressions, calls, and returns | Full binary32 compiler path with intrinsic `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FMin`, and `FMax` | Core operations, bounded nested straight-line trees over module REAL values, and up to two nested two-REAL-parameter functions with bounded static REAL locals; `MAIN` may call either and the later function may assign the earlier result or use it directly inside a supported intrinsic tree | Partial parity; reentrant locals, control flow, user-call arguments, unrestricted nested calls, mixed types, arbitrary signatures/calls, and recursive frames remain gaps |
+| General REAL source expressions, calls, and returns | Full binary32 compiler path with intrinsic `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FMin`, and `FMax` | Core operations, bounded nested straight-line trees over module REAL values, and up to two nested two-REAL-parameter functions with bounded static REAL locals; `MAIN` may call either and the later function may assign the earlier result or use bounded earlier calls as intrinsic or local-call operands | Partial parity; reentrant locals, control flow, unrestricted user-call argument trees and nested calls, mixed types, arbitrary signatures/calls, and recursive frames remain gaps |
 | INPUT1 joystick/two-button mouse API | 19 declarations | 19 declarations | Parity; physical checks remain |
 | DBF1 API | 20 declarations | 20 declarations | Parity; physical REU/disk checks remain |
 | SIDSPR1 API | 37 declarations | 37 declarations | Parity; physical SID/display checks remain |
@@ -270,8 +271,11 @@ selectors, disjoint static storage, and separate DBG1 banks. The shared
 `CHAIN -> LENGTH` relocations and produces binary32 5.0 in both products.
 The shared `real_function_nested_local_call_postfix.act` fixture uses the same
 declaration-order edge directly inside `FMax` and also produces binary32 5.0 in
-both products. Reentrant local frames, control flow, user calls as arguments to
-other user calls, unrestricted nested call expressions, mixed types, arbitrary
+both products. The shared `real_function_user_call_arguments_postfix.act`
+fixture returns `LOWER(LOWER(A,A),LOWER(B,B))`; distinct native temporary spills
+preserve binary32 3.0 and 4.0 inner results before the outer call, and both
+products produce 3.0. Reentrant local frames, control flow, unrestricted
+user-call argument trees and nested call expressions, mixed types, arbitrary
 signatures, recursive frames, and the rest of MATH1 remain incomplete.
 
 Remaining work is dependency ordered:
@@ -402,7 +406,7 @@ make sync-native-check NATIVE_ACTION_ROOT=/path/to/actionc64u
 
 The 2026-07-21 current cross-product baseline passed:
 
-- 817 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
+- 819 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
   ALINK closure, IEEE-754, ACTEDIT, ACTDBG, Linux compatibility, export, and
   release-image checks;
 - 133 UDOS integration tests, with one intentional embedded-AUTOEXEC capacity
@@ -722,9 +726,13 @@ source local and feeds `LENGTH(A,B)` directly into `FMax`; pass 7 traverses the
 local call without creating a phantom library import. Pass 7 is now 6,678 bytes
 with 1,514 bytes free in its 8 KiB window; native VICE verifies 5.0 in both the
 module result and nested-call temporary, and Idun executes the same source.
-Current inventories are 1,349 broad direct-PRG shapes, 181 non-runtime
+The shared `real_function_user_call_arguments_postfix.act` fixture next feeds
+two calls to `LOWER` into a third call. Pass L copies each returned A/X pointer
+to a distinct temporary, so overwriting the callee's static cells cannot alias
+the outer arguments; native VICE and Idun both produce 3.0.
+Current inventories are 1,350 broad direct-PRG shapes, 182 non-runtime
 source-backed object-emission shapes, and 298 compiled-runtime relocation-oracle
-cases. Pass L is 5,667 bytes with 2,525 bytes free. The 28-routine MATH1 gap is
+cases. Pass L is 5,670 bytes with 2,522 bytes free. The 28-routine MATH1 gap is
 unchanged.
 
 Pass 1 now contains only the streamed module-header validator. Moving the

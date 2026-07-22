@@ -73,15 +73,16 @@ Current contract:
   accepts up to two nonrecursive two-REAL-parameter functions called directly
   by `MAIN` when each function returns a nested expression from that same helper
   set. A later function may assign an earlier function's result to a REAL local,
-  or use that call directly as an operand in a supported intrinsic return tree.
+  use that call directly as an operand in a supported intrinsic return tree, or
+  pass bounded calls to the earlier function as arguments to another such call.
   Each function may declare bounded REAL locals, which use disjoint ordinary
   OBJ1 data storage and DBG1
   local-variable records. It emits executable machine OBJ1
   with private temporaries, a pointer argument ABI, and selective imports.
   Static storage makes declaration order part of this bounded ABI: forward,
   self, and cyclic function edges are rejected. This is not frame-backed or
-  reentrant local storage, control-flow, arbitrary-signature, user-call argument,
-  unrestricted nested-call-expression, or recursive-frame lowering.
+  reentrant local storage, control-flow, arbitrary-signature, unrestricted
+  user-call-argument or nested-call-expression, or recursive-frame lowering.
   Pass K additionally owns a bounded four-REAL root that initializes three
   named values with `REAL(integer)`, assigns one named destination from
   `FClamp(value,lower,upper)`, prints a named value, and returns. The body

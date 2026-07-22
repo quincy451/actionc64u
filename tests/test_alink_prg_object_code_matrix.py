@@ -607,6 +607,36 @@ class TestAlinkPrgObjectCodeMatrix(unittest.TestCase):
         self.assertNotIn("LIB/RT_F_CLAMP.OBJ", case["expected_alink_loads"])
         self.assertTrue(case["expected_tail_from_compiled_object"])
 
+    def test_real_function_call_arguments_use_independent_temporary_storage(self) -> None:
+        sys.path.insert(0, str(self.workspace / "udos" / "tools"))
+        import run_action_alink_prg_probe as probe
+
+        shape = "actc_real_function_user_call_arguments_postfix_linked"
+        case = probe.DIRECT_PRG_CASES[shape]
+        fragments = "".join(case["expected_object_fragments"])
+        fixture = (
+            self.workspace
+            / "actionc64u"
+            / "tests"
+            / "parity"
+            / "real_function_user_call_arguments_postfix.act"
+        ).read_text(encoding="ascii")
+
+        self.assertEqual(case["source"].replace("\r", "\n"), fixture)
+        self.assertIn(f"\t{shape} \\\n", self.make_text)
+        self.assertIn("x main 0 383\nx lower 119 74\nx chain 193 134\n", fragments)
+        self.assertIn("r 65 x chain\n", fragments)
+        self.assertEqual(len(re.findall(r"(?m)^r \d+ x lower$", fragments)), 3)
+        self.assertIn("r 259 x __rt4\n", fragments)
+        self.assertIn("r 288 x __rt5\n", fragments)
+        self.assertIn("r 317 x __rt6\n", fragments)
+        self.assertEqual(case["screen_fragments"], ["3"])
+        self.assertEqual(case["store_check_addr"], 0x114F)
+        self.assertIn({"addr": 0x1179, "value": 0x80}, case["extra_store_checks"])
+        self.assertIn("LIB/RT_F_MIN.OBJ", case["expected_alink_loads"])
+        self.assertNotIn("LIB/RT_F_MAX.OBJ", case["expected_alink_loads"])
+        self.assertTrue(case["expected_tail_from_compiled_object"])
+
     def test_full_range_multiply_probe_forces_staged_root_object_path(self) -> None:
         sys.path.insert(0, str(self.workspace / "udos" / "tools"))
         import run_action_alink_prg_probe as probe

@@ -25,6 +25,7 @@ class TestActcOverlay(unittest.TestCase):
     ACTC_NATIVE_REAL_POSTFIX_EMIT_MIN_HEADROOM = 0x800
     ACTC_NATIVE_REAL_POSTFIX_CONTROL_EMIT_MIN_HEADROOM = 0x400
     ACTC_NATIVE_REAL_POSTFIX_MULTI_CONTROL_EMIT_MIN_HEADROOM = 0x400
+    ACTC_NATIVE_REAL_POSTFIX_EXTENDED_CONTROL_EMIT_MIN_HEADROOM = 0x400
     ACTC_OVERLAY_WINDOW_SIZE = 0x2000
     ACTC_PREPROCESS_CODE_WINDOW_SIZE = 0x2000
 
@@ -208,8 +209,9 @@ class TestActcOverlay(unittest.TestCase):
         self.assertIn("ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_OBJECT = $15", overlay_abi_text)
         self.assertIn("ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_CONTROL_OBJECT = $16", overlay_abi_text)
         self.assertIn("ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_MULTI_CONTROL_OBJECT = $17", overlay_abi_text)
-        self.assertIn("ACTC_OVERLAY_PASS_COUNT = $18", overlay_abi_text)
-        self.assertIn("ldx #$0D\nbuild_object_content_with_overlay_candidate_loop:", actc_text)
+        self.assertIn("ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_EXTENDED_CONTROL_OBJECT = $18", overlay_abi_text)
+        self.assertIn("ACTC_OVERLAY_PASS_COUNT = $19", overlay_abi_text)
+        self.assertIn("ldx #$0E\nbuild_object_content_with_overlay_candidate_loop:", actc_text)
         self.assertIn("cmp #10\n    bcc :+", actc_text)
         self.assertIn(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_OBJECT", actc_text)
         self.assertIn(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_WHILE_OBJECT", actc_text)
@@ -221,6 +223,7 @@ class TestActcOverlay(unittest.TestCase):
         self.assertIn(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_OBJECT", actc_text)
         self.assertIn(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_CONTROL_OBJECT", actc_text)
         self.assertIn(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_MULTI_CONTROL_OBJECT", actc_text)
+        self.assertIn(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_EXTENDED_CONTROL_OBJECT", actc_text)
         self.assertIn("ACTC_OVERLAY_STATUS_NOT_APPLICABLE", overlay_abi_text)
         self.assertIn("ACTC_OVERLAY_CTX_BODY_TABLE_ONLY = 200", overlay_abi_text)
         self.assertIn("ACTC_OVERLAY_CTX_BODY_MODE = ACTC_OVERLAY_CTX_BODY_TABLE_ONLY", overlay_abi_text)
@@ -624,6 +627,9 @@ class TestActcOverlay(unittest.TestCase):
         self.run_checked(
             [str(self.root / "tools" / "build_actc_overlay_emit_native_real_postfix_multi_control_object.sh")]
         )
+        self.run_checked(
+            [str(self.root / "tools" / "build_actc_overlay_emit_native_real_postfix_extended_control_object.sh")]
+        )
 
     def assert_body_overlay_map_keeps_headroom(self, map_name: str, overlay_name: str) -> None:
         map_text = (self.build_dir / map_name).read_text(encoding="ascii")
@@ -741,7 +747,7 @@ class TestActcOverlay(unittest.TestCase):
             self.last_emit_overlay_pass = summary["dumps"]["actc_overlay_requested_pass"]
             self.assertIn(
                 self.last_emit_overlay_pass,
-                ([5], [8], [9], [10], [11], [12], [13], [14], [15], [16], [17], [19], [20], [21], [22], [23]),
+                ([5], [8], [9], [10], [11], [12], [13], [14], [15], [16], [17], [19], [20], [21], [22], [23], [24]),
                 msg=result.stdout,
             )
             self.assertTrue(
@@ -9126,6 +9132,94 @@ class TestActcOverlay(unittest.TestCase):
             obj,
         )
 
+    def test_real_function_four_sequential_if_uses_all_extended_control_slots(self) -> None:
+        source = (
+            self.root
+            / "tests"
+            / "parity"
+            / "real_function_four_sequential_if_postfix.act"
+        ).read_text(encoding="ascii").replace("\n", "\r")
+        obj = self.compile_overlay_object(
+            source,
+            "actc-overlay-real-function-four-sequential-if",
+            extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [24])
+        self.assertIn(
+            "x main 0 420\n"
+            "x pick 170 206\n"
+            "x __rf00 260 1\n"
+            "x __rf01 297 1\n"
+            "x __rf02 334 1\n"
+            "x __rf03 371 1\n"
+            "x __idata 376 28\n",
+            obj,
+        )
+        for relocation in (
+            "r 247 x __rf00\n",
+            "r 284 x __rf01\n",
+            "r 321 x __rf02\n",
+            "r 358 x __rf03\n",
+        ):
+            self.assertIn(relocation, obj)
+        self.assertIn("u rt_f_cmp\nu rt_i_to_f\nu rt_print_f\n", obj)
+
+    def test_real_function_four_deep_if_uses_depth_first_relocations_and_declines_fifth_control(self) -> None:
+        source = (
+            self.root
+            / "tests"
+            / "parity"
+            / "real_function_four_deep_if_postfix.act"
+        ).read_text(encoding="ascii").replace("\n", "\r")
+        obj = self.compile_overlay_object(
+            source,
+            "actc-overlay-real-function-four-deep-if",
+            extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [24])
+        self.assertIn(
+            "x main 0 607\n"
+            "x pick 299 232\n"
+            "x __rf00 526 1\n"
+            "x __rf01 526 1\n"
+            "x __rf02 526 1\n"
+            "x __rf03 515 1\n"
+            "x __re03 526 1\n"
+            "x __idata 531 32\n",
+            obj,
+        )
+        for relocation in (
+            "r 376 x __rf00\n",
+            "r 417 x __rf01\n",
+            "r 458 x __rf02\n",
+            "r 499 x __rf03\n",
+            "r 513 x __re03\n",
+        ):
+            self.assertIn(relocation, obj)
+        self.assertIn("u rt_f_cmp\nu rt_i_to_f\nu rt_print_f\n", obj)
+
+        sequential_source = (
+            self.root
+            / "tests"
+            / "parity"
+            / "real_function_four_sequential_if_postfix.act"
+        ).read_text(encoding="ascii").replace("\n", "\r")
+        five_control_source = sequential_source.replace(
+            "RETURN(CHOICE)\r",
+            "IF A<B THEN\rCHOICE=A\rFI\rRETURN(CHOICE)\r",
+            1,
+        )
+        fallback_obj = self.compile_overlay_object(
+            five_control_source,
+            "actc-overlay-fallback-real-function-five-controls",
+            extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [5])
+        self.assertNotIn("x __rf04 ", fallback_obj)
+
     def test_real_function_mutual_call_cycle_is_rejected(self) -> None:
         console = self.compile_overlay_object(
             "MODULE MAIN\r"
@@ -10786,6 +10880,43 @@ class TestActcOverlay(unittest.TestCase):
         labels = (
             self.build_dir
             / "actc_overlay_emit_native_real_postfix_multi_control_object.labels"
+        ).read_text(encoding="ascii")
+        self.assertIn(".native_real_postfix_detect", labels)
+        self.assertIn(".nrp_control_stack", labels)
+
+    def test_native_real_postfix_extended_control_emit_object_overlay_builds_with_expected_header(self) -> None:
+        self.require_toolchain()
+        self.run_checked(
+            [
+                str(
+                    self.root
+                    / "tools"
+                    / "build_actc_overlay_emit_native_real_postfix_extended_control_object.sh"
+                )
+            ]
+        )
+
+        overlay = self.build_dir / "ACTC_OVLO.BIN"
+        data = overlay.read_bytes()
+        self.assertGreaterEqual(len(data), 18)
+        self.assertEqual(data[0:4], b"ACOV")
+        self.assertEqual(data[4], self.ACTC_OVERLAY_ABI_VERSION)
+        self.assertEqual(data[5], 24)
+
+        load_base = data[6] | (data[7] << 8)
+        entry = data[8] | (data[9] << 8)
+        length = data[10] | (data[11] << 8)
+        self.assertEqual(load_base, 0xA000)
+        self.assertEqual(entry, 0xA000 + 14)
+        self.assertEqual(length, len(data))
+        self.assert_emit_overlay_map_keeps_headroom(
+            "actc_overlay_emit_native_real_postfix_extended_control_object.map",
+            "ACTC_OVLO.BIN",
+            self.ACTC_NATIVE_REAL_POSTFIX_EXTENDED_CONTROL_EMIT_MIN_HEADROOM,
+        )
+        labels = (
+            self.build_dir
+            / "actc_overlay_emit_native_real_postfix_extended_control_object.labels"
         ).read_text(encoding="ascii")
         self.assertIn(".native_real_postfix_detect", labels)
         self.assertIn(".nrp_control_stack", labels)

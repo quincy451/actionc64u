@@ -854,7 +854,13 @@ form when at least one function contains a second conditional. It supports at
 most two conditionals per function, either sequentially or nested to depth two,
 with a distinct false/end export pair per control. Its 7,120-byte image leaves
 1,072 bytes under the same 1 KiB reserve while passes L and M remain
-byte-identical. Recursive/reentrant local frames, loops, early returns, more
-than two controls, deeper control nesting, unrestricted user-call argument
-trees and nested call expressions, mixed types, arbitrary signatures, and
-recursion remain the next compiler dependency.
+byte-identical.
+
+Base-36 pass O, `ACTC_OVLO.BIN`, separately claims the third conditional and
+supports at most four controls per function, either sequentially or nested to
+depth four. Its four-slot label indexing remains ordinary OBJ1 metadata. The
+7,123-byte image leaves 1,069 bytes under the 1 KiB reserve while passes L, M,
+and N remain byte-identical. Recursive/reentrant local frames, loops, early
+returns, more than four controls, deeper control nesting, unrestricted
+user-call argument trees and nested call expressions, mixed types, arbitrary
+signatures, and recursion remain the next compiler dependency.

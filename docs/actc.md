@@ -97,8 +97,11 @@ Current contract:
   claims functions containing a second conditional. It accepts at most two
   `IF`/`ELSE` instances per function, either sequentially or nested to depth
   two, and emits independent relocatable false/end labels for each instance.
-  Loops, early returns, more than two controls, deeper nesting, and
-  recursive/reentrant functions remain outside the bounded function path.
+  Pass O separately claims the third control and accepts up to four controls
+  per function, either sequentially or nested to depth four, within the shared
+  64-operation debug bank. Loops, early returns, more than four controls,
+  deeper nesting, and recursive/reentrant functions remain outside the bounded
+  function path.
   Pass K additionally owns a bounded four-REAL root that initializes three
   named values with `REAL(integer)`, assigns one named destination from
   `FClamp(value,lower,upper)`, prints a named value, and returns. The body

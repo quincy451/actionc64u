@@ -9,7 +9,7 @@ prunes unreachable source-defined library routines from an application OBJ
 before linking while retaining every project routine; native ACTC retains only
 the bounded routines it can currently lower.
 
-Status date: 2026-07-21. Full cross-product parity is not yet complete; the
+Status date: 2026-07-22. Full cross-product parity is not yet complete; the
 matrix and ordered implementation plan below are the authoritative gap list.
 
 ## Executive Status
@@ -60,8 +60,10 @@ such edge. Pass M adds one nonnested `IF`/`ELSE` per supported REAL function,
 all six REAL relations, and relocatable internal branch labels while preserving
 the same terminal-return ABI. Pass N permits at most two controls per function,
 either sequentially or nested to depth two, and preserves independent
-relocatable false/end labels. Self and mutual cycles are rejected. Loops, early
-returns, more than two controls, deeper nesting, unrestricted user-call
+relocatable false/end labels. Pass O claims the third conditional and permits
+at most four controls per function, either sequentially or nested to depth
+four. Self and mutual cycles are rejected. Loops, early returns, more than four
+controls, deeper nesting, unrestricted user-call
 argument trees and nested call expressions, recursive/reentrant local
 frames, mixed types, arrays, pointers,
 strings, arbitrary signatures, and recursive frames remain tracked native gaps.
@@ -105,12 +107,12 @@ not parity artifacts.
 | Raw bracketed machine-code bodies | Constants, symbols, current address, routine addresses | Byte/word/character/sum constants plus preprocessed `DEFINE`, storage, local-routine, and current-address relocations | Core parity; linked external routine-symbol expressions remain a native compiler/address gap |
 | Numeric literals in call arguments | Decimal, hexadecimal, and binary forms | Same three 16-bit forms through streamed SourceReader tokens | Parity; object, REU-window, and live VICE proofs pass |
 | Arrays, pointers, records, and indirect parameters | Dynamically sized compiler metadata and typed target operations | Not part of the maintained native direct-machine core | Native compiler gap |
-| Typed functions and recursive frames | BYTE/CARD/INT/REAL, nested calls, direct/mutual recursion | Scalar nonrecursive word functions plus constrained REAL forms, including up to two nested two-REAL-parameter callees with bounded static REAL locals, acyclic calls in either declaration direction with caller-cell stack preservation, bounded calls as intrinsic or local-call operands, and up to two sequential or depth-two nested conditionals per function | Native compiler/ABI gap beyond the bounded pass-L/M/N call ABI |
+| Typed functions and recursive frames | BYTE/CARD/INT/REAL, nested calls, direct/mutual recursion | Scalar nonrecursive word functions plus constrained REAL forms, including up to two nested two-REAL-parameter callees with bounded static REAL locals, acyclic calls in either declaration direction with caller-cell stack preservation, bounded calls as intrinsic or local-call operands, and up to four sequential or depth-four nested conditionals per function | Native compiler/ABI gap beyond the bounded pass-L/M/N/O call ABI |
 | Application REU arrays | `REU BYTE ARRAY` plus 8/16-bit accessors | Runtime helpers exist, but native ACTC has no declaration/access lowering | Native compiler gap; compiler REU workspace is not equivalent |
 | Program-owned overlay sections | `OVERLAY`/`ENDOVERLAY` and relocated `OverlayCall` | No native source lowering | Native compiler gap; ACTC tool overlays are not equivalent |
 | Program argument entry | `MAIN(argc,argv)` through the Idun target service | `MAIN()` and UDOS command-tail workflow | OS-specific contracts; expose equivalent user arguments without copying the Idun upload ABI |
 | IEEE-754 binary32 arithmetic and exceptional values | Standalone modules | Standalone modules plus native support modules | Parity at runtime |
-| General REAL source expressions, calls, and returns | Full binary32 compiler path with intrinsic `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FMin`, and `FMax` | Core operations, bounded nested straight-line trees over module REAL values, and up to two nested two-REAL-parameter functions with bounded static REAL locals, frame-preserved acyclic calls, and at most two sequential or depth-two nested conditionals per function | Partial parity; recursive/reentrant locals, loops, early returns, more/deeper controls, unrestricted user-call argument trees and nested calls, mixed types, arbitrary signatures/calls, and recursive frames remain gaps |
+| General REAL source expressions, calls, and returns | Full binary32 compiler path with intrinsic `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FMin`, and `FMax` | Core operations, bounded nested straight-line trees over module REAL values, and up to two nested two-REAL-parameter functions with bounded static REAL locals, frame-preserved acyclic calls, and at most four sequential or depth-four nested conditionals per function | Partial parity; recursive/reentrant locals, loops, early returns, controls beyond the four-control/depth-four bound, unrestricted user-call argument trees and nested calls, mixed types, arbitrary signatures/calls, and recursive frames remain gaps |
 | INPUT1 joystick/two-button mouse API | 19 declarations | 19 declarations | Parity; physical checks remain |
 | DBF1 API | 20 declarations | 20 declarations | Parity; physical REU/disk checks remain |
 | SIDSPR1 API | 37 declarations | 37 declarations | Parity; physical SID/display checks remain |
@@ -174,7 +176,7 @@ the same host-side implementation is neither required nor desirable.
 
 | Work package | Portable result | Native C64U/UDOS work | Idun/Alpine work | State |
 | --- | --- | --- | --- | --- |
-| Compiler expression and call core | The same supported typed source produces equivalent OBJ1 calls, storage, returns, and direct-PRG results | Extend passes L/M/N beyond two nonrecursive two-REAL-parameter callees, bounded static REAL locals, frame-preserved acyclic calls, and two bounded controls to general functions, parameters, recursive/reentrant locals, structured control, and nested calls; then add arrays, pointers, records, strings, indirect parameters, and bounded frames | Keep Linux ACTC as the behavioral oracle and add every shared fixture to its regression suite | In progress; passes L/M/N prove both `MAIN` selectors, backward and forward acyclic edges, and sequential/depth-two function conditionals, but not a general or recursive call graph |
+| Compiler expression and call core | The same supported typed source produces equivalent OBJ1 calls, storage, returns, and direct-PRG results | Extend passes L/M/N/O beyond two nonrecursive two-REAL-parameter callees, bounded static REAL locals, frame-preserved acyclic calls, and four bounded controls to general functions, parameters, recursive/reentrant locals, structured control, and nested calls; then add arrays, pointers, records, strings, indirect parameters, and bounded frames | Keep Linux ACTC as the behavioral oracle and add every shared fixture to its regression suite | In progress; passes L/M/N/O prove both `MAIN` selectors, backward and forward acyclic edges, and sequential/depth-four function conditionals, but not a general or recursive call graph |
 | MATH1 | All 43 routines and 8 constants have the same binary32/domain behavior and unused routines are absent from the PRG | Lower the 28 missing source routines after general REAL calls work; package each routine or dependency group as OBJ1 | Complete: ACTC emits only source routines reachable from `MAIN`, while intrinsic helpers remain independent OBJ1 modules | Blocked on the native compiler core; Idun packaging is complete |
 | GFX1 | The common 60-routine/16-constant catalog behaves the same on the C64 target | Implement the 45 missing high-level routines in reachable OBJ1 groups and retain the existing 15 low-level calls | Keep the implemented source library and generated-program tests as the reference | Native implementation pending |
 | Resources | `SPRITE`, `MSPRITE`, `BITMAP`, and `MBITMAP` validate ASP1/ABM1 and expose equivalent linked asset addresses | Load through UDOS/REU services, emit aligned relocatable data, and add native ACTSPRITE/ACTBITMAP plus ACTEDIT F8 | Keep POSIX loading and Linux editors; add shared malformed-resource and emitted-layout fixtures | Native implementation pending |
@@ -288,8 +290,12 @@ code exports. Pass N adds byte-identical
 `real_function_sequential_if_else_postfix.act` and
 `real_function_nested_if_else_postfix.act` fixtures. They print `43` and `143`,
 respectively, proving two sequential controls and depth-two inner true/false
-plus outer-false paths through ordinary OBJ1 closure. Reentrant local frames,
-loops, early returns, more than two controls, deeper nesting, unrestricted
+plus outer-false paths through ordinary OBJ1 closure. Pass O adds byte-identical
+`real_function_four_sequential_if_postfix.act` and
+`real_function_four_deep_if_postfix.act` fixtures. They print `43` and `154`,
+proving all four slots plus depth-four deep-true, deep-false, and outer-false
+paths. Reentrant local frames, loops, early returns, more than four controls,
+deeper nesting, unrestricted
 user-call argument trees and nested call expressions, mixed types, arbitrary
 signatures, recursive frames, and the rest of MATH1 remain incomplete.
 
@@ -336,7 +342,7 @@ remaining parity and acceptance work. Items 1 through 10 are implementation
 work; item 11 is the final emulated and physical acceptance phase.
 
 The native D64 is intentionally a valid UDOS boot plus standalone ALINK disk.
-The complete ACTC compiler, passes 0 through N, development tools, libraries,
+The complete ACTC compiler, passes 0 through O, development tools, libraries,
 examples, and assets live in `ACTION.DNP`, the primary C64 Ultimate workspace.
 New native parity work targets the DNP and must not produce a partial compiler
 on the capacity-constrained D64.
@@ -421,7 +427,7 @@ make sync-native-check NATIVE_ACTION_ROOT=/path/to/actionc64u
 
 The 2026-07-22 current cross-product baseline passed:
 
-- 830 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
+- 835 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
   ALINK closure, IEEE-754, ACTEDIT, ACTDBG, Linux compatibility, export, and
   release-image checks;
 - 133 UDOS integration tests, with one intentional embedded-AUTOEXEC capacity
@@ -754,11 +760,14 @@ of one nonnested REAL-function `IF`/`ELSE`. Pass M maps `A<B` through
 `rt_f_cmp`, relocates long branches to ordinary internal code exports, and both
 products print `34`. Pass N then runs two sequential controls and a depth-two
 nested pair through the shared fixtures; both products print `43` and `143`.
-Current inventories are 1,354 broad direct-PRG shapes, 186 non-runtime
+Pass O then runs four sequential controls and a depth-four nested function;
+both products print `43` and `154`. Current inventories are 1,356 broad
+direct-PRG shapes, 188 non-runtime
 source-backed object-emission shapes, and 298 compiled-runtime relocation-oracle
 cases. Pass L is 6,124 bytes with 2,068 bytes free; pass M is 6,998 bytes with
 1,194 bytes free; pass N is 7,120 bytes with 1,072 bytes free under its 1 KiB
-gate. The 28-routine MATH1 gap is unchanged.
+gate; pass O is 7,123 bytes with 1,069 bytes free under the same gate. The
+28-routine MATH1 gap is unchanged.
 
 Pass 1 now contains only the streamed module-header validator. Moving the
 transform into `ACTC_OVLI.BIN` reduced pass 1 to 788 bytes. Integer folding,
@@ -774,7 +783,7 @@ label index, and emitter state occupy the reserved `$9E00-$9F1E` range. Pass J
 is 7,901 bytes with 291 bytes free under its 256-byte reserve; pass A is 7,418
 bytes with 774 bytes free under its 768-byte reserve; pass K is 5,877 bytes with
 2,315 bytes free. The complete
-228-test overlay suite and 198-test source-cache suite pass with this layout.
+231-test overlay suite and 198-test source-cache suite pass with this layout.
 
 Shipped and ordinary harness builds default to
 `ACTC_ENABLE_REAL_CONST_EVALUATOR=1`. The legacy all-resident body, layout, and

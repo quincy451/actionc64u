@@ -1,7 +1,8 @@
 ; Nested REAL postfix lowering to ordinary OBJ1 machine records.
 .macpack longbranch
 
-NRP_ENABLE_MULTI_CONTROL = ACTC_EMIT_NATIVE_REAL_POSTFIX_MULTI_CONTROL_ONLY
+NRP_ENABLE_EXTENDED_CONTROL = ACTC_EMIT_NATIVE_REAL_POSTFIX_EXTENDED_CONTROL_ONLY
+NRP_ENABLE_MULTI_CONTROL = ACTC_EMIT_NATIVE_REAL_POSTFIX_MULTI_CONTROL_ONLY + NRP_ENABLE_EXTENDED_CONTROL
 NRP_ENABLE_CONTROL = ACTC_EMIT_NATIVE_REAL_POSTFIX_CONTROL_ONLY + NRP_ENABLE_MULTI_CONTROL
 
 NRP_MODE_ANALYZE = 0
@@ -30,7 +31,15 @@ NRP_DEBUG_MAX = 64
 NRP_FUNCTION_MAX = 2
 NRP_PROC_MAX = NRP_FUNCTION_MAX+1
 .if NRP_ENABLE_MULTI_CONTROL
+.if NRP_ENABLE_EXTENDED_CONTROL
+NRP_CONTROL_MAX = 4
+NRP_CONTROL_MIN = 3
+NRP_CONTROL_MASK = 3
+.else
 NRP_CONTROL_MAX = 2
+NRP_CONTROL_MIN = 2
+NRP_CONTROL_MASK = 1
+.endif
 NRP_CONTROL_SLOT_MAX = NRP_FUNCTION_MAX*NRP_CONTROL_MAX
 .endif
 .if NRP_ENABLE_CONTROL
@@ -834,6 +843,9 @@ nrp_parse_if:
     jne nrp_parse_body_fail
     lda nrp_proc_index
     asl a
+.if NRP_ENABLE_EXTENDED_CONTROL
+    asl a
+.endif
     clc
     adc nrp_control_count
     sta nrp_control_index
@@ -852,7 +864,7 @@ nrp_parse_if:
     lda #$01
     sta nrp_if_seen,x
     lda nrp_control_count
-    cmp #NRP_CONTROL_MAX
+    cmp #NRP_CONTROL_MIN
     bcc nrp_parse_if_done
     lda #$01
     sta nrp_multi_control_seen
@@ -1900,6 +1912,9 @@ native_real_postfix_emit_control_export_loop:
     beq native_real_postfix_emit_control_export_next_function
     lda nrp_function_index
     asl a
+.if NRP_ENABLE_EXTENDED_CONTROL
+    asl a
+.endif
     clc
     adc nrp_control_ordinal
     sta nrp_control_index
@@ -2154,6 +2169,9 @@ native_real_postfix_emit_control_body_marker_loop:
     beq native_real_postfix_emit_control_body_marker_next_function
     lda nrp_function_index
     asl a
+.if NRP_ENABLE_EXTENDED_CONTROL
+    asl a
+.endif
     clc
     adc nrp_control_ordinal
     sta nrp_control_index
@@ -2406,7 +2424,7 @@ nrp_emit_control_name:
 .if NRP_ENABLE_MULTI_CONTROL
     jsr emit_object_selector_overlay
     lda nrp_control_index
-    and #$01
+    and #NRP_CONTROL_MASK
     jmp emit_object_selector_overlay
 .else
     jmp emit_object_selector_overlay

@@ -9,10 +9,11 @@ Current state:
   verified by `make -C ../udos vice-action-actc-alink-launch`.
 - Broad direct-PRG object/link coverage is verified by
   `make -C ../udos vice-action-alink-prg-matrix`.
-- The broad direct-PRG matrix currently enumerates 1354 probe shapes from
+- The broad direct-PRG matrix currently enumerates 1356 probe shapes from
   `udos/tools/run_action_alink_prg_probe.py`.
 - The source-backed sequential and nested REAL-function control cases prove
-  pass N's multiple internal code exports, out-of-order nested export offsets,
+  passes N and O's multiple internal code exports, shared and out-of-order
+  nested export offsets,
   named/import relocations, and reachable-only runtime closure without any
   ALINK source-shape handling.
 - The source-backed `actc_fixed_register_machine_abi_linked` case proves that

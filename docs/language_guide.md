@@ -421,7 +421,12 @@ inside either arm of the other, up to depth two. Each conditional receives an
 independent `__rfNN` false label and `__reNN` end label, so ALINK sees only
 ordinary OBJ1 exports and relocations.
 
-Loops, returns inside either arm, more than two controls, deeper control
+Pass O claims functions containing a third conditional and extends the same
+format to four controls per function and nesting depth four. Four is the
+documented native bound because a fully formed function must also fit the
+64-operation debug bank; the compiler does not advertise unreachable slots.
+
+Loops, returns inside either arm, more than four controls, deeper control
 nesting, recursive/reentrant frames, unrestricted user-call argument trees and
 nested call expressions, mixed parameter types, arbitrary signatures,
 recursive calls, and external REAL functions are not yet part of this native

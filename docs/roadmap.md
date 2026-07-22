@@ -1815,3 +1815,30 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   oracle remains 298. Loops, early returns, more than two controls, deeper
   nesting, recursive/reentrant frames, mixed types, arbitrary signatures, and
   recursion remain pending.
+
+## 2026-07-22 Bounded Four-Control REAL Function Control
+
+- Added pass O, `ACTC_OVLO.BIN` (id 24), as the four-control build of the
+  shared postfix REAL emitter. It claims a supported program when at least one
+  REAL function contains a third conditional and permits at most four controls
+  per function, either sequentially or nested to depth four.
+- Each slot retains an independent `__rfNN` false export and optional `__reNN`
+  end export. Power-of-two slot arithmetic keeps nested label resolution
+  independent of source order while ALINK continues to process ordinary OBJ1
+  exports and relocations only.
+- Added byte-identical `real_function_four_sequential_if_postfix.act` and
+  `real_function_four_deep_if_postfix.act` fixtures. Rebuilt release artifacts
+  launch directly in VICE and print `43` and `154`; exact memory checks cover
+  all sequential results plus depth-four deep-true, deep-false, and outer-false
+  paths. Idun ACTC/ALINK executes the same sources with identical results.
+- Passes L, M, and N remain byte-identical. Pass O is 7,123 bytes with 1,069
+  bytes free under its 1 KiB gate and has SHA-256
+  `dd71aaa1d07600ce5e8004376879746ee046a56c33a49d5db727563feade0211`.
+- Current native inventories are 1,356 broad direct-PRG and 188 non-runtime
+  source-backed shapes; the native unittest inventory is 835, the overlay suite
+  is 231 tests, the source-cache suite is 198 tests, and the compiled-runtime
+  oracle remains 298. Tracked build scripts are executable so fresh GitHub
+  clones can run Makefile entrypoints without local mode repairs.
+- Loops, early returns, controls beyond four or depth four,
+  recursive/reentrant frames, mixed types, arbitrary signatures, and recursion
+  remain pending.

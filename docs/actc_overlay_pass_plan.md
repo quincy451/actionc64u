@@ -60,7 +60,7 @@ The overlay artifacts share one stable execution ABI:
   transform as base-36 pass `I`; `tools/build_actc_overlay_preprocess.sh` emits
   `build/udos_tools/ACTC_OVLI.BIN`.
 - The workspace exporter and UDOS release Makefile include base-36 passes
-  `ACTC_OVL0.BIN` through `ACTC_OVLN.BIN` next to `ACTC.PRG`, so pass files are
+  `ACTC_OVL0.BIN` through `ACTC_OVLO.BIN` next to `ACTC.PRG`, so pass files are
   present when the scheduler runs from an exported or release image.
 - `tests/test_actc_overlay.py` proves the `ACOV` header, ABI version, pass id,
   `$A000` execution base, encoded byte length, compatibility no-op return, and the
@@ -94,14 +94,15 @@ The overlay artifacts share one stable execution ABI:
   `ACTC_OVLK.BIN` for bounded two-REAL-parameter finite comparison/select
   functions, `ACTC_OVLL.BIN` for bounded nested straight-line REAL trees, and
   `ACTC_OVLM.BIN` for the same function form with one bounded `IF`/`ELSE`, and
-  `ACTC_OVLN.BIN` for two sequential or depth-two nested conditionals.
+  `ACTC_OVLN.BIN` for two sequential or depth-two nested conditionals, and
+  `ACTC_OVLO.BIN` for up to four sequential or depth-four nested controls.
   Passes 8 and A through H retain their native integer, REAL,
   runtime, and composition roles.
   The same path stages `ACTC_OVL5.BIN` as the generic object-emission fallback
   and `ACTC_OVL7.BIN` for overlay-hosted body external preallocation. On
   success, later compiler phases consume the overlay-written REU metadata.
   Overlay staging uses the executable-relative tool ABI path prefix, so
-  `!ACTC_OVL1.BIN` through `!ACTC_OVLN.BIN` resolve beside the launched
+  `!ACTC_OVL1.BIN` through `!ACTC_OVLO.BIN` resolve beside the launched
   `ACTC.PRG`.
 - `tools/build_actc_udos.sh` always builds `ACTC_OVL0.BIN`, including compiler
   harness builds, because compile/link/debug chaining and compile-error editor
@@ -204,6 +205,13 @@ The overlay artifacts share one stable execution ABI:
   and `__reNN` exports keep each long branch fully relocatable. The 7,120-byte
   image leaves 1,072 bytes free under a dedicated 1 KiB gate; passes L and M
   remain byte-identical to their prior builds.
+- `tools/build_actc_overlay_emit_native_real_postfix_extended_control_object.sh`
+  builds `ACTC_OVLO.BIN`, pass id `24`, from the same emitter with four
+  power-of-two control slots per REAL function. It claims only when a supported
+  function contains a third conditional, permits at most four controls and
+  nesting depth four, and emits independent `__rfNN`/`__reNN` targets for every
+  occupied slot. Its 7,123-byte image leaves 1,069 bytes free under the 1 KiB
+  gate; passes L, M, and N remain byte-identical.
 - `tools/build_actc_overlay_emit_native_object.sh` builds
   `build/udos_tools/ACTC_OVL8.BIN`, pass id `8`. In addition to straight-line
   word expressions and integer IF/DO control flow, it owns two word FOR loop
@@ -352,7 +360,8 @@ resident UDOS services execute.
    function first uses `ACTC_OVLK.BIN`; nested straight-line REAL postfix trees
    first use `ACTC_OVLL.BIN`; one bounded REAL-function `IF`/`ELSE` first uses
    `ACTC_OVLM.BIN`; two sequential or depth-two nested controls first use
-   `ACTC_OVLN.BIN`.
+   `ACTC_OVLN.BIN`; three or four controls and depth-three/four nesting first
+   use `ACTC_OVLO.BIN`.
    Native passes return explicit not-applicable status before writing output so
    the resident driver can try the next emitter without rolling back a partial
    object.

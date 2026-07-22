@@ -28,6 +28,7 @@ class TestActcOverlay(unittest.TestCase):
     ACTC_NATIVE_REAL_POSTFIX_EXTENDED_CONTROL_EMIT_MIN_HEADROOM = 0x400
     ACTC_NATIVE_REAL_POSTFIX_EARLY_RETURN_EMIT_MIN_HEADROOM = 0x400
     ACTC_NATIVE_REAL_POSTFIX_LOOP_EMIT_MIN_HEADROOM = 0x400
+    ACTC_NATIVE_REAL_POSTFIX_LOOP_EXIT_EMIT_MIN_HEADROOM = 0x300
     ACTC_OVERLAY_WINDOW_SIZE = 0x2000
     ACTC_PREPROCESS_CODE_WINDOW_SIZE = 0x2000
 
@@ -214,8 +215,9 @@ class TestActcOverlay(unittest.TestCase):
         self.assertIn("ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_EXTENDED_CONTROL_OBJECT = $18", overlay_abi_text)
         self.assertIn("ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_EARLY_RETURN_OBJECT = $19", overlay_abi_text)
         self.assertIn("ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_LOOP_OBJECT = $1A", overlay_abi_text)
-        self.assertIn("ACTC_OVERLAY_PASS_COUNT = $1B", overlay_abi_text)
-        self.assertIn("ldx #$10\nbuild_object_content_with_overlay_candidate_loop:", actc_text)
+        self.assertIn("ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_LOOP_EXIT_OBJECT = $1B", overlay_abi_text)
+        self.assertIn("ACTC_OVERLAY_PASS_COUNT = $1C", overlay_abi_text)
+        self.assertIn("ldx #$11\nbuild_object_content_with_overlay_candidate_loop:", actc_text)
         self.assertIn("cmp #10\n    bcc :+", actc_text)
         self.assertIn(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_OBJECT", actc_text)
         self.assertIn(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_WHILE_OBJECT", actc_text)
@@ -230,8 +232,13 @@ class TestActcOverlay(unittest.TestCase):
         self.assertIn(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_EXTENDED_CONTROL_OBJECT", actc_text)
         self.assertIn(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_EARLY_RETURN_OBJECT", actc_text)
         self.assertIn(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_LOOP_OBJECT", actc_text)
+        self.assertIn(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_LOOP_EXIT_OBJECT", actc_text)
         self.assertLess(
             actc_text.index(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_LOOP_OBJECT"),
+            actc_text.index(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_LOOP_EXIT_OBJECT"),
+        )
+        self.assertLess(
+            actc_text.index(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_LOOP_EXIT_OBJECT"),
             actc_text.index(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_EARLY_RETURN_OBJECT"),
         )
         self.assertLess(
@@ -650,6 +657,9 @@ class TestActcOverlay(unittest.TestCase):
         self.run_checked(
             [str(self.root / "tools" / "build_actc_overlay_emit_native_real_postfix_loop_object.sh")]
         )
+        self.run_checked(
+            [str(self.root / "tools" / "build_actc_overlay_emit_native_real_postfix_loop_exit_object.sh")]
+        )
 
     def assert_body_overlay_map_keeps_headroom(self, map_name: str, overlay_name: str) -> None:
         map_text = (self.build_dir / map_name).read_text(encoding="ascii")
@@ -767,7 +777,7 @@ class TestActcOverlay(unittest.TestCase):
             self.last_emit_overlay_pass = summary["dumps"]["actc_overlay_requested_pass"]
             self.assertIn(
                 self.last_emit_overlay_pass,
-                ([5], [8], [9], [10], [11], [12], [13], [14], [15], [16], [17], [19], [20], [21], [22], [23], [24], [25], [26]),
+                ([5], [8], [9], [10], [11], [12], [13], [14], [15], [16], [17], [19], [20], [21], [22], [23], [24], [25], [26], [27]),
                 msg=result.stdout,
             )
             self.assertTrue(
@@ -9355,6 +9365,68 @@ class TestActcOverlay(unittest.TestCase):
         self.assertIn("u rt_f_cmp\nu rt_i_to_f\nu rt_print_f\n", obj)
         self.assertNotIn("u rt_f_add\n", obj)
 
+    def test_real_function_loop_exit_uses_pass_r_with_distinct_targets(self) -> None:
+        source = (
+            self.root / "tests" / "parity" / "real_function_loop_exit_postfix.act"
+        ).read_text(encoding="ascii").replace("\n", "\r")
+        obj = self.compile_overlay_object(
+            source,
+            "actc-overlay-real-function-loop-exit",
+            extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [27])
+        self.assertIn(
+            "x main 0 432\n"
+            "x plain 222 64\n"
+            "x guarded 286 90\n"
+            "x __rb00 264 1\n"
+            "x __rz00 281 1\n"
+            "x __rb10 328 1\n"
+            "x __rz10 371 1\n"
+            "x __idata 376 32\n",
+            obj,
+        )
+        for relocation in (
+            "r 276 x __rz00\n",
+            "r 279 x __rb00\n",
+            "r 352 x __rz10\n",
+            "r 366 x __rz10\n",
+            "r 369 x __rb10\n",
+        ):
+            self.assertIn(relocation, obj)
+        self.assertIn("u rt_f_cmp\nu rt_i_to_f\nu rt_print_f\n", obj)
+        self.assertNotIn("u rt_f_add\n", obj)
+
+    def test_real_function_loop_exit_targets_nearest_nested_plain_loop(self) -> None:
+        obj = self.compile_overlay_object(
+            "MODULE MAIN\r"
+            "REAL LEFT\r"
+            "REAL RIGHT\r"
+            "REAL RESULT\r"
+            "REAL FUNC PICK(REAL A,B)\r"
+            "DO\r"
+            "DO\r"
+            "A=B\r"
+            "EXIT\r"
+            "OD\r"
+            "EXIT\r"
+            "OD\r"
+            "RETURN(A)\r"
+            "PROC MAIN()\r"
+            "LEFT=REAL(1)\r"
+            "RIGHT=REAL(4)\r"
+            "RESULT=PICK(LEFT,RIGHT)\r"
+            "RETURN\r",
+            "actc-overlay-real-function-nearest-loop-exit",
+            extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [27])
+        for label in ("__rb00", "__rz00", "__rb01", "__rz01"):
+            self.assertRegex(obj, rf"(?m)^x {label} [0-9]+ 1$")
+            self.assertRegex(obj, rf"(?m)^r [0-9]+ x {label}$")
+
     def test_real_function_loop_pass_owns_depth_four_and_declines_fifth_loop(self) -> None:
         def nested_loop_source(depth: int) -> str:
             return (
@@ -11170,6 +11242,44 @@ class TestActcOverlay(unittest.TestCase):
         ).read_text(encoding="ascii")
         self.assertIn(".native_real_postfix_detect", labels)
         self.assertIn(".nrp_loop_stack", labels)
+
+    def test_native_real_postfix_loop_exit_emit_object_overlay_builds_with_expected_header(self) -> None:
+        self.require_toolchain()
+        self.run_checked(
+            [
+                str(
+                    self.root
+                    / "tools"
+                    / "build_actc_overlay_emit_native_real_postfix_loop_exit_object.sh"
+                )
+            ]
+        )
+
+        overlay = self.build_dir / "ACTC_OVLR.BIN"
+        data = overlay.read_bytes()
+        self.assertGreaterEqual(len(data), 18)
+        self.assertEqual(data[0:4], b"ACOV")
+        self.assertEqual(data[4], self.ACTC_OVERLAY_ABI_VERSION)
+        self.assertEqual(data[5], 27)
+
+        load_base = data[6] | (data[7] << 8)
+        entry = data[8] | (data[9] << 8)
+        length = data[10] | (data[11] << 8)
+        self.assertEqual(load_base, 0xA000)
+        self.assertEqual(entry, 0xA000 + 14)
+        self.assertEqual(length, len(data))
+        self.assert_emit_overlay_map_keeps_headroom(
+            "actc_overlay_emit_native_real_postfix_loop_exit_object.map",
+            "ACTC_OVLR.BIN",
+            self.ACTC_NATIVE_REAL_POSTFIX_LOOP_EXIT_EMIT_MIN_HEADROOM,
+        )
+        labels = (
+            self.build_dir
+            / "actc_overlay_emit_native_real_postfix_loop_exit_object.labels"
+        ).read_text(encoding="ascii")
+        self.assertIn(".native_real_postfix_detect", labels)
+        self.assertIn(".nrp_loop_special_seen_any", labels)
+        self.assertIn(".nrp_loop_user_exit", labels)
 
     def test_native_real_while_emit_object_overlay_builds_with_expected_header(self) -> None:
         self.require_toolchain()

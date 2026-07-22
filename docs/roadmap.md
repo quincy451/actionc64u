@@ -1886,3 +1886,31 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   from inside loops, controls beyond four or depth four, unrestricted call
   trees, recursive/reentrant frames, mixed types, arbitrary signatures, and
   recursion remain pending.
+
+## 2026-07-22 Bounded REAL Function Plain Loops And EXIT
+
+- Added pass R, `ACTC_OVLR.BIN` (id 27), for plain `DO ... OD` and
+  unconditional `EXIT` within the existing four-loop REAL-function bound. The
+  collector's base-36 loop-kind selector is decoded without changing the body
+  or OBJ1 formats; `EXIT` targets the nearest active `DO` or `WHILE` through
+  that loop's ordinary relocatable `__rzNN` export, while `OD` retains the
+  independent `__rbNN` back edge.
+- Added byte-identical `real_function_loop_exit_postfix.act` fixtures. Native
+  ACTC/ALINK launches the linked PRG directly in VICE, exits one plain and one
+  guarded loop, stores FIRST=4.0 and SECOND=3.0, and displays `43`. Idun's
+  Linux ACTC/ALINK generated-6502 path executes the same source with identical
+  values. A compiler regression also proves that nested `EXIT` binds to the
+  nearest active plain loop.
+- Pass Q remains exactly 7,151 bytes with SHA-256
+  `40273408c14c54a618e92d60d5fae12370820a8ea9a60cddc3c508fb4ac67507`;
+  passes L through Q remain byte-identical. Pass R is 7,334 bytes with 858
+  bytes free under its dedicated 768-byte gate and has SHA-256
+  `1ef9ff4c164ee353025da5e3f4d02dceadfadd0a833ea244e7c798f88f72db15`.
+- Current native inventories are 1,360 broad direct-PRG and 192 non-runtime
+  source-backed shapes; the native unittest inventory is 848, the overlay suite
+  is 240 tests, the source-cache suite is 198 tests, and the compiled-runtime
+  oracle remains 298.
+- REAL-function `FOR`, mixed loop/conditional nesting, returns from inside
+  loops, controls beyond four or depth four, unrestricted call trees,
+  recursive/reentrant frames, mixed types, arbitrary signatures, and recursion
+  remain pending.

@@ -621,6 +621,7 @@ class TestUdosWorkspaceExport(unittest.TestCase):
             self.assertEqual((image_root / "ACTC_OVLO.BIN").read_bytes()[:4], b"ACOV")
             self.assertEqual((image_root / "ACTC_OVLP.BIN").read_bytes()[:4], b"ACOV")
             self.assertEqual((image_root / "ACTC_OVLQ.BIN").read_bytes()[:4], b"ACOV")
+            self.assertEqual((image_root / "ACTC_OVLR.BIN").read_bytes()[:4], b"ACOV")
             self.assertTrue((image_root / "ALINK.PRG").is_file())
             self.assertTrue((image_root / "ACTCHK.PRG").is_file())
             self.assertTrue((image_root / "ACTMON.PRG").is_file())

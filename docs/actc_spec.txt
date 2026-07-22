@@ -162,13 +162,13 @@ Current machine-code emission slices:
   bounded `IF`/`ELSE` arms while still requiring a terminal fallback return.
   Pass Q accepts at most four `DO ... UNTIL ... OD` or
   `WHILE ... DO ... OD` loops per function and emits relocatable back-edge and
-  while-exit labels.
+  while-exit labels. Pass R accepts the same bound plus plain `DO ... OD` and
+  unconditional `EXIT` targeting the nearest active `DO` or `WHILE`.
   These passes use all six REAL relations through `RT_F_CMP.OBJ` and relocatable
   internal control-flow code labels. Strings, mixed declaration types,
-  arbitrary signatures, plain infinite `DO`, loop `EXIT`, mixed
-  loop/conditional nesting, returns from inside loops, more than four controls,
-  deeper control nesting, and recursive/reentrant calls are not part of these
-  passes.
+  arbitrary signatures, REAL-function `FOR`, mixed loop/conditional nesting,
+  returns from inside loops, more than four controls, deeper control nesting,
+  and recursive/reentrant calls are not part of these passes.
 
 Non-responsibilities
 

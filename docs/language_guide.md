@@ -437,8 +437,13 @@ Pass Q accepts up to four bounded REAL-function loops, in either post-test
 as Passes M through P. Each loop receives an ordinary relocatable `__rbNN`
 back-edge label; a `WHILE` loop also receives a relocatable `__rzNN` exit label.
 
-Plain infinite `DO`, loop `EXIT`, mixed loop/conditional nesting, returns from
-inside loops, more than four controls, deeper control nesting,
+Pass R accepts the same four-loop bound plus plain `DO ... OD` and
+unconditional `EXIT`. `EXIT` always targets the nearest active `DO` or
+`WHILE`; ACTC emits it as a relocation to that loop's independent `__rzNN`
+post-loop label. A plain loop without `EXIT` intentionally remains infinite.
+
+REAL-function `FOR`, mixed loop/conditional nesting, returns from inside loops,
+more than four controls, deeper control nesting,
 recursive/reentrant frames, unrestricted user-call argument trees and
 nested call expressions, mixed parameter types, arbitrary signatures,
 recursive calls, and external REAL functions are not yet part of this native

@@ -2699,6 +2699,7 @@ class TestActcReuSourceCache(unittest.TestCase):
             "actc_overlay_emit_native_real_postfix_extended_control_object.asm",
             "actc_overlay_emit_native_real_postfix_early_return_object.asm",
             "actc_overlay_emit_native_real_postfix_loop_object.asm",
+            "actc_overlay_emit_native_real_postfix_loop_exit_object.asm",
             "actc_overlay_emit_native_real_while_object.asm",
             "actc_overlay_emit_native_runtime_condition_object.asm",
             "actc_overlay_emit_native_runtime_sequence_object.asm",

@@ -117,10 +117,13 @@ terminal fallback; its shared one-control and depth-four fixtures print `33`
 and `154`. Pass Q adds up to four bounded `DO ... UNTIL` and
 `WHILE ... DO ... OD` loops per supported REAL function. Its shared fixture
 executes one post-test and one pre-test loop, prints `43`, and proves ordinary
-OBJ1 back-edge and exit-label relocations. Self and mutual cycles remain
-rejected until recursive/reentrant frames are added. Plain infinite `DO`,
-loop `EXIT`, mixed loop/conditional nesting, controls beyond four, and deeper
-nesting remain the next control-flow work.
+OBJ1 back-edge and exit-label relocations. Pass R adds plain `DO ... OD` and
+unconditional `EXIT` to the nearest active `DO` or `WHILE`, using distinct
+relocatable back-edge and post-loop labels; its shared direct PRG also prints
+`43`. Self and mutual cycles remain rejected until recursive/reentrant frames
+are added. REAL-function `FOR`, mixed loop/conditional nesting, returns from
+inside loops, controls beyond four, and deeper nesting remain control-flow
+work.
 Bounded named-REAL `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FMin`, `FMax`, and `FClamp` calls now have
 complete portable call semantics through independently link-selected helpers.
 The pass-K clamp root captures initializer, argument, destination, and print
@@ -153,10 +156,10 @@ Treat `vice-action-alink` as the default direct-native linker gate that emits
 `BIN/MAIN.PRG`.
 Treat `vice-action-actc-alink-launch` as the helper-free higher-level default.
 Treat `vice-action-actc-alink-launch-object-emission-matrix` as the all
-source-backed ACTC object-emission launch matrix; it currently enumerates 191
+source-backed ACTC object-emission launch matrix; it currently enumerates 192
 non-runtime, non-object-code source shapes.
 Treat `vice-action-alink-prg-matrix` as the broad direct-PRG object/link matrix;
-it currently enumerates 1359 shape probes.
+it currently enumerates 1360 shape probes.
 Treat `vice-action-alink-prg-object-code-matrices` as the focused direct
 object-code graph, behavior, and rejection gate.
 Treat `vice-action-actc-alink-launch-runtime-matrices` as the focused

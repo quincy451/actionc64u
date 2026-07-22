@@ -940,6 +940,57 @@ class TestAlinkPrgObjectCodeMatrix(unittest.TestCase):
         self.assertNotIn("LIB/RT_F_ADD.OBJ", case["expected_alink_loads"])
         self.assertTrue(case["expected_tail_from_compiled_object"])
 
+    def test_real_function_loop_exit_uses_nearest_object_labels(self) -> None:
+        sys.path.insert(0, str(self.workspace / "udos" / "tools"))
+        import run_action_alink_prg_probe as probe
+
+        shape = "actc_real_function_loop_exit_postfix_linked"
+        case = probe.DIRECT_PRG_CASES[shape]
+        fragments = "".join(case["expected_object_fragments"])
+        fixture = (
+            self.workspace
+            / "actionc64u"
+            / "tests"
+            / "parity"
+            / "real_function_loop_exit_postfix.act"
+        ).read_text(encoding="ascii")
+
+        self.assertEqual(case["source"].replace("\r", "\n"), fixture)
+        self.assertIn(f"\t{shape} \\\n", self.make_text)
+        for export in (
+            "x __rb00 264 1\n",
+            "x __rz00 281 1\n",
+            "x __rb10 328 1\n",
+            "x __rz10 371 1\n",
+        ):
+            self.assertIn(export, fragments)
+        for relocation in (
+            "r 276 x __rz00\n",
+            "r 279 x __rb00\n",
+            "r 352 x __rz10\n",
+            "r 366 x __rz10\n",
+            "r 369 x __rb10\n",
+        ):
+            self.assertIn(relocation, fragments)
+        self.assertEqual(case["screen_fragments"], ["4", "3"])
+        self.assertEqual(case["store_check_addr"], 0x1180)
+        self.assertEqual(case["store_check_value"], 0x00)
+        self.assertEqual(
+            case["extra_store_checks"],
+            [
+                {"addr": 0x1181, "value": 0x00},
+                {"addr": 0x1182, "value": 0x80},
+                {"addr": 0x1183, "value": 0x40},
+                {"addr": 0x1184, "value": 0x00},
+                {"addr": 0x1185, "value": 0x00},
+                {"addr": 0x1186, "value": 0x40},
+                {"addr": 0x1187, "value": 0x40},
+            ],
+        )
+        self.assertIn("LIB/RT_F_CMP.OBJ", case["expected_alink_loads"])
+        self.assertNotIn("LIB/RT_F_ADD.OBJ", case["expected_alink_loads"])
+        self.assertTrue(case["expected_tail_from_compiled_object"])
+
     def test_full_range_multiply_probe_forces_staged_root_object_path(self) -> None:
         sys.path.insert(0, str(self.workspace / "udos" / "tools"))
         import run_action_alink_prg_probe as probe

@@ -883,7 +883,18 @@ four loops per function, emits relocatable `__rbNN` back-edge labels and
 `RT_F_CMP.OBJ`. The shared fixture executes both loop forms and produces 4.0
 and 3.0 in native VICE and the Idun generated-6502 path. The 7,151-byte image
 leaves 1,041 bytes under the 1 KiB reserve while passes L through P remain
-byte-identical. Plain infinite `DO`, `EXIT`, mixed loop/conditional nesting,
-returns from inside loops, controls beyond four, unrestricted call trees,
-mixed types, arbitrary signatures, and recursive/reentrant frames remain
-pending.
+byte-identical. Plain `DO`, `EXIT`, mixed loop/conditional nesting, returns
+from inside loops, controls beyond four, unrestricted call trees, mixed types,
+arbitrary signatures, and recursive/reentrant frames remain outside pass Q.
+
+Base-36 pass R, `ACTC_OVLR.BIN`, separately claims a supported REAL function
+containing plain `DO ... OD` or unconditional `EXIT`. It preserves the
+four-loop bound, decodes the collector's nearest-loop selector, emits `EXIT`
+as an ordinary relocation to that loop's `__rzNN` post-loop target, and emits
+plain-loop back edges to `__rbNN`. The byte-identical shared fixture runs one
+plain and one guarded exit and produces 4.0 and 3.0 in native VICE and Idun's
+generated-6502 path. The 7,334-byte image leaves 858 bytes under a dedicated
+768-byte reserve while passes L through Q remain byte-identical. REAL-function
+`FOR`, mixed loop/conditional nesting, returns from inside loops, controls
+beyond four, unrestricted call trees, mixed types, arbitrary signatures, and
+recursive/reentrant frames remain pending.

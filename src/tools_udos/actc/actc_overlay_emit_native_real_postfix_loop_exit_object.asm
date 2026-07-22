@@ -1,0 +1,3 @@
+ACTC_EMIT_NATIVE_REAL_POSTFIX_ONLY = 1
+ACTC_EMIT_NATIVE_REAL_POSTFIX_LOOP_EXIT_ONLY = 1
+.include "actc_overlay_emit_object.asm"

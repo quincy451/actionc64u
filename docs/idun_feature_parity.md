@@ -52,12 +52,13 @@ consumes that stream for a straight-line module-REAL subset and emits ordinary
 machine, relocation, data, line, and variable OBJ1 records. Besides one
 `MAIN`, it now supports up to two nonrecursive two-REAL-parameter functions
 whose nested REAL return trees are called directly by `MAIN`. Each function may
-use bounded all-REAL static locals with DBG1 local records. The later function
-may assign the earlier function's result, use that call directly in a supported
-intrinsic return tree, or use bounded calls to the earlier function as arguments
-to another such call; forward, self, and cyclic edges are rejected. Control
-flow, unrestricted user-call argument trees and nested call expressions,
-reentrant local frames, mixed types, arrays, pointers,
+use bounded all-REAL static locals with DBG1 local records. Either function may
+call the other while the graph remains acyclic, including calls used directly
+in a supported intrinsic return tree or as arguments to another call. Pass L
+stack-preserves caller parameters, locals, and live temporaries around every
+such edge. Self and mutual cycles are rejected. Control flow, unrestricted
+user-call argument trees and nested call expressions, recursive/reentrant local
+frames, mixed types, arrays, pointers,
 strings, arbitrary signatures, and recursive frames remain tracked native gaps.
 
 ## Parity Rules
@@ -99,12 +100,12 @@ not parity artifacts.
 | Raw bracketed machine-code bodies | Constants, symbols, current address, routine addresses | Byte/word/character/sum constants plus preprocessed `DEFINE`, storage, local-routine, and current-address relocations | Core parity; linked external routine-symbol expressions remain a native compiler/address gap |
 | Numeric literals in call arguments | Decimal, hexadecimal, and binary forms | Same three 16-bit forms through streamed SourceReader tokens | Parity; object, REU-window, and live VICE proofs pass |
 | Arrays, pointers, records, and indirect parameters | Dynamically sized compiler metadata and typed target operations | Not part of the maintained native direct-machine core | Native compiler gap |
-| Typed functions and recursive frames | BYTE/CARD/INT/REAL, nested calls, direct/mutual recursion | Scalar nonrecursive word functions plus constrained REAL forms, including up to two nested two-REAL-parameter callees with bounded static REAL locals, a declaration-order call edge, and bounded calls to that earlier function as intrinsic or local-call operands | Native compiler/ABI gap beyond the bounded pass-L call ABI |
+| Typed functions and recursive frames | BYTE/CARD/INT/REAL, nested calls, direct/mutual recursion | Scalar nonrecursive word functions plus constrained REAL forms, including up to two nested two-REAL-parameter callees with bounded static REAL locals, acyclic calls in either declaration direction with caller-cell stack preservation, and bounded calls as intrinsic or local-call operands | Native compiler/ABI gap beyond the bounded pass-L call ABI |
 | Application REU arrays | `REU BYTE ARRAY` plus 8/16-bit accessors | Runtime helpers exist, but native ACTC has no declaration/access lowering | Native compiler gap; compiler REU workspace is not equivalent |
 | Program-owned overlay sections | `OVERLAY`/`ENDOVERLAY` and relocated `OverlayCall` | No native source lowering | Native compiler gap; ACTC tool overlays are not equivalent |
 | Program argument entry | `MAIN(argc,argv)` through the Idun target service | `MAIN()` and UDOS command-tail workflow | OS-specific contracts; expose equivalent user arguments without copying the Idun upload ABI |
 | IEEE-754 binary32 arithmetic and exceptional values | Standalone modules | Standalone modules plus native support modules | Parity at runtime |
-| General REAL source expressions, calls, and returns | Full binary32 compiler path with intrinsic `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FMin`, and `FMax` | Core operations, bounded nested straight-line trees over module REAL values, and up to two nested two-REAL-parameter functions with bounded static REAL locals; `MAIN` may call either and the later function may assign the earlier result or use bounded earlier calls as intrinsic or local-call operands | Partial parity; reentrant locals, control flow, unrestricted user-call argument trees and nested calls, mixed types, arbitrary signatures/calls, and recursive frames remain gaps |
+| General REAL source expressions, calls, and returns | Full binary32 compiler path with intrinsic `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FMin`, and `FMax` | Core operations, bounded nested straight-line trees over module REAL values, and up to two nested two-REAL-parameter functions with bounded static REAL locals and frame-preserved acyclic calls in either declaration direction | Partial parity; recursive/reentrant locals, control flow, unrestricted user-call argument trees and nested calls, mixed types, arbitrary signatures/calls, and recursive frames remain gaps |
 | INPUT1 joystick/two-button mouse API | 19 declarations | 19 declarations | Parity; physical checks remain |
 | DBF1 API | 20 declarations | 20 declarations | Parity; physical REU/disk checks remain |
 | SIDSPR1 API | 37 declarations | 37 declarations | Parity; physical SID/display checks remain |
@@ -168,7 +169,7 @@ the same host-side implementation is neither required nor desirable.
 
 | Work package | Portable result | Native C64U/UDOS work | Idun/Alpine work | State |
 | --- | --- | --- | --- | --- |
-| Compiler expression and call core | The same supported typed source produces equivalent OBJ1 calls, storage, returns, and direct-PRG results | Extend pass L beyond two nonrecursive two-REAL-parameter callees, bounded static REAL locals, one declaration-order call edge, and one local call as an intrinsic operand to general functions, parameters, reentrant locals, control flow, and nested calls; then add arrays, pointers, records, strings, indirect parameters, and bounded frames | Keep Linux ACTC as the behavioral oracle and add every shared fixture to its regression suite | In progress; pass L proves both `MAIN` selectors plus `MAIN -> CHAIN -> LENGTH` as an assignment and as an intrinsic operand, but not a general call graph |
+| Compiler expression and call core | The same supported typed source produces equivalent OBJ1 calls, storage, returns, and direct-PRG results | Extend pass L beyond two nonrecursive two-REAL-parameter callees, bounded static REAL locals, and frame-preserved acyclic calls to general functions, parameters, recursive/reentrant locals, control flow, and nested calls; then add arrays, pointers, records, strings, indirect parameters, and bounded frames | Keep Linux ACTC as the behavioral oracle and add every shared fixture to its regression suite | In progress; pass L proves both `MAIN` selectors plus backward and forward acyclic function edges, but not a general or recursive call graph |
 | MATH1 | All 43 routines and 8 constants have the same binary32/domain behavior and unused routines are absent from the PRG | Lower the 28 missing source routines after general REAL calls work; package each routine or dependency group as OBJ1 | Complete: ACTC emits only source routines reachable from `MAIN`, while intrinsic helpers remain independent OBJ1 modules | Blocked on the native compiler core; Idun packaging is complete |
 | GFX1 | The common 60-routine/16-constant catalog behaves the same on the C64 target | Implement the 45 missing high-level routines in reachable OBJ1 groups and retain the existing 15 low-level calls | Keep the implemented source library and generated-program tests as the reference | Native implementation pending |
 | Resources | `SPRITE`, `MSPRITE`, `BITMAP`, and `MBITMAP` validate ASP1/ABM1 and expose equivalent linked asset addresses | Load through UDOS/REU services, emit aligned relocatable data, and add native ACTSPRITE/ACTBITMAP plus ACTEDIT F8 | Keep POSIX loading and Linux editors; add shared malformed-resource and emitted-layout fixtures | Native implementation pending |
@@ -406,7 +407,7 @@ make sync-native-check NATIVE_ACTION_ROOT=/path/to/actionc64u
 
 The 2026-07-21 current cross-product baseline passed:
 
-- 819 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
+- 821 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
   ALINK closure, IEEE-754, ACTEDIT, ACTDBG, Linux compatibility, export, and
   release-image checks;
 - 133 UDOS integration tests, with one intentional embedded-AUTOEXEC capacity
@@ -714,13 +715,12 @@ fixture emits distinct `length` and `shorter` exports, disjoint parameter/local
 storage, and three DBG1 procedure banks; native ACTC/ALINK prints `5` and `3`
 while VICE verifies both results and both locals. Linux ACTC gained direct
 `FMin`/`FMax` expression lowering to the same selected runtime objects and
-executes the fixture with identical results. Pass L now also accepts one
+executes the fixture with identical results. Pass L first added one
 declaration-order function edge. The shared
 `real_function_call_chain_postfix.act` fixture emits ordinary `MAIN -> CHAIN`
 and `CHAIN -> LENGTH` export relocations. Native VICE verifies binary32 5.0 in
 both the module result and `CHAIN.BASE`; Idun ACTC/ALINK executes the same source
-with the same result. Forward, self, and cyclic edges fail native compilation
-before generic emission. The shared
+with the same result. The shared
 `real_function_nested_local_call_postfix.act` fixture then removes the temporary
 source local and feeds `LENGTH(A,B)` directly into `FMax`; pass 7 traverses the
 local call without creating a phantom library import. Pass 7 is now 6,678 bytes
@@ -730,9 +730,14 @@ The shared `real_function_user_call_arguments_postfix.act` fixture next feeds
 two calls to `LOWER` into a third call. Pass L copies each returned A/X pointer
 to a distinct temporary, so overwriting the callee's static cells cannot alias
 the outer arguments; native VICE and Idun both produce 3.0.
-Current inventories are 1,350 broad direct-PRG shapes, 182 non-runtime
+The shared `real_function_forward_frame_postfix.act` fixture then reverses the
+declaration direction with `FIRST -> SECOND` while keeping the `FAbs(A)`
+temporary live. Pass L stack-saves `FIRST`'s parameters and live temporary,
+stages `SECOND`'s A/X result, restores the caller cells, and produces 3.0 in
+both products. Self and mutual cycles remain rejected.
+Current inventories are 1,351 broad direct-PRG shapes, 183 non-runtime
 source-backed object-emission shapes, and 298 compiled-runtime relocation-oracle
-cases. Pass L is 5,670 bytes with 2,522 bytes free. The 28-routine MATH1 gap is
+cases. Pass L is 6,124 bytes with 2,068 bytes free. The 28-routine MATH1 gap is
 unchanged.
 
 Pass 1 now contains only the streamed module-header validator. Moving the

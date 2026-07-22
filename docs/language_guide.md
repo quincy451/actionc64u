@@ -379,8 +379,8 @@ REAL FUNC CHAIN(REAL A,B)
   RETURN(FMax(LENGTH(A,B),FAbs(A)))
 ```
 
-Bounded calls to that earlier function may also supply both arguments to another
-call. ACTC spills each completed result before evaluating the next argument, so
+Bounded calls to another function in the acyclic graph may also supply both
+arguments to a call. ACTC spills each completed result before evaluating the next argument, so
 the callee's static result and parameter cells cannot alias the outer call:
 
 ```action
@@ -394,10 +394,12 @@ REAL FUNC CHAIN(REAL A,B)
 Each call uses an ordinary OBJ1 export relocation and returns a four-byte result
 pointer in A/X. An assignment copies that result; a nested intrinsic consumes a
 private temporary, and a nested user call receives independently spilled
-argument results. Because parameters and locals are currently static, function
-edges must point to an earlier declaration. ACTC rejects forward, self, and
-cyclic edges instead of falling back to generic object emission. Reentrant
-frames, control flow in these functions, unrestricted user-call argument trees
+argument results. Around every function-to-function call, ACTC stack-saves the
+caller's static parameters, locals, and live temporaries, stages the returned
+value, and restores the caller cells. Edges may therefore point forward or
+backward when the graph remains acyclic. ACTC rejects self and mutual cycles
+instead of falling back to generic object emission. Recursive/reentrant frames,
+control flow in these functions, unrestricted user-call argument trees
 and nested call expressions, mixed parameter types, arbitrary signatures,
 recursive calls, and external REAL functions are not yet part of this native
 path.

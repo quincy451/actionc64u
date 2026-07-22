@@ -72,17 +72,21 @@ Current contract:
   arithmetic, and `FClamp` in a straight-line module-REAL program. It also
   accepts up to two nonrecursive two-REAL-parameter functions called directly
   by `MAIN` when each function returns a nested expression from that same helper
-  set. A later function may assign an earlier function's result to a REAL local,
-  use that call directly as an operand in a supported intrinsic return tree, or
-  pass bounded calls to the earlier function as arguments to another such call.
+  set. Either function may call the other while the resulting graph remains
+  acyclic. A call may assign its result to a REAL local, appear directly as an
+  operand in a supported intrinsic return tree, or provide bounded arguments
+  to another such call.
   Each function may declare bounded REAL locals, which use disjoint ordinary
   OBJ1 data storage and DBG1
   local-variable records. It emits executable machine OBJ1
-  with private temporaries, a pointer argument ABI, and selective imports.
-  Static storage makes declaration order part of this bounded ABI: forward,
-  self, and cyclic function edges are rejected. This is not frame-backed or
-  reentrant local storage, control-flow, arbitrary-signature, unrestricted
-  user-call-argument or nested-call-expression, or recursive-frame lowering.
+  with private temporaries, a pointer argument ABI, and selective imports. On
+  every function-to-function call, pass L saves the caller's parameter, local,
+  and live-temporary cells on the 6502 stack, stages the A/X-returned value,
+  restores those cells in reverse order, and copies the staged value to an
+  independent temporary. Forward and backward acyclic edges therefore use the
+  same ABI. Self and mutual cycles remain hard errors. This is not control-flow,
+  arbitrary-signature, unrestricted user-call-argument or nested-call-expression,
+  or recursive/reentrant-frame lowering.
   Pass K additionally owns a bounded four-REAL root that initializes three
   named values with `REAL(integer)`, assigns one named destination from
   `FClamp(value,lower,upper)`, prints a named value, and returns. The body

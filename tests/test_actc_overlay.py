@@ -8874,10 +8874,10 @@ class TestActcOverlay(unittest.TestCase):
 
         self.assertEqual(self.last_emit_overlay_pass, [21])
         self.assertIn(
-            "x main 0 417\n"
+            "x main 0 468\n"
             "x length 119 112\n"
-            "x chain 231 122\n"
-            "x __idata 353 28\n",
+            "x chain 231 173\n"
+            "x __idata 404 28\n",
             obj,
         )
         self.assertEqual(len(re.findall(r"(?m)^r \d+ x length$", obj)), 1)
@@ -8905,23 +8905,23 @@ class TestActcOverlay(unittest.TestCase):
 
         self.assertEqual(self.last_emit_overlay_pass, [21])
         self.assertIn(
-            "x main 0 383\n"
+            "x main 0 596\n"
             "x lower 119 74\n"
-            "x chain 193 134\n"
-            "x __idata 327 28\n",
+            "x chain 193 347\n"
+            "x __idata 540 28\n",
             obj,
         )
         self.assertEqual(len(re.findall(r"(?m)^r \d+ x lower$", obj)), 3)
         self.assertEqual(len(re.findall(r"(?m)^r \d+ x chain$", obj)), 1)
-        self.assertIn("r 259 x __rt4\n", obj)
-        self.assertIn("r 288 x __rt5\n", obj)
-        self.assertIn("r 317 x __rt6\n", obj)
+        self.assertIn("r 310 x __rt4\n", obj)
+        self.assertIn("r 410 x __rt5\n", obj)
+        self.assertIn("r 530 x __rt6\n", obj)
         self.assertIn("u rt_f_min\nu rt_i_to_f\nu rt_print_f\n", obj)
         self.assertNotIn("u rt_f_max\n", obj)
         self.assertNotIn("u rt_f_hypot\n", obj)
 
-    def test_real_function_forward_call_is_rejected(self) -> None:
-        console = self.compile_overlay_object(
+    def test_real_function_forward_assignment_call_is_frame_preserved(self) -> None:
+        obj = self.compile_overlay_object(
             "MODULE MAIN\r"
             "REAL LEFT\r"
             "REAL RIGHT\r"
@@ -8937,29 +8937,67 @@ class TestActcOverlay(unittest.TestCase):
             "RIGHT=REAL(4)\r"
             "RESULT=FIRST(LEFT,RIGHT)\r"
             "RETURN\r",
-            "actc-overlay-reject-forward-real-function-call",
+            "actc-overlay-forward-real-function-assignment-call",
             extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
-            expected_exit_status=1,
         )
 
-        self.assertIn("EMIT OVL FAIL", console)
+        self.assertEqual(self.last_emit_overlay_pass, [21])
+        self.assertRegex(obj, r"(?m)^x first \d+ \d+$")
+        self.assertRegex(obj, r"(?m)^x second \d+ \d+$")
+        self.assertEqual(len(re.findall(r"(?m)^r \d+ x second$", obj)), 1)
+        self.assertEqual(len(re.findall(r"(?m)^r \d+ x first$", obj)), 1)
 
-    def test_real_function_forward_call_in_expression_is_rejected(self) -> None:
+    def test_real_function_forward_expression_call_preserves_live_temporary(self) -> None:
+        source = (
+            self.root
+            / "tests"
+            / "parity"
+            / "real_function_forward_frame_postfix.act"
+        ).read_text(encoding="ascii").replace("\n", "\r")
+        obj = self.compile_overlay_object(
+            source,
+            "actc-overlay-forward-real-function-expression-call",
+            extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [21])
+        self.assertIn(
+            "x main 0 442\n"
+            "x first 119 193\n"
+            "x second 312 74\n"
+            "x __idata 386 28\n",
+            obj,
+        )
+        self.assertIn("r 183 x __rv3\n", obj)
+        self.assertIn("r 192 x __rv4\n", obj)
+        self.assertIn("r 201 x __rt3\n", obj)
+        self.assertIn("r 220 x second\n", obj)
+        self.assertIn("r 240 x __rt3\n", obj)
+        self.assertIn("r 251 x __rv4\n", obj)
+        self.assertIn("r 262 x __rv3\n", obj)
+        self.assertIn("r 275 x __rt4\n", obj)
+        self.assertIn(
+            "u rt_f_abs\nu rt_f_max\nu rt_f_min\n"
+            "u rt_i_to_f\nu rt_print_f\n",
+            obj,
+        )
+
+    def test_real_function_mutual_call_cycle_is_rejected(self) -> None:
         console = self.compile_overlay_object(
             "MODULE MAIN\r"
             "REAL LEFT\r"
             "REAL RIGHT\r"
             "REAL RESULT\r"
             "REAL FUNC FIRST(REAL A,B)\r"
-            "RETURN(FMax(SECOND(A,B),A))\r"
+            "RETURN(SECOND(A,B))\r"
             "REAL FUNC SECOND(REAL A,B)\r"
-            "RETURN(A)\r"
+            "RETURN(FIRST(A,B))\r"
             "PROC MAIN()\r"
             "LEFT=REAL(3)\r"
             "RIGHT=REAL(4)\r"
             "RESULT=FIRST(LEFT,RIGHT)\r"
             "RETURN\r",
-            "actc-overlay-reject-forward-real-function-expression-call",
+            "actc-overlay-reject-mutual-real-function-cycle",
             extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
             expected_exit_status=1,
         )

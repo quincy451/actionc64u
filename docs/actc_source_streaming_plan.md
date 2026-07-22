@@ -829,14 +829,17 @@ relocation offsets. It also lowers up to two nonrecursive two-REAL-parameter
 functions: caller-pushed pointers
 are reverse-bound to per-function static parameter cells, A/X returns the
 selected result pointer, and bounded all-REAL locals use ordinary static OBJ1
-storage plus DBG1 local records. `MAIN` may call either function; a later
-function may assign an earlier function's result, use the call directly as an
-operand in a supported intrinsic return tree, or pass bounded calls to that
-earlier function as arguments to another call. Forward, self, and cyclic edges
-are rejected before generic emission. Nested expression, local-storage,
-two-callee, declaration-order call-chain, nested local-call-expression, and
-nested user-call-argument PRGs pass ACTC, ALINK, DBG validation, and VICE
-execution while loading only reachable runtime modules. Its 5,670-byte image
-leaves 2,522 bytes in `$A000-$BFFF`. Reentrant local frames, control flow,
+storage plus DBG1 local records. `MAIN` may call either function; either
+declaration direction may assign the other function's result, use the call
+directly as an operand in a supported intrinsic return tree, or pass bounded
+calls as arguments to another call while the graph remains acyclic. Every
+function-to-function edge saves caller parameters, locals, and live temporaries
+on the hardware stack, stages the A/X result, and restores the caller cells.
+Self and mutual cycles are rejected before generic emission. Nested expression,
+local-storage, two-callee, backward/forward call-chain, nested
+local-call-expression, and nested user-call-argument PRGs pass ACTC, ALINK, DBG
+validation, and VICE execution while loading only reachable runtime modules.
+Its 6,124-byte image leaves 2,068 bytes in `$A000-$BFFF`. Recursive/reentrant
+local frames, control flow,
 unrestricted user-call argument trees and nested call expressions, mixed types,
 arbitrary signatures, and recursion remain the next compiler dependency.

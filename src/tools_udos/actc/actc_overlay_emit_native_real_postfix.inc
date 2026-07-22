@@ -30,6 +30,8 @@ native_real_postfix_detect:
     sta nrp_active
     sta nrp_rejected_call_graph
     sta nrp_program_mode
+    sta nrp_call_edges
+    sta nrp_call_edges+1
     lda #ACTC_OVERLAY_CTX_EXPORT_COUNT_PTR_LO
     jsr load_count_from_context
     cmp #$01
@@ -263,6 +265,12 @@ native_real_postfix_analyze_function_loop:
     jmp native_real_postfix_analyze_function_loop
 
 native_real_postfix_analyze_done:
+    lda nrp_program_mode
+    cmp #NRP_PROGRAM_REAL_FUNCTION
+    bne :+
+    jsr nrp_validate_call_graph
+    jcc native_real_postfix_detect_no
+:
     lda nrp_nested
     jeq native_real_postfix_detect_no
     lda nrp_var_count
@@ -533,6 +541,8 @@ nrp_parse_local_call:
     lda nrp_program_mode
     cmp #NRP_PROGRAM_REAL_FUNCTION
     jne nrp_parse_body_fail
+    lda #$00
+    sta nrp_preserve_frame
     jsr nrp_read_selector
     jcc nrp_parse_body_fail
     cmp nrp_function_count
@@ -542,10 +552,12 @@ nrp_parse_local_call:
     cmp nrp_function_count
     beq nrp_parse_local_call_allowed
     jcs nrp_parse_body_fail
-    ; Static frames are safe only for declaration-order DAG edges.
     cmp nrp_call_export_index
-    jcc nrp_parse_local_call_rejected
     jeq nrp_parse_local_call_rejected
+    lda #$01
+    sta nrp_preserve_frame
+    sta nrp_nested
+    jsr nrp_record_call_edge
 nrp_parse_local_call_allowed:
     jsr nrp_pop_real_to_operand2
     jcc nrp_parse_body_fail
@@ -553,6 +565,10 @@ nrp_parse_local_call_allowed:
     jcc nrp_parse_body_fail
     ; A temporary consumed by another local call requires Pass L ownership.
     jsr nrp_mark_nested_operands_2
+    lda nrp_preserve_frame
+    beq :+
+    jsr nrp_emit_frame_save
+:
     lda nrp_operand1_kind
     sta nrp_name_kind
     lda nrp_operand1_index
@@ -564,10 +580,21 @@ nrp_parse_local_call_allowed:
     sta nrp_name_index
     jsr nrp_emit_push_name_pointer
     jsr nrp_emit_call_export
+    lda nrp_preserve_frame
+    beq nrp_parse_local_call_copy_return
+    jsr nrp_emit_return_stage
+    jsr nrp_emit_frame_restore
+    jsr nrp_allocate_temp
+    jcc nrp_parse_body_fail
+    stx nrp_dest_index
+    jsr nrp_emit_staged_return_copy
+    jmp nrp_parse_local_call_push_result
+nrp_parse_local_call_copy_return:
     jsr nrp_allocate_temp
     jcc nrp_parse_body_fail
     stx nrp_dest_index
     jsr nrp_emit_return_copy
+nrp_parse_local_call_push_result:
     lda #NRP_VALUE_TEMP
     ldx nrp_dest_index
     jsr nrp_push_value
@@ -577,6 +604,29 @@ nrp_parse_local_call_rejected:
     lda #$01
     sta nrp_rejected_call_graph
     jmp nrp_parse_body_fail
+
+nrp_record_call_edge:
+    ldx nrp_call_export_index
+    lda nrp_call_edge_bits,x
+    ldx nrp_proc_index
+    ora nrp_call_edges,x
+    sta nrp_call_edges,x
+    rts
+
+nrp_validate_call_graph:
+    lda nrp_call_edges
+    and #$02
+    beq nrp_validate_call_graph_ok
+    lda nrp_call_edges+1
+    and #$01
+    beq nrp_validate_call_graph_ok
+    lda #$01
+    sta nrp_rejected_call_graph
+    clc
+    rts
+nrp_validate_call_graph_ok:
+    sec
+    rts
 
 nrp_parse_param_bind:
     jsr nrp_read_selector
@@ -940,6 +990,158 @@ nrp_emit_restore_return_machine_loop:
     lda nrp_saved_index
     cmp #$05
     bcc nrp_emit_restore_return_machine_loop
+    rts
+
+nrp_emit_frame_save:
+    lda nrp_param_base
+    sta nrp_frame_name_index
+    ldx nrp_proc_index
+    lda nrp_function_local_count,x
+    clc
+    adc #$02
+    sta nrp_frame_slots_left
+nrp_emit_frame_save_var_loop:
+    lda #NRP_VALUE_VAR
+    sta nrp_name_kind
+    lda nrp_frame_name_index
+    sta nrp_name_index
+    jsr nrp_emit_frame_save_slot
+    inc nrp_frame_name_index
+    dec nrp_frame_slots_left
+    bne nrp_emit_frame_save_var_loop
+    lda nrp_temp_count
+    sec
+    sbc nrp_temp_base
+    sta nrp_frame_slots_left
+    beq nrp_emit_frame_save_done
+    lda nrp_temp_base
+    sta nrp_frame_name_index
+nrp_emit_frame_save_temp_loop:
+    lda #NRP_VALUE_TEMP
+    sta nrp_name_kind
+    lda nrp_frame_name_index
+    sta nrp_name_index
+    jsr nrp_emit_frame_save_slot
+    inc nrp_frame_name_index
+    dec nrp_frame_slots_left
+    bne nrp_emit_frame_save_temp_loop
+nrp_emit_frame_save_done:
+    rts
+
+nrp_emit_frame_save_slot:
+    lda nrp_mode
+    cmp #NRP_MODE_MACHINE
+    beq nrp_emit_frame_save_slot_machine
+    cmp #NRP_MODE_RELOC
+    bne nrp_emit_frame_save_slot_advance
+    lda #$03
+    jsr nrp_emit_named_word_reloc_delta
+nrp_emit_frame_save_slot_advance:
+    lda #$09
+    jmp nrp_advance_code
+nrp_emit_frame_save_slot_machine:
+    ldx #nrp_frame_save_template-nrp_frame_save_template
+    lda #nrp_return_stage_template-nrp_frame_save_template
+    jmp nrp_emit_frame_template
+
+nrp_emit_return_stage:
+    lda nrp_mode
+    cmp #NRP_MODE_MACHINE
+    beq nrp_emit_return_stage_machine
+    lda #$0E
+    jmp nrp_advance_code
+nrp_emit_return_stage_machine:
+    ldx #nrp_return_stage_template-nrp_frame_save_template
+    lda #nrp_frame_restore_template-nrp_frame_save_template
+    jmp nrp_emit_frame_template
+
+nrp_emit_frame_restore:
+    lda nrp_temp_count
+    sec
+    sbc nrp_temp_base
+    sta nrp_frame_slots_left
+    beq nrp_emit_frame_restore_vars
+    lda nrp_temp_count
+    sec
+    sbc #$01
+    sta nrp_frame_name_index
+nrp_emit_frame_restore_temp_loop:
+    lda #NRP_VALUE_TEMP
+    sta nrp_name_kind
+    lda nrp_frame_name_index
+    sta nrp_name_index
+    jsr nrp_emit_frame_restore_slot
+    dec nrp_frame_name_index
+    dec nrp_frame_slots_left
+    bne nrp_emit_frame_restore_temp_loop
+nrp_emit_frame_restore_vars:
+    ldx nrp_proc_index
+    lda nrp_function_local_count,x
+    clc
+    adc #$02
+    sta nrp_frame_slots_left
+    clc
+    adc nrp_param_base
+    sec
+    sbc #$01
+    sta nrp_frame_name_index
+nrp_emit_frame_restore_var_loop:
+    lda #NRP_VALUE_VAR
+    sta nrp_name_kind
+    lda nrp_frame_name_index
+    sta nrp_name_index
+    jsr nrp_emit_frame_restore_slot
+    dec nrp_frame_name_index
+    dec nrp_frame_slots_left
+    bne nrp_emit_frame_restore_var_loop
+    rts
+
+nrp_emit_frame_restore_slot:
+    lda nrp_mode
+    cmp #NRP_MODE_MACHINE
+    beq nrp_emit_frame_restore_slot_machine
+    cmp #NRP_MODE_RELOC
+    bne nrp_emit_frame_restore_slot_advance
+    lda #$04
+    jsr nrp_emit_named_word_reloc_delta
+nrp_emit_frame_restore_slot_advance:
+    lda #$0B
+    jmp nrp_advance_code
+nrp_emit_frame_restore_slot_machine:
+    ldx #nrp_frame_restore_template-nrp_frame_save_template
+    lda #nrp_staged_return_copy_template-nrp_frame_save_template
+    jmp nrp_emit_frame_template
+
+nrp_emit_staged_return_copy:
+    lda #NRP_VALUE_TEMP
+    sta nrp_name_kind
+    lda nrp_dest_index
+    sta nrp_name_index
+    lda nrp_mode
+    cmp #NRP_MODE_MACHINE
+    beq nrp_emit_staged_return_copy_machine
+    cmp #NRP_MODE_RELOC
+    bne nrp_emit_staged_return_copy_advance
+    lda #$06
+    jsr nrp_emit_named_word_reloc_delta
+nrp_emit_staged_return_copy_advance:
+    lda #$0B
+    jmp nrp_advance_code
+nrp_emit_staged_return_copy_machine:
+    ldx #nrp_staged_return_copy_template-nrp_frame_save_template
+    lda #nrp_frame_templates_end-nrp_frame_save_template
+nrp_emit_frame_template:
+    sta nrp_frame_template_end
+nrp_emit_frame_template_loop:
+    txa
+    pha
+    lda nrp_frame_save_template,x
+    jsr nrp_emit_machine_byte
+    pla
+    tax
+    inx
+    cpx nrp_frame_template_end
+    bcc nrp_emit_frame_template_loop
     rts
 
 nrp_emit_push_name_pointer:
@@ -1636,6 +1838,9 @@ nrp_helper_kind:
     .byte NRP_HELPER_BINARY,NRP_HELPER_BINARY,NRP_HELPER_BINARY,NRP_HELPER_BINARY
     .byte NRP_HELPER_TERNARY
 
+nrp_call_edge_bits:
+    .byte $01,$02
+
 nrp_copy_template:
     .byte $A0,$03,$B9,$00,$00,$99,$00,$00,$88,$10,$F7
 nrp_exit_template:
@@ -1646,6 +1851,15 @@ nrp_restore_return_template:
     .byte $A5,$04,$48,$8A,$48
 nrp_param_bind_template:
     .byte $68,$85,$03,$68,$85,$02,$A0,$03,$B1,$02,$99,$00,$00,$88,$10,$F8
+nrp_frame_save_template:
+    .byte $A0,$03,$B9,$00,$00,$48,$88,$10,$F9
+nrp_return_stage_template:
+    .byte $85,$04,$86,$05,$A0,$03,$B1,$04,$99,$0C,$00,$88,$10,$F8
+nrp_frame_restore_template:
+    .byte $A0,$00,$68,$99,$00,$00,$C8,$C0,$04,$90,$F7
+nrp_staged_return_copy_template:
+    .byte $A0,$03,$B9,$0C,$00,$99,$00,$00,$88,$10,$F7
+nrp_frame_templates_end:
 nrp_push_pointer_template:
     .byte $A9,$00,$48,$A9,$00,$48
 nrp_return_copy_template:
@@ -1684,7 +1898,12 @@ nrp_param_base: .res 1
 nrp_expected_var_index: .res 1
 nrp_function_param_base: .res NRP_FUNCTION_MAX
 nrp_function_local_count: .res NRP_FUNCTION_MAX
+nrp_call_edges: .res NRP_FUNCTION_MAX
 nrp_param_binds_left: .res 1
+nrp_preserve_frame: .res 1
+nrp_frame_name_index: .res 1
+nrp_frame_slots_left: .res 1
+nrp_frame_template_end: .res 1
 nrp_debug_count: .res 1
 nrp_debug_lo: .res NRP_DEBUG_MAX*NRP_PROC_MAX
 nrp_debug_hi: .res NRP_DEBUG_MAX*NRP_PROC_MAX

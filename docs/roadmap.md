@@ -1750,3 +1750,24 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   free, while pass 7 remains 6,678 bytes with 1,514 bytes free. Reentrant frames,
   control flow, unrestricted user-call argument trees and nested calls, mixed
   types, arbitrary signatures, and recursion remain pending.
+
+## 2026-07-21 Native Frame-Preserved Forward REAL Calls
+
+- Pass L now accepts acyclic function-to-function calls in either declaration
+  direction. Before each such call it saves the caller's static REAL parameters,
+  locals, and live temporaries on the 6502 stack; after staging the A/X-returned
+  four-byte value in `$0C-$0F`, it restores those cells in reverse and copies
+  the result to an independent temporary.
+- Added byte-identical `real_function_forward_frame_postfix.act` fixtures. Its
+  `FIRST -> SECOND` forward edge keeps `FAbs(A)` live across the call. Native
+  ACTC emits ordinary OBJ1 export/storage relocations, ALINK performs generic
+  closure and placement, and the rebuilt direct PRG produces binary32 3.0 in
+  VICE while selecting only `FAbs`, `FMax`, `FMin`, conversion, and printing.
+  Idun ACTC/ALINK executes the same source with the same result.
+- Self and mutual cycles remain hard errors. Pass L still has no function
+  control flow or recursive/reentrant frame allocation, so bounded terminating
+  recursion is the next call-ABI dependency rather than a claim of completion.
+- Current native inventories are 1,351 broad direct-PRG and 183 non-runtime
+  source-backed shapes; the native unittest inventory is 821 and the
+  compiled-runtime oracle remains 298. Native pass L is 6,124 bytes with 2,068
+  bytes free, while native pass 7 remains 6,678 bytes with 1,514 bytes free.

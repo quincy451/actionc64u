@@ -174,14 +174,16 @@ The overlay artifacts share one stable execution ABI:
   relocation, line, and variable records. The function form uses caller-pushed
   argument pointers, reverse-bound static parameter cells, an A/X result
   pointer, and bounded all-REAL local storage with DBG1 local records. `MAIN`
-  may call either function, and a later function may assign the result of an
-  earlier function, feed it directly to a supported intrinsic return tree, or
-  use bounded calls to the earlier function as arguments to another such call.
-  Forward, self, and cyclic edges are hard errors; the pass remains explicitly
-  nonrecursive and has no control flow. Its private
+  may call either function, and either declaration direction may assign the
+  other function's result, feed it directly to a supported intrinsic return
+  tree, or use bounded calls as arguments to another such call while the graph
+  remains acyclic. Each function-to-function edge saves caller parameters,
+  locals, and live temporaries on the hardware stack, stages the A/X result,
+  then restores the caller cells. Self and mutual cycles are hard errors; the
+  pass remains explicitly nonrecursive and has no control flow. Its private
   four-byte temporaries and every export/relocation offset are 16-bit; an
   overlapping `__idata` aggregate anchors only source variables in DBG1. The
-  5,670-byte image leaves 2,522 bytes free in the 8 KiB execution window.
+  6,124-byte image leaves 2,068 bytes free in the 8 KiB execution window.
 - `tools/build_actc_overlay_emit_native_object.sh` builds
   `build/udos_tools/ACTC_OVL8.BIN`, pass id `8`. In addition to straight-line
   word expressions and integer IF/DO control flow, it owns two word FOR loop

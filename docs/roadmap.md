@@ -1914,3 +1914,33 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   loops, controls beyond four or depth four, unrestricted call trees,
   recursive/reentrant frames, mixed types, arbitrary signatures, and recursion
   remain pending.
+
+## 2026-07-22 Bounded REAL Function FOR Loops
+
+- Added pass S, `ACTC_OVLS.BIN` (id 28), for up to four nested or sequential
+  local CARD-counter `FOR` loops per supported REAL function. Initial and final
+  values are constants; the optional signed constant step defaults to `1` and
+  must be nonzero. Inclusive unsigned comparisons and carry-based
+  overflow/underflow exits prevent counter wraparound from restarting a loop.
+- Added byte-identical `real_function_for_postfix.act` fixtures. The ascending
+  `FOR I=1 TO 3` function produces 4.0; the descending
+  `FOR J=5 TO 1 STEP -2` function produces 7.0. Native ACTC/ALINK emits and
+  launches the direct PRG in VICE, displays `47`, and selects only the five
+  reachable REAL add/conversion/print modules. Idun ACTC/ALINK's generated-6502
+  path compiles, links, and executes the same source with identical result
+  cells.
+- Pass Q remains byte-identical at SHA-256
+  `40273408c14c54a618e92d60d5fae12370820a8ea9a60cddc3c508fb4ac67507`;
+  pass R remains byte-identical at SHA-256
+  `1ef9ff4c164ee353025da5e3f4d02dceadfadd0a833ea244e7c798f88f72db15`.
+  Pass S is 7,828 bytes with 364 bytes free under its dedicated 256-byte gate
+  and has SHA-256
+  `0291077c9a1895313eb5fe1ad5b9914b3b4c8ebe64cd9c75634863d96e639128`.
+- Current native inventories are 1,361 broad direct-PRG and 193 non-runtime
+  source-backed shapes; the native unittest inventory is 851, the overlay suite
+  is 242 tests, the source-cache suite is 198 tests, and the compiled-runtime
+  oracle remains 298.
+- Dynamic `FOR` bounds, nested counter-to-REAL body composition, mixed
+  loop/conditional nesting, returns inside loops, controls beyond four or depth
+  four, unrestricted call trees, recursive/reentrant frames, mixed types,
+  arbitrary signatures, and recursion remain pending.

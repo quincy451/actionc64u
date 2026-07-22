@@ -60,7 +60,7 @@ The overlay artifacts share one stable execution ABI:
   transform as base-36 pass `I`; `tools/build_actc_overlay_preprocess.sh` emits
   `build/udos_tools/ACTC_OVLI.BIN`.
 - The workspace exporter and UDOS release Makefile include base-36 passes
-  `ACTC_OVL0.BIN` through `ACTC_OVLR.BIN` next to `ACTC.PRG`, so pass files are
+  `ACTC_OVL0.BIN` through `ACTC_OVLS.BIN` next to `ACTC.PRG`, so pass files are
   present when the scheduler runs from an exported or release image.
 - `tests/test_actc_overlay.py` proves the `ACOV` header, ABI version, pass id,
   `$A000` execution base, encoded byte length, compatibility no-op return, and the
@@ -98,15 +98,15 @@ The overlay artifacts share one stable execution ABI:
   `ACTC_OVLO.BIN` for up to four sequential or depth-four nested controls, and
   `ACTC_OVLP.BIN` for bounded conditional early returns with a terminal
   fallback, and `ACTC_OVLQ.BIN` for bounded REAL-function post-test and
-  pre-test loops, and `ACTC_OVLR.BIN` for plain loops plus nearest-loop
-  `EXIT`.
+  pre-test loops, `ACTC_OVLR.BIN` for plain loops plus nearest-loop `EXIT`, and
+  `ACTC_OVLS.BIN` for constant-bound CARD-counter REAL-function `FOR` loops.
   Passes 8 and A through H retain their native integer, REAL,
   runtime, and composition roles.
   The same path stages `ACTC_OVL5.BIN` as the generic object-emission fallback
   and `ACTC_OVL7.BIN` for overlay-hosted body external preallocation. On
   success, later compiler phases consume the overlay-written REU metadata.
   Overlay staging uses the executable-relative tool ABI path prefix, so
-  `!ACTC_OVL1.BIN` through `!ACTC_OVLR.BIN` resolve beside the launched
+  `!ACTC_OVL1.BIN` through `!ACTC_OVLS.BIN` resolve beside the launched
   `ACTC.PRG`.
 - `tools/build_actc_udos.sh` always builds `ACTC_OVL0.BIN`, including compiler
   harness builds, because compile/link/debug chaining and compile-error editor
@@ -241,6 +241,17 @@ The overlay artifacts share one stable execution ABI:
   passes L through Q remain byte-identical. REAL-function `FOR`, mixed
   loop/conditional nesting, and returns from inside a loop remain outside this
   bounded pass.
+- `tools/build_actc_overlay_emit_native_real_postfix_for_object.sh` builds
+  `ACTC_OVLS.BIN`, pass id `28`, from the shared postfix emitter with only the
+  bounded `FOR` specialization enabled. It accepts up to four nested or
+  sequential local CARD-counter loops per supported REAL function within the
+  shared 64-operation body/debug budget. Initial and final values are
+  constants; the optional signed constant step must be nonzero. Inclusive
+  unsigned bounds and carry-based overflow/underflow exits
+  prevent wraparound from restarting the loop. Its 7,828-byte image leaves 364
+  bytes free under a dedicated 256-byte gate; passes Q and R remain
+  byte-identical. Dynamic bounds, nested counter-to-REAL body expressions,
+  mixed controls, and returns inside loops remain outside this pass.
 - `tools/build_actc_overlay_emit_native_object.sh` builds
   `build/udos_tools/ACTC_OVL8.BIN`, pass id `8`. In addition to straight-line
   word expressions and integer IF/DO control flow, it owns two word FOR loop
@@ -393,7 +404,8 @@ resident UDOS services execute.
    use `ACTC_OVLO.BIN`; returns inside those bounded controls first use
    `ACTC_OVLP.BIN`; bounded REAL-function post-test and pre-test loops first use
    `ACTC_OVLQ.BIN`; plain REAL-function loops and nearest-loop `EXIT` first use
-   `ACTC_OVLR.BIN`.
+   `ACTC_OVLR.BIN`; constant-bound CARD-counter REAL-function `FOR` loops first
+   use `ACTC_OVLS.BIN`.
    Native passes return explicit not-applicable status before writing output so
    the resident driver can try the next emitter without rolling back a partial
    object.

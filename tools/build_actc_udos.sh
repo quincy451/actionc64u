@@ -52,6 +52,7 @@ ACTC_NATIVE_REAL_POSTFIX_EXTENDED_CONTROL_EMIT_OVERLAY_BUILD="$ROOT_DIR/tools/bu
 ACTC_NATIVE_REAL_POSTFIX_EARLY_RETURN_EMIT_OVERLAY_BUILD="$ROOT_DIR/tools/build_actc_overlay_emit_native_real_postfix_early_return_object.sh"
 ACTC_NATIVE_REAL_POSTFIX_LOOP_EMIT_OVERLAY_BUILD="$ROOT_DIR/tools/build_actc_overlay_emit_native_real_postfix_loop_object.sh"
 ACTC_NATIVE_REAL_POSTFIX_LOOP_EXIT_EMIT_OVERLAY_BUILD="$ROOT_DIR/tools/build_actc_overlay_emit_native_real_postfix_loop_exit_object.sh"
+ACTC_NATIVE_REAL_POSTFIX_FOR_EMIT_OVERLAY_BUILD="$ROOT_DIR/tools/build_actc_overlay_emit_native_real_postfix_for_object.sh"
 ACTC_BODY_OVERLAY_BUILD="$ROOT_DIR/tools/build_actc_overlay_body_collect.sh"
 ACTC_PREALLOC_OVERLAY_BUILD="$ROOT_DIR/tools/build_actc_overlay_body_preallocate.sh"
 
@@ -109,6 +110,7 @@ if [[ "$ACTC_USE_EMIT_OVERLAY" != "0" ]]; then
   bash "$ACTC_NATIVE_REAL_POSTFIX_EARLY_RETURN_EMIT_OVERLAY_BUILD" >/dev/null
   bash "$ACTC_NATIVE_REAL_POSTFIX_LOOP_EMIT_OVERLAY_BUILD" >/dev/null
   bash "$ACTC_NATIVE_REAL_POSTFIX_LOOP_EXIT_EMIT_OVERLAY_BUILD" >/dev/null
+  bash "$ACTC_NATIVE_REAL_POSTFIX_FOR_EMIT_OVERLAY_BUILD" >/dev/null
 fi
 if [[ "$ACTC_USE_BODY_OVERLAY" != "0" ]]; then
   ACTC_KEEP_BODY_RESIDENT_FALLBACK="$ACTC_KEEP_BODY_RESIDENT_FALLBACK" bash "$ACTC_BODY_OVERLAY_BUILD" >/dev/null

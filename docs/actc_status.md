@@ -168,7 +168,9 @@ Current state:
   7,123 bytes with 1,069 bytes free. Conditional-early-return pass P is 7,147
   bytes with 1,045 bytes free. REAL-function loop pass Q is 7,151 bytes with
   1,041 bytes free. Plain-loop/nearest-EXIT pass R is 7,334 bytes with 858
-  bytes free under its dedicated 768-byte gate. Native REAL emitter
+  bytes free under its dedicated 768-byte gate. Constant-bound CARD-counter
+  `FOR` pass S is 7,828 bytes with 364 bytes free under its dedicated 256-byte
+  gate. Native REAL emitter
   pass A is 7,418 bytes with 774 bytes free under its 768-byte growth reserve.
   Passes H and J share pass 9's typed-parameter bind prologue, so runtime helper calls
   inside supported functions retain the word-return ABI. Pass F is 6,709 bytes
@@ -374,8 +376,12 @@ Current state:
   pre-test loops per REAL function, relocates independent back-edge/exit labels,
   and prints `43` in its direct PRG. Pass R adds plain `DO ... OD` and
   unconditional nearest-loop `EXIT`; its direct PRG proves one plain and one
-  guarded exit, stores 4.0 and 3.0, and prints `43`. Recursive/reentrant frames,
-  REAL-function `FOR`, mixed loop/conditional nesting, returns inside loops,
+  guarded exit, stores 4.0 and 3.0, and prints `43`. Pass S adds up to four
+  nested or sequential local CARD-counter `FOR` loops with constant bounds and
+  a nonzero constant signed step; its ascending/descending direct PRG stores
+  4.0 and 7.0 and prints `47`. Recursive/reentrant frames, dynamic `FOR`
+  bounds, counter-to-REAL composition inside the loop body, mixed
+  loop/conditional nesting, returns inside loops,
   controls beyond four, deeper nesting, unrestricted user-call argument trees
   and nested call expressions, mixed declarations, arbitrary signatures, and
   recursive frames remain unsupported.

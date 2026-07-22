@@ -163,10 +163,15 @@ Current machine-code emission slices:
   Pass Q accepts at most four `DO ... UNTIL ... OD` or
   `WHILE ... DO ... OD` loops per function and emits relocatable back-edge and
   while-exit labels. Pass R accepts the same bound plus plain `DO ... OD` and
-  unconditional `EXIT` targeting the nearest active `DO` or `WHILE`.
+  unconditional `EXIT` targeting the nearest active `DO` or `WHILE`. Pass S
+  accepts at most four nested or sequential local CARD-counter `FOR` loops per
+  supported REAL function with constant initial/final values and a nonzero
+  constant signed step. Its inclusive unsigned tests terminate on counter
+  overflow or underflow and use ordinary back-edge/post-loop relocations.
   These passes use all six REAL relations through `RT_F_CMP.OBJ` and relocatable
   internal control-flow code labels. Strings, mixed declaration types,
-  arbitrary signatures, REAL-function `FOR`, mixed loop/conditional nesting,
+  arbitrary signatures, dynamic REAL-function `FOR` bounds, nested
+  counter-to-REAL body composition, mixed loop/conditional nesting,
   returns from inside loops, more than four controls, deeper control nesting,
   and recursive/reentrant calls are not part of these passes.
 

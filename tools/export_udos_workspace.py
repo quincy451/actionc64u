@@ -141,6 +141,7 @@ def export_udos_tools(root: Path, image_root: Path, bin_dir: Path) -> None:
         ("build_actc_overlay_emit_native_real_postfix_early_return_object.sh", "ACTC_OVLP.BIN"),
         ("build_actc_overlay_emit_native_real_postfix_loop_object.sh", "ACTC_OVLQ.BIN"),
         ("build_actc_overlay_emit_native_real_postfix_loop_exit_object.sh", "ACTC_OVLR.BIN"),
+        ("build_actc_overlay_emit_native_real_postfix_for_object.sh", "ACTC_OVLS.BIN"),
         ("build_alink_udos.sh", "ALINK.PRG"),
         ("build_actdbg_udos.sh", "ACTDBG.PRG"),
         ("build_actdbg_overlay_optional_ui.sh", "ACTDBG_OVL1.BIN"),

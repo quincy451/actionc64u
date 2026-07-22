@@ -895,6 +895,18 @@ plain-loop back edges to `__rbNN`. The byte-identical shared fixture runs one
 plain and one guarded exit and produces 4.0 and 3.0 in native VICE and Idun's
 generated-6502 path. The 7,334-byte image leaves 858 bytes under a dedicated
 768-byte reserve while passes L through Q remain byte-identical. REAL-function
-`FOR`, mixed loop/conditional nesting, returns from inside loops, controls
-beyond four, unrestricted call trees, mixed types, arbitrary signatures, and
-recursive/reentrant frames remain pending.
+`FOR` remains outside pass R.
+
+Base-36 pass S, `ACTC_OVLS.BIN`, separately claims up to four nested or
+sequential local CARD-counter `FOR` loops in supported REAL functions. The
+collector supplies constant initial/final values and a nonzero signed constant
+step. The emitter uses inclusive unsigned comparisons and carry-based
+overflow/underflow exits, then emits ordinary `__rbNN` and `__rzNN` exports and
+relocations. The byte-identical shared fixture runs one ascending default-step
+loop and one descending `STEP -2` loop, producing 4.0 and 7.0 in native VICE
+and the Idun generated-6502 path. The 7,828-byte image leaves 364 bytes under a
+dedicated 256-byte reserve while passes Q and R remain byte-identical. Dynamic
+bounds, nested counter-to-REAL body expressions, mixed loop/conditional
+nesting, returns from inside loops, controls beyond four, unrestricted call
+trees, mixed types, arbitrary signatures, and recursive/reentrant frames remain
+pending.

@@ -991,6 +991,46 @@ class TestAlinkPrgObjectCodeMatrix(unittest.TestCase):
         self.assertNotIn("LIB/RT_F_ADD.OBJ", case["expected_alink_loads"])
         self.assertTrue(case["expected_tail_from_compiled_object"])
 
+    def test_real_function_for_uses_constant_card_bounds_and_steps(self) -> None:
+        sys.path.insert(0, str(self.workspace / "udos" / "tools"))
+        import run_action_alink_prg_probe as probe
+
+        shape = "actc_real_function_for_postfix_linked"
+        case = probe.DIRECT_PRG_CASES[shape]
+        fragments = "".join(case["expected_object_fragments"])
+        fixture = (
+            self.workspace
+            / "actionc64u"
+            / "tests"
+            / "parity"
+            / "real_function_for_postfix.act"
+        ).read_text(encoding="ascii")
+
+        self.assertEqual(case["source"].replace("\r", "\n"), fixture)
+        self.assertIn(f"\t{shape} \\\n", self.make_text)
+        for export in (
+            "x __rb00 268 1\n",
+            "x __rz00 368 1\n",
+            "x __rb10 445 1\n",
+            "x __rz10 543 1\n",
+        ):
+            self.assertIn(export, fragments)
+        for relocation in (
+            "r 296 x __rz00\n",
+            "r 363 x __rb00\n",
+            "r 366 x __rz00\n",
+            "r 471 x __rz10\n",
+            "r 538 x __rb10\n",
+            "r 541 x __rz10\n",
+        ):
+            self.assertIn(relocation, fragments)
+        self.assertEqual(case["screen_fragments"], ["4", "7"])
+        self.assertEqual(case["store_check_addr"], 0x122C)
+        self.assertIn("LIB/RT_F_ADD.OBJ", case["expected_alink_loads"])
+        self.assertIn("LIB/RT_F_ADDSUB_CORE.OBJ", case["expected_alink_loads"])
+        self.assertIn("LIB/RT_F_SPECIAL.OBJ", case["expected_alink_loads"])
+        self.assertTrue(case["expected_tail_from_compiled_object"])
+
     def test_full_range_multiply_probe_forces_staged_root_object_path(self) -> None:
         sys.path.insert(0, str(self.workspace / "udos" / "tools"))
         import run_action_alink_prg_probe as probe

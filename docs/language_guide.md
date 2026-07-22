@@ -442,8 +442,25 @@ unconditional `EXIT`. `EXIT` always targets the nearest active `DO` or
 `WHILE`; ACTC emits it as a relocation to that loop's independent `__rzNN`
 post-loop label. A plain loop without `EXIT` intentionally remains infinite.
 
-REAL-function `FOR`, mixed loop/conditional nesting, returns from inside loops,
-more than four controls, deeper control nesting,
+Pass S accepts up to four nested or sequential local CARD-counter loops in the
+supported REAL-function form, subject to the shared 64-operation body/debug
+budget:
+
+```action
+FOR I=1 TO 5 STEP 2
+DO
+TOTAL=TOTAL+DELTA
+OD
+```
+
+The initial and final values must be integer constants. The optional signed
+constant step defaults to `1` and must be nonzero. Comparison is unsigned and
+inclusive; overflow or underflow ends the loop instead of wrapping. Dynamic
+bounds and composing `REAL(I)` into the nested REAL body expression are not yet
+accepted by this bounded collector/emitter path.
+
+Mixed loop/conditional nesting, returns from inside loops, more than four
+controls, deeper control nesting,
 recursive/reentrant frames, unrestricted user-call argument trees and
 nested call expressions, mixed parameter types, arbitrary signatures,
 recursive calls, and external REAL functions are not yet part of this native

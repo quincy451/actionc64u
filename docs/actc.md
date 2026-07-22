@@ -107,7 +107,12 @@ Current contract:
   relocatable back-edge and while-exit labels. Pass R accepts the same loop
   bound plus plain `DO ... OD` and unconditional `EXIT` from the nearest active
   `DO` or `WHILE`; every occupied loop keeps independent `__rbNN` back-edge
-  and `__rzNN` post-loop labels. REAL-function `FOR`, mixed loop/conditional
+  and `__rzNN` post-loop labels. Pass S accepts up to four nested or sequential
+  local CARD-counter `FOR` loops per function, with constant initial/final
+  values and a nonzero constant signed step, subject to the shared 64-operation
+  body/debug budget. It emits unsigned inclusive tests
+  plus overflow-safe termination to the same ordinary label form. Dynamic
+  bounds, counter-to-REAL composition in the body, mixed loop/conditional
   nesting, returns from inside loops, more than four controls, deeper nesting,
   and recursive/reentrant functions remain outside the bounded function path.
   Pass K additionally owns a bounded four-REAL root that initializes three

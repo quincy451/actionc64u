@@ -162,7 +162,8 @@ Current state:
   128-byte gate. Fixed-address and register-machine pass J is 7,901 bytes with
   291 bytes free under a 256-byte gate. REAL function/ternary pass K is 5,877
   bytes with 2,315 bytes free in its 8 KiB window. Nested REAL postfix pass L
-  is 6,124 bytes with 2,068 bytes free. Native REAL emitter pass A
+  is 6,124 bytes with 2,068 bytes free. Function-control pass M is 6,998 bytes
+  with 1,194 bytes free under its dedicated 1 KiB gate. Native REAL emitter pass A
   is 7,418 bytes with 774 bytes free under its 768-byte growth reserve.
   Passes H and J share pass 9's typed-parameter bind prologue, so runtime helper calls
   inside supported functions retain the word-return ABI. Pass F is 6,709 bytes
@@ -339,7 +340,7 @@ Current state:
   unary and binary REAL helpers, and `FClamp`; stack depth is eight, temporary
   count is 16, and debug-operation count is 64 per procedure. In addition to
   one `MAIN`, pass L accepts up to two nonrecursive two-REAL-parameter functions
-  with bounded all-REAL locals, no control flow, and nested REAL return trees.
+  with bounded all-REAL locals and nested REAL return trees.
   `MAIN` may call either function, and either declaration direction may assign
   the other function's result to a local, feed it directly to a supported
   intrinsic return tree, or pass bounded calls as arguments to another call
@@ -352,8 +353,12 @@ Current state:
   backward and forward acyclic function edges, a nested local-call operand,
   nested user-call arguments with independent result spills, and reachable-only
   runtime objects. Pass L is 6,124 bytes with 2,068 bytes free.
-  Self and mutual cycles are rejected. Recursive/reentrant frames, control
-  flow, unrestricted user-call argument trees and nested call expressions,
+  Pass M extends the same ABI with one nonnested `IF`/`ELSE` per REAL function,
+  six REAL relations through `rt_f_cmp`, relocatable internal false/end labels,
+  supported expressions in both arms, and one terminal return. Its direct PRG
+  executes both paths and prints `34`. Self and mutual cycles are rejected.
+  Recursive/reentrant frames, sequential/nested function control, loops, early
+  returns, unrestricted user-call argument trees and nested call expressions,
   mixed declarations, arbitrary signatures, and recursive frames remain
   unsupported.
 

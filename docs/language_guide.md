@@ -398,11 +398,28 @@ argument results. Around every function-to-function call, ACTC stack-saves the
 caller's static parameters, locals, and live temporaries, stages the returned
 value, and restores the caller cells. Edges may therefore point forward or
 backward when the graph remains acyclic. ACTC rejects self and mutual cycles
-instead of falling back to generic object emission. Recursive/reentrant frames,
-control flow in these functions, unrestricted user-call argument trees
-and nested call expressions, mixed parameter types, arbitrary signatures,
-recursive calls, and external REAL functions are not yet part of this native
-path.
+instead of falling back to generic object emission.
+
+Pass M also accepts one nonnested `IF`/`ELSE` per supported REAL function when
+both arms join before one terminal return:
+
+```action
+REAL FUNC PICK(REAL A,B)
+  REAL CHOICE
+  IF A<B THEN
+    CHOICE=A
+  ELSE
+    CHOICE=FMax(A,B)
+  FI
+  RETURN(CHOICE)
+```
+
+All six REAL relations use `rt_f_cmp`; the false and end destinations are
+ordinary relocatable OBJ1 code labels. Sequential or nested controls, loops,
+returns inside either arm, recursive/reentrant frames, unrestricted user-call
+argument trees and nested call expressions, mixed parameter types, arbitrary
+signatures, recursive calls, and external REAL functions are not yet part of
+this native path.
 
 ## Dynamic Word Arithmetic
 

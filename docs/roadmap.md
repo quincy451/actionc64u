@@ -1771,3 +1771,24 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   source-backed shapes; the native unittest inventory is 821 and the
   compiled-runtime oracle remains 298. Native pass L is 6,124 bytes with 2,068
   bytes free, while native pass 7 remains 6,678 bytes with 1,514 bytes free.
+
+## 2026-07-21 Bounded REAL Function IF/ELSE
+
+- Added pass M, `ACTC_OVLM.BIN`, as the control-capable build of the shared
+  postfix REAL emitter. Pass L remains byte-for-byte 6,124 bytes and keeps its
+  2,068-byte reserve; pass M is 6,998 bytes with 1,194 bytes free under a
+  dedicated 1 KiB capacity gate.
+- Pass M claims only a supported REAL function containing one nonnested
+  `IF`/`ELSE`. It maps all six relations through `rt_f_cmp`, emits a branch-over
+  plus absolute `JMP`, and relocates those jumps to ordinary internal `__rfN`
+  false and `__reN` end code exports. This avoids relative-branch span limits
+  and requires no ALINK source-shape handling.
+- Added byte-identical `real_function_if_else_postfix.act` fixtures. `PICK(3,4)`
+  takes the then arm and `PICK(4,3)` takes the `FMax` else arm; native ACTC and
+  ALINK produce a direct PRG that prints `34`, and Idun ACTC/ALINK executes the
+  same source with identical results.
+- Current native inventories are 1,352 broad direct-PRG and 184 non-runtime
+  source-backed shapes; the native unittest inventory is 825 and the
+  compiled-runtime oracle remains 298. Sequential/nested function controls,
+  loops, early returns, recursive/reentrant frames, mixed types, arbitrary
+  signatures, and recursion remain pending.

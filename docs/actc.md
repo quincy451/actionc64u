@@ -87,6 +87,13 @@ Current contract:
   same ABI. Self and mutual cycles remain hard errors. This is not control-flow,
   arbitrary-signature, unrestricted user-call-argument or nested-call-expression,
   or recursive/reentrant-frame lowering.
+  Pass M reuses that emitter for one nonnested `IF`/`ELSE` in each supported
+  REAL function. The condition may use any of the six REAL relations; ACTC
+  imports `rt_f_cmp` and emits long branches through relocatable internal OBJ1
+  code labels. Both arms may use the supported REAL expression/helper set and
+  join at one terminal `RETURN`. Sequential/nested controls, loops, returns
+  inside either arm, and recursive/reentrant functions are still outside this
+  bounded form.
   Pass K additionally owns a bounded four-REAL root that initializes three
   named values with `REAL(integer)`, assigns one named destination from
   `FClamp(value,lower,upper)`, prints a named value, and returns. The body

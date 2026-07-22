@@ -839,7 +839,15 @@ Self and mutual cycles are rejected before generic emission. Nested expression,
 local-storage, two-callee, backward/forward call-chain, nested
 local-call-expression, and nested user-call-argument PRGs pass ACTC, ALINK, DBG
 validation, and VICE execution while loading only reachable runtime modules.
-Its 6,124-byte image leaves 2,068 bytes in `$A000-$BFFF`. Recursive/reentrant
-local frames, control flow,
-unrestricted user-call argument trees and nested call expressions, mixed types,
-arbitrary signatures, and recursion remain the next compiler dependency.
+Its 6,124-byte image leaves 2,068 bytes in `$A000-$BFFF`.
+
+Base-36 pass M, `ACTC_OVLM.BIN`, is the control-capable build of that shared
+emitter. It claims only a supported REAL function containing one nonnested
+`IF`/`ELSE`, maps all six relations through `rt_f_cmp`, and emits absolute long
+branches to internal `__rfN` and `__reN` OBJ1 code exports. Both arms may contain
+the supported REAL expression operations and converge on one terminal return.
+Its 6,998-byte image leaves 1,194 bytes under a 1 KiB reserve without consuming
+pass L's 2 KiB margin. Recursive/reentrant local frames, sequential or nested
+function controls, loops, early returns, unrestricted user-call argument trees
+and nested call expressions, mixed types, arbitrary signatures, and recursion
+remain the next compiler dependency.

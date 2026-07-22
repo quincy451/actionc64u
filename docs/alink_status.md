@@ -9,7 +9,7 @@ Current state:
   verified by `make -C ../udos vice-action-actc-alink-launch`.
 - Broad direct-PRG object/link coverage is verified by
   `make -C ../udos vice-action-alink-prg-matrix`.
-- The broad direct-PRG matrix currently enumerates 1351 probe shapes from
+- The broad direct-PRG matrix currently enumerates 1352 probe shapes from
   `udos/tools/run_action_alink_prg_probe.py`.
 - The source-backed `actc_fixed_register_machine_abi_linked` case proves that
   ALINK treats native `=*(...)` routines as ordinary machine exports and JSR
@@ -70,6 +70,10 @@ Current state:
   stack-preserves the caller's parameters and live temporary around `FIRST ->
   SECOND`; ALINK remains unaware of the function ABI, selects only the reachable
   `FAbs`/`FMax`/`FMin` closure, and the direct PRG produces binary32 3.0.
+- `actc_real_function_if_else_postfix_linked` proves one bounded REAL-function
+  `IF`/`ELSE` lowers to ordinary `rt_f_cmp` import closure plus relocations to
+  internal `__rf0` and `__re0` code exports. ALINK remains source-agnostic; the
+  direct PRG executes both paths and prints `34`.
 - Direct object-code launch and rejection coverage is verified by
   `make -C ../udos vice-action-alink-prg-object-code-matrices`.
 - The linker-owned direct PRG include is `src/tools_udos/alink/direct_prg.inc`.

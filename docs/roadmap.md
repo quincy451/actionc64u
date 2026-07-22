@@ -1864,3 +1864,25 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
 - Loops, controls beyond four or depth four, unrestricted call-expression
   trees, recursive/reentrant frames, mixed types, arbitrary signatures, and
   recursion remain pending.
+
+## 2026-07-22 Bounded REAL Function Loops
+
+- Added pass Q, `ACTC_OVLQ.BIN` (id 26), for up to four bounded
+  `DO ... UNTIL ... OD` and `WHILE ... DO ... OD` loops per supported REAL
+  function. Back edges and pre-test exits use ordinary relocatable `__rbNN` and
+  `__rzNN` OBJ1 code exports; ALINK remains source-shape agnostic.
+- Added the byte-identical `real_function_loops_postfix.act` fixture. Rebuilt
+  native ACTC/ALINK artifacts launch directly in VICE and produce FIRST=4.0 and
+  SECOND=3.0, displayed as `43`. Idun ACTC/ALINK's generated-6502 execution path
+  produces the same values.
+- Passes L through P remain byte-identical. Pass Q is 7,151 bytes with 1,041
+  bytes free under its 1 KiB gate and has SHA-256
+  `40273408c14c54a618e92d60d5fae12370820a8ea9a60cddc3c508fb4ac67507`.
+- Current native inventories are 1,359 broad direct-PRG and 191 non-runtime
+  source-backed shapes; the native unittest inventory is 844, the overlay suite
+  is 237 tests, the source-cache suite is 198 tests, and the compiled-runtime
+  oracle remains 298.
+- Plain infinite `DO`, loop `EXIT`, mixed loop/conditional nesting, returns
+  from inside loops, controls beyond four or depth four, unrestricted call
+  trees, recursive/reentrant frames, mixed types, arbitrary signatures, and
+  recursion remain pending.

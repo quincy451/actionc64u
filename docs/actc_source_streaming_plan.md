@@ -875,3 +875,15 @@ true, early else, and fallback paths. The 7,147-byte image leaves 1,045 bytes
 under the 1 KiB reserve while passes L through O remain byte-identical. Loops,
 controls beyond four, deeper nesting, unrestricted call trees, mixed types,
 arbitrary signatures, and recursive/reentrant frames remain pending.
+
+Base-36 pass Q, `ACTC_OVLQ.BIN`, separately claims supported REAL functions
+containing `DO ... UNTIL ... OD` or `WHILE ... DO ... OD`. It tracks at most
+four loops per function, emits relocatable `__rbNN` back-edge labels and
+`__rzNN` while-exit labels, and reuses the same REAL relation lowering through
+`RT_F_CMP.OBJ`. The shared fixture executes both loop forms and produces 4.0
+and 3.0 in native VICE and the Idun generated-6502 path. The 7,151-byte image
+leaves 1,041 bytes under the 1 KiB reserve while passes L through P remain
+byte-identical. Plain infinite `DO`, `EXIT`, mixed loop/conditional nesting,
+returns from inside loops, controls beyond four, unrestricted call trees,
+mixed types, arbitrary signatures, and recursive/reentrant frames remain
+pending.

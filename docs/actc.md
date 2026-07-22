@@ -102,8 +102,12 @@ Current contract:
   64-operation debug bank. Pass P separately claims a `RETURN(expr)` inside a
   supported function `IF`/`ELSE`, emits an immediate pointer return, and then
   continues parsing solely to close ordinary OBJ1 labels. A terminal fallback
-  return remains required. Loops, more than four controls, deeper nesting, and
-  recursive/reentrant functions remain outside the bounded function path.
+  return remains required. Pass Q separately accepts up to four bounded
+  `DO ... UNTIL ... OD` and `WHILE ... DO ... OD` loops per function and emits
+  relocatable back-edge and while-exit labels. Plain infinite `DO`, loop
+  `EXIT`, mixed loop/conditional nesting, returns from inside loops, more than
+  four controls, deeper nesting, and recursive/reentrant functions remain
+  outside the bounded function path.
   Pass K additionally owns a bounded four-REAL root that initializes three
   named values with `REAL(integer)`, assigns one named destination from
   `FClamp(value,lower,upper)`, prints a named value, and returns. The body

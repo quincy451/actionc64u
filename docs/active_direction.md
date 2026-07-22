@@ -114,9 +114,13 @@ Pass O claims a third conditional and accepts up to four controls per function,
 sequentially or nested to depth four; its shared fixtures print `43` and `154`.
 Pass P adds returns from inside those bounded conditionals while requiring a
 terminal fallback; its shared one-control and depth-four fixtures print `33`
-and `154`. Self and mutual cycles remain rejected until recursive/reentrant
-frames are added, and loops, controls beyond four, and deeper nesting remain
-the next control-flow work.
+and `154`. Pass Q adds up to four bounded `DO ... UNTIL` and
+`WHILE ... DO ... OD` loops per supported REAL function. Its shared fixture
+executes one post-test and one pre-test loop, prints `43`, and proves ordinary
+OBJ1 back-edge and exit-label relocations. Self and mutual cycles remain
+rejected until recursive/reentrant frames are added. Plain infinite `DO`,
+loop `EXIT`, mixed loop/conditional nesting, controls beyond four, and deeper
+nesting remain the next control-flow work.
 Bounded named-REAL `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FMin`, `FMax`, and `FClamp` calls now have
 complete portable call semantics through independently link-selected helpers.
 The pass-K clamp root captures initializer, argument, destination, and print
@@ -149,10 +153,10 @@ Treat `vice-action-alink` as the default direct-native linker gate that emits
 `BIN/MAIN.PRG`.
 Treat `vice-action-actc-alink-launch` as the helper-free higher-level default.
 Treat `vice-action-actc-alink-launch-object-emission-matrix` as the all
-source-backed ACTC object-emission launch matrix; it currently enumerates 190
+source-backed ACTC object-emission launch matrix; it currently enumerates 191
 non-runtime, non-object-code source shapes.
 Treat `vice-action-alink-prg-matrix` as the broad direct-PRG object/link matrix;
-it currently enumerates 1358 shape probes.
+it currently enumerates 1359 shape probes.
 Treat `vice-action-alink-prg-object-code-matrices` as the focused direct
 object-code graph, behavior, and rejection gate.
 Treat `vice-action-actc-alink-launch-runtime-matrices` as the focused

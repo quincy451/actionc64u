@@ -905,6 +905,41 @@ class TestAlinkPrgObjectCodeMatrix(unittest.TestCase):
         self.assertNotIn("LIB/RT_F_HYPOT.OBJ", case["expected_alink_loads"])
         self.assertTrue(case["expected_tail_from_compiled_object"])
 
+    def test_real_function_loops_use_distinct_back_and_exit_object_labels(self) -> None:
+        sys.path.insert(0, str(self.workspace / "udos" / "tools"))
+        import run_action_alink_prg_probe as probe
+
+        shape = "actc_real_function_loops_postfix_linked"
+        case = probe.DIRECT_PRG_CASES[shape]
+        fragments = "".join(case["expected_object_fragments"])
+        fixture = (
+            self.workspace
+            / "actionc64u"
+            / "tests"
+            / "parity"
+            / "real_function_loops_postfix.act"
+        ).read_text(encoding="ascii")
+
+        self.assertEqual(case["source"].replace("\r", "\n"), fixture)
+        self.assertIn(f"\t{shape} \\\n", self.make_text)
+        for export in (
+            "x __rb00 264 1\n",
+            "x __rb10 348 1\n",
+            "x __rz10 388 1\n",
+        ):
+            self.assertIn(export, fragments)
+        for relocation in (
+            "r 299 x __rb00\n",
+            "r 372 x __rz10\n",
+            "r 386 x __rb10\n",
+        ):
+            self.assertIn(relocation, fragments)
+        self.assertEqual(case["screen_fragments"], ["4", "3"])
+        self.assertEqual(case["store_check_addr"], 0x1191)
+        self.assertIn("LIB/RT_F_CMP.OBJ", case["expected_alink_loads"])
+        self.assertNotIn("LIB/RT_F_ADD.OBJ", case["expected_alink_loads"])
+        self.assertTrue(case["expected_tail_from_compiled_object"])
+
     def test_full_range_multiply_probe_forces_staged_root_object_path(self) -> None:
         sys.path.insert(0, str(self.workspace / "udos" / "tools"))
         import run_action_alink_prg_probe as probe

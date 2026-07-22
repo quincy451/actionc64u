@@ -5,6 +5,8 @@ NRP_ENABLE_EARLY_RETURN = ACTC_EMIT_NATIVE_REAL_POSTFIX_EARLY_RETURN_ONLY
 NRP_ENABLE_EXTENDED_CONTROL = ACTC_EMIT_NATIVE_REAL_POSTFIX_EXTENDED_CONTROL_ONLY + NRP_ENABLE_EARLY_RETURN
 NRP_ENABLE_MULTI_CONTROL = ACTC_EMIT_NATIVE_REAL_POSTFIX_MULTI_CONTROL_ONLY + NRP_ENABLE_EXTENDED_CONTROL
 NRP_ENABLE_CONTROL = ACTC_EMIT_NATIVE_REAL_POSTFIX_CONTROL_ONLY + NRP_ENABLE_MULTI_CONTROL
+NRP_ENABLE_LOOP = ACTC_EMIT_NATIVE_REAL_POSTFIX_LOOP_ONLY
+NRP_ENABLE_CONDITION = NRP_ENABLE_CONTROL + NRP_ENABLE_LOOP
 
 NRP_MODE_ANALYZE = 0
 NRP_MODE_MACHINE = 1
@@ -43,10 +45,18 @@ NRP_CONTROL_MASK = 1
 .endif
 NRP_CONTROL_SLOT_MAX = NRP_FUNCTION_MAX*NRP_CONTROL_MAX
 .endif
-.if NRP_ENABLE_CONTROL
+.if NRP_ENABLE_CONDITION
 NRP_HELPER_COUNT = 21
 .else
 NRP_HELPER_COUNT = 20
+.endif
+.if NRP_ENABLE_LOOP
+NRP_LOOP_MAX = 4
+NRP_LOOP_MASK = 3
+NRP_LOOP_SLOT_MAX = NRP_FUNCTION_MAX*NRP_LOOP_MAX
+NRP_LOOP_UNKNOWN = 0
+NRP_LOOP_WHILE = 1
+NRP_LOOP_UNTIL = 2
 .endif
 
 native_real_postfix_detect:
@@ -74,6 +84,15 @@ native_real_postfix_clear_multi_control_loop:
     sta nrp_if_has_else
     sta nrp_if_has_else+1
 .endif
+.endif
+.if NRP_ENABLE_LOOP
+    sta nrp_loop_seen_any
+    ldx #(NRP_LOOP_SLOT_MAX-1)
+native_real_postfix_clear_loop_loop:
+    sta nrp_loop_seen,x
+    sta nrp_loop_has_exit,x
+    dex
+    bpl native_real_postfix_clear_loop_loop
 .endif
     lda #ACTC_OVERLAY_CTX_EXPORT_COUNT_PTR_LO
     jsr load_count_from_context
@@ -317,6 +336,9 @@ native_real_postfix_analyze_done:
 .if NRP_ENABLE_EARLY_RETURN
     lda nrp_early_return_seen
     jeq native_real_postfix_detect_no
+.elseif NRP_ENABLE_LOOP
+    lda nrp_loop_seen_any
+    jeq native_real_postfix_detect_no
 .elseif NRP_ENABLE_MULTI_CONTROL
     lda nrp_multi_control_seen
     jeq native_real_postfix_detect_no
@@ -393,6 +415,11 @@ nrp_parse_body:
     sta nrp_control_else_seen
 .endif
 .endif
+.if NRP_ENABLE_LOOP
+    sta nrp_loop_count
+    sta nrp_loop_depth
+    sta nrp_loop_index
+.endif
     lda nrp_temp_base
     sta nrp_temp_count
     lda nrp_code_start_lo
@@ -425,7 +452,7 @@ nrp_parse_body_loop:
     jeq nrp_parse_call
     cmp #'C'
     jeq nrp_parse_local_call
-.if NRP_ENABLE_CONTROL
+.if NRP_ENABLE_CONDITION
     cmp #'g'
     jeq nrp_parse_relation
     cmp #'l'
@@ -434,12 +461,26 @@ nrp_parse_body_loop:
     jeq nrp_parse_relation
     cmp #'n'
     jeq nrp_parse_relation
+.endif
+.if NRP_ENABLE_CONTROL
     cmp #'h'
     jeq nrp_parse_if
     cmp #'w'
     jeq nrp_parse_else
     cmp #'v'
     jeq nrp_parse_endif
+.endif
+.if NRP_ENABLE_LOOP
+    cmp #'d'
+    jeq nrp_parse_loop_start
+    cmp #'f'
+    jeq nrp_parse_loop_while
+    cmp #'t'
+    jeq nrp_parse_loop_until
+    cmp #'o'
+    jeq nrp_parse_loop_until_end
+    cmp #'x'
+    jeq nrp_parse_loop_while_end
 .endif
     cmp #'T'
     jeq nrp_parse_store
@@ -540,7 +581,7 @@ nrp_parse_call:
     jeq nrp_parse_call_binary
     cmp #NRP_HELPER_TERNARY
     jeq nrp_parse_call_ternary
-.if NRP_ENABLE_CONTROL
+.if NRP_ENABLE_CONDITION
     cmp #NRP_HELPER_COMPARE
     jeq nrp_parse_call_compare
 .endif
@@ -620,7 +661,7 @@ nrp_parse_call_ternary:
     jcc nrp_parse_body_fail
     jmp nrp_parse_body_loop
 
-.if NRP_ENABLE_CONTROL
+.if NRP_ENABLE_CONDITION
 nrp_parse_call_compare:
     jsr nrp_pop_real_to_operand2
     jcc nrp_parse_body_fail
@@ -726,7 +767,7 @@ nrp_validate_call_graph_ok:
     sec
     rts
 
-.if NRP_ENABLE_CONTROL
+.if NRP_ENABLE_CONDITION
 nrp_parse_relation:
     jsr nrp_pop_value
     jcc nrp_parse_body_fail
@@ -827,7 +868,140 @@ nrp_load_literal_word:
 nrp_load_literal_word_no:
     clc
     rts
+.endif
 
+.if NRP_ENABLE_LOOP
+nrp_parse_loop_start:
+    lda nrp_program_mode
+    cmp #NRP_PROGRAM_REAL_FUNCTION
+    jne nrp_parse_body_fail
+    lda nrp_proc_index
+    cmp nrp_function_count
+    jcs nrp_parse_body_fail
+    lda nrp_loop_count
+    cmp #NRP_LOOP_MAX
+    jcs nrp_parse_body_fail
+    lda nrp_loop_depth
+    cmp #NRP_LOOP_MAX
+    jcs nrp_parse_body_fail
+    lda nrp_proc_index
+    asl a
+    asl a
+    clc
+    adc nrp_loop_count
+    sta nrp_loop_index
+    ldy nrp_loop_depth
+    sta nrp_loop_stack,y
+    inc nrp_loop_count
+    inc nrp_loop_depth
+    lda #$01
+    sta nrp_nested
+    lda nrp_mode
+    bne nrp_parse_loop_start_done
+    lda #$01
+    sta nrp_loop_seen_any
+    ldx nrp_loop_index
+    sta nrp_loop_seen,x
+    lda #NRP_LOOP_UNKNOWN
+    sta nrp_loop_kind,x
+    lda nrp_code_lo
+    sta nrp_loop_start_offset_lo,x
+    lda nrp_code_hi
+    sta nrp_loop_start_offset_hi,x
+nrp_parse_loop_start_done:
+    jmp nrp_parse_body_loop
+
+nrp_parse_loop_while:
+    lda #NRP_LOOP_WHILE
+    ldy #'z'
+    bne nrp_parse_loop_condition
+
+nrp_parse_loop_until:
+    lda #NRP_LOOP_UNTIL
+    ldy #'b'
+nrp_parse_loop_condition:
+    sta nrp_byte
+    sty nrp_loop_label_kind
+    jsr nrp_pop_loop_condition
+    jcc nrp_parse_body_fail
+    ldx nrp_loop_index
+    lda nrp_loop_kind,x
+    beq nrp_parse_loop_condition_kind_ok
+    cmp nrp_byte
+    jne nrp_parse_body_fail
+nrp_parse_loop_condition_kind_ok:
+    lda nrp_mode
+    bne nrp_parse_loop_condition_emit
+    lda nrp_byte
+    sta nrp_loop_kind,x
+nrp_parse_loop_condition_emit:
+    jsr nrp_emit_loop_condition_jump
+    jmp nrp_parse_body_loop
+
+nrp_parse_loop_until_end:
+    jsr nrp_load_loop_top
+    jcc nrp_parse_body_fail
+    ldx nrp_loop_index
+    lda nrp_loop_kind,x
+    cmp #NRP_LOOP_UNTIL
+    jne nrp_parse_body_fail
+    dec nrp_loop_depth
+    jmp nrp_parse_body_loop
+
+nrp_parse_loop_while_end:
+    jsr nrp_load_loop_top
+    jcc nrp_parse_body_fail
+    ldx nrp_loop_index
+    lda nrp_loop_kind,x
+    cmp #NRP_LOOP_WHILE
+    jne nrp_parse_body_fail
+    lda #'b'
+    sta nrp_loop_label_kind
+    jsr nrp_emit_loop_back_jump
+    lda nrp_mode
+    bne nrp_parse_loop_while_end_close
+    ldx nrp_loop_index
+    lda #$01
+    sta nrp_loop_has_exit,x
+    lda nrp_code_lo
+    sta nrp_loop_exit_offset_lo,x
+    lda nrp_code_hi
+    sta nrp_loop_exit_offset_hi,x
+nrp_parse_loop_while_end_close:
+    dec nrp_loop_depth
+    jmp nrp_parse_body_loop
+
+nrp_pop_loop_condition:
+    jsr nrp_load_loop_top
+    bcc nrp_pop_loop_condition_no
+    jsr nrp_pop_value
+    bcc nrp_pop_loop_condition_no
+    cmp #NRP_VALUE_CONDITION
+    bne nrp_pop_loop_condition_no
+    lda nrp_stack_depth
+    bne nrp_pop_loop_condition_no
+    sec
+    rts
+nrp_pop_loop_condition_no:
+    clc
+    rts
+
+nrp_load_loop_top:
+    lda nrp_loop_depth
+    beq nrp_load_loop_top_no
+    sec
+    sbc #$01
+    tay
+    lda nrp_loop_stack,y
+    sta nrp_loop_index
+    sec
+    rts
+nrp_load_loop_top_no:
+    clc
+    rts
+.endif
+
+.if NRP_ENABLE_CONTROL
 .if NRP_ENABLE_MULTI_CONTROL
 nrp_parse_if:
     lda nrp_program_mode
@@ -1039,6 +1213,9 @@ nrp_parse_return:
 .else
     ora nrp_control_depth
 .endif
+.endif
+.if NRP_ENABLE_LOOP
+    ora nrp_loop_depth
 .endif
     jne nrp_parse_body_fail
     lda nrp_program_mode
@@ -1322,7 +1499,7 @@ nrp_emit_ternary:
     jsr nrp_emit_operand3_zp8
     jsr nrp_emit_dest_zp6
     jmp nrp_emit_call_import
-.if NRP_ENABLE_CONTROL
+.if NRP_ENABLE_CONDITION
 nrp_emit_compare:
     jsr nrp_emit_operand1_zp2
     jsr nrp_emit_operand2_zp4
@@ -1374,6 +1551,54 @@ nrp_emit_else_jump_advance:
     lda #$03
     jmp nrp_advance_code
 nrp_emit_else_jump_machine:
+    lda #$4C
+    jsr nrp_emit_machine_byte
+    lda #$00
+    jsr nrp_emit_machine_byte
+    lda #$00
+    jmp nrp_emit_machine_byte
+.endif
+
+.if NRP_ENABLE_LOOP
+nrp_emit_loop_condition_jump:
+    lda nrp_mode
+    cmp #NRP_MODE_MACHINE
+    beq nrp_emit_loop_condition_jump_machine
+    cmp #NRP_MODE_RELOC
+    bne nrp_emit_loop_condition_jump_advance
+    lda #$05
+    jsr nrp_emit_loop_reloc_delta
+nrp_emit_loop_condition_jump_advance:
+    lda #$07
+    jmp nrp_advance_code
+nrp_emit_loop_condition_jump_machine:
+    lda #$C9
+    jsr nrp_emit_machine_byte
+    lda nrp_condition_cmp
+    jsr nrp_emit_machine_byte
+    lda nrp_condition_true_branch
+    jsr nrp_emit_machine_byte
+    lda #$03
+    jsr nrp_emit_machine_byte
+    lda #$4C
+    jsr nrp_emit_machine_byte
+    lda #$00
+    jsr nrp_emit_machine_byte
+    lda #$00
+    jmp nrp_emit_machine_byte
+
+nrp_emit_loop_back_jump:
+    lda nrp_mode
+    cmp #NRP_MODE_MACHINE
+    beq nrp_emit_loop_back_jump_machine
+    cmp #NRP_MODE_RELOC
+    bne nrp_emit_loop_back_jump_advance
+    lda #$01
+    jsr nrp_emit_loop_reloc_delta
+nrp_emit_loop_back_jump_advance:
+    lda #$03
+    jmp nrp_advance_code
+nrp_emit_loop_back_jump_machine:
     lda #$4C
     jsr nrp_emit_machine_byte
     lda #$00
@@ -1914,6 +2139,8 @@ native_real_postfix_emit_function_export_loop:
     cmp nrp_function_count
 .if NRP_ENABLE_CONTROL
     beq native_real_postfix_emit_control_exports
+.elseif NRP_ENABLE_LOOP
+    beq native_real_postfix_emit_loop_exports
 .else
     beq native_real_postfix_emit_data_exports
 .endif
@@ -2004,6 +2231,54 @@ native_real_postfix_emit_control_export_next:
     jmp native_real_postfix_emit_control_export_loop
 .endif
 .endif
+.if NRP_ENABLE_LOOP
+native_real_postfix_emit_loop_exports:
+    lda #$00
+    sta nrp_function_index
+native_real_postfix_emit_loop_export_function_loop:
+    lda nrp_function_index
+    cmp nrp_function_count
+    beq native_real_postfix_emit_data_exports
+    sta nrp_proc_index
+    lda #$00
+    sta nrp_loop_ordinal
+native_real_postfix_emit_loop_export_loop:
+    lda nrp_loop_ordinal
+    cmp #NRP_LOOP_MAX
+    beq native_real_postfix_emit_loop_export_next_function
+    lda nrp_function_index
+    asl a
+    asl a
+    clc
+    adc nrp_loop_ordinal
+    sta nrp_loop_index
+    tax
+    lda nrp_loop_seen,x
+    beq native_real_postfix_emit_loop_export_next
+    lda #'b'
+    sta nrp_loop_label_kind
+    lda nrp_loop_start_offset_lo,x
+    sta nrp_export_offset_lo
+    lda nrp_loop_start_offset_hi,x
+    sta nrp_export_offset_hi
+    jsr nrp_emit_loop_export
+    ldx nrp_loop_index
+    lda nrp_loop_has_exit,x
+    beq native_real_postfix_emit_loop_export_next
+    lda #'z'
+    sta nrp_loop_label_kind
+    lda nrp_loop_exit_offset_lo,x
+    sta nrp_export_offset_lo
+    lda nrp_loop_exit_offset_hi,x
+    sta nrp_export_offset_hi
+    jsr nrp_emit_loop_export
+native_real_postfix_emit_loop_export_next:
+    inc nrp_loop_ordinal
+    jmp native_real_postfix_emit_loop_export_loop
+native_real_postfix_emit_loop_export_next_function:
+    inc nrp_function_index
+    jmp native_real_postfix_emit_loop_export_function_loop
+.endif
 native_real_postfix_emit_data_exports:
     lda nrp_code_size_lo
     sta nrp_export_offset_lo
@@ -2072,6 +2347,25 @@ nrp_emit_control_export:
     lda #' '
     jsr emit_char_overlay
     jsr nrp_emit_control_name
+    lda #' '
+    jsr emit_char_overlay
+    lda nrp_export_offset_lo
+    ldy nrp_export_offset_hi
+    jsr emit_word_decimal
+    lda #' '
+    jsr emit_char_overlay
+    lda #$01
+    ldy #$00
+    jsr emit_word_decimal
+    jmp emit_newline
+.endif
+.if NRP_ENABLE_LOOP
+nrp_emit_loop_export:
+    lda #'x'
+    jsr emit_char_overlay
+    lda #' '
+    jsr emit_char_overlay
+    jsr nrp_emit_loop_name
     lda #' '
     jsr emit_char_overlay
     lda nrp_export_offset_lo
@@ -2173,6 +2467,8 @@ native_real_postfix_emit_function_body_marker_loop:
     cmp nrp_function_count
 .if NRP_ENABLE_CONTROL
     beq native_real_postfix_emit_control_body_markers
+.elseif NRP_ENABLE_LOOP
+    beq native_real_postfix_emit_loop_body_markers
 .else
     beq native_real_postfix_emit_body_data
 .endif
@@ -2235,6 +2531,41 @@ native_real_postfix_emit_control_body_marker_next:
     inc nrp_function_index
     jmp native_real_postfix_emit_control_body_marker_loop
 .endif
+.endif
+.if NRP_ENABLE_LOOP
+native_real_postfix_emit_loop_body_markers:
+    lda #$00
+    sta nrp_function_index
+native_real_postfix_emit_loop_body_marker_function_loop:
+    lda nrp_function_index
+    cmp nrp_function_count
+    beq native_real_postfix_emit_body_data
+    lda #$00
+    sta nrp_loop_ordinal
+native_real_postfix_emit_loop_body_marker_loop:
+    lda nrp_loop_ordinal
+    cmp #NRP_LOOP_MAX
+    beq native_real_postfix_emit_loop_body_marker_next_function
+    lda nrp_function_index
+    asl a
+    asl a
+    clc
+    adc nrp_loop_ordinal
+    sta nrp_loop_index
+    tax
+    lda nrp_loop_seen,x
+    beq native_real_postfix_emit_loop_body_marker_next
+    jsr emit_machine_body_marker_line
+    ldx nrp_loop_index
+    lda nrp_loop_has_exit,x
+    beq native_real_postfix_emit_loop_body_marker_next
+    jsr emit_machine_body_marker_line
+native_real_postfix_emit_loop_body_marker_next:
+    inc nrp_loop_ordinal
+    jmp native_real_postfix_emit_loop_body_marker_loop
+native_real_postfix_emit_loop_body_marker_next_function:
+    inc nrp_function_index
+    jmp native_real_postfix_emit_loop_body_marker_function_loop
 .endif
 native_real_postfix_emit_body_data:
     lda nrp_data_slots
@@ -2394,6 +2725,16 @@ nrp_emit_control_reloc_delta:
     jsr nrp_emit_control_name
     jmp emit_newline
 .endif
+.if NRP_ENABLE_LOOP
+nrp_emit_loop_reloc_delta:
+    jsr nrp_emit_reloc_prefix_delta
+    lda #'x'
+    jsr emit_char_overlay
+    lda #' '
+    jsr emit_char_overlay
+    jsr nrp_emit_loop_name
+    jmp emit_newline
+.endif
 nrp_emit_reloc_prefix_delta:
     clc
     adc nrp_code_lo
@@ -2457,11 +2798,27 @@ nrp_emit_control_name:
     jmp emit_object_selector_overlay
 .endif
 .endif
+.if NRP_ENABLE_LOOP
+nrp_emit_loop_name:
+    lda #'_'
+    jsr emit_char_overlay
+    lda #'_'
+    jsr emit_char_overlay
+    lda #'r'
+    jsr emit_char_overlay
+    lda nrp_loop_label_kind
+    jsr emit_char_overlay
+    lda nrp_proc_index
+    jsr emit_object_selector_overlay
+    lda nrp_loop_index
+    and #NRP_LOOP_MASK
+    jmp emit_object_selector_overlay
+.endif
 
 nrp_helper_i_to_f: .asciiz "rt_i_to_f"
 nrp_helper_s_to_f: .asciiz "rt_s_to_f"
 nrp_helper_print_f: .asciiz "rt_print_f"
-.if NRP_ENABLE_CONTROL
+.if NRP_ENABLE_CONDITION
 nrp_helper_f_cmp: .asciiz "rt_f_cmp"
 .endif
 nrp_helper_f_abs: .asciiz "rt_f_abs"
@@ -2484,7 +2841,7 @@ nrp_helper_f_clamp: .asciiz "rt_f_clamp"
 
 nrp_helper_name_lo:
     .byte <nrp_helper_i_to_f,<nrp_helper_s_to_f,<nrp_helper_print_f
-.if NRP_ENABLE_CONTROL
+.if NRP_ENABLE_CONDITION
     .byte <nrp_helper_f_cmp
 .endif
     .byte <nrp_helper_f_abs,<nrp_helper_f_sqrt,<nrp_helper_f_sign
@@ -2495,7 +2852,7 @@ nrp_helper_name_lo:
     .byte <nrp_helper_f_hypot,<nrp_helper_f_clamp
 nrp_helper_name_hi:
     .byte >nrp_helper_i_to_f,>nrp_helper_s_to_f,>nrp_helper_print_f
-.if NRP_ENABLE_CONTROL
+.if NRP_ENABLE_CONDITION
     .byte >nrp_helper_f_cmp
 .endif
     .byte >nrp_helper_f_abs,>nrp_helper_f_sqrt,>nrp_helper_f_sign
@@ -2506,7 +2863,7 @@ nrp_helper_name_hi:
     .byte >nrp_helper_f_hypot,>nrp_helper_f_clamp
 nrp_helper_kind:
     .byte NRP_HELPER_CONVERT,NRP_HELPER_CONVERT,NRP_HELPER_PRINT
-.if NRP_ENABLE_CONTROL
+.if NRP_ENABLE_CONDITION
     .byte NRP_HELPER_COMPARE
 .endif
     .byte NRP_HELPER_UNARY,NRP_HELPER_UNARY,NRP_HELPER_UNARY,NRP_HELPER_UNARY
@@ -2597,8 +2954,6 @@ nrp_control_else_stack: .res NRP_CONTROL_MAX
 nrp_control_else_seen: .res 1
 .endif
 nrp_control_label_kind: .res 1
-nrp_condition_cmp: .res 1
-nrp_condition_true_branch: .res 1
 .if NRP_ENABLE_MULTI_CONTROL
 nrp_if_seen: .res NRP_CONTROL_SLOT_MAX
 nrp_if_has_else: .res NRP_CONTROL_SLOT_MAX
@@ -2614,6 +2969,26 @@ nrp_if_false_offset_hi: .res NRP_FUNCTION_MAX
 nrp_if_end_offset_lo: .res NRP_FUNCTION_MAX
 nrp_if_end_offset_hi: .res NRP_FUNCTION_MAX
 .endif
+.endif
+.if NRP_ENABLE_CONDITION
+nrp_condition_cmp: .res 1
+nrp_condition_true_branch: .res 1
+.endif
+.if NRP_ENABLE_LOOP
+nrp_loop_count: .res 1
+nrp_loop_depth: .res 1
+nrp_loop_index: .res 1
+nrp_loop_ordinal: .res 1
+nrp_loop_seen_any: .res 1
+nrp_loop_label_kind: .res 1
+nrp_loop_stack: .res NRP_LOOP_MAX
+nrp_loop_seen: .res NRP_LOOP_SLOT_MAX
+nrp_loop_kind: .res NRP_LOOP_SLOT_MAX
+nrp_loop_has_exit: .res NRP_LOOP_SLOT_MAX
+nrp_loop_start_offset_lo: .res NRP_LOOP_SLOT_MAX
+nrp_loop_start_offset_hi: .res NRP_LOOP_SLOT_MAX
+nrp_loop_exit_offset_lo: .res NRP_LOOP_SLOT_MAX
+nrp_loop_exit_offset_hi: .res NRP_LOOP_SLOT_MAX
 .endif
 nrp_debug_count: .res 1
 nrp_debug_lo: .res NRP_DEBUG_MAX*NRP_PROC_MAX

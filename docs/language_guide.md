@@ -431,7 +431,14 @@ return value pointer is produced immediately and the machine routine exits;
 ACTC continues parsing only to validate and relocate the remaining labels. A
 terminal fallback `RETURN(expr)` after the controls is still required.
 
-Loops, more than four controls, deeper control nesting,
+Pass Q accepts up to four bounded REAL-function loops, in either post-test
+`DO ... UNTIL condition ... OD` form or pre-test
+`WHILE condition DO ... OD` form. Conditions use the same six REAL relations
+as Passes M through P. Each loop receives an ordinary relocatable `__rbNN`
+back-edge label; a `WHILE` loop also receives a relocatable `__rzNN` exit label.
+
+Plain infinite `DO`, loop `EXIT`, mixed loop/conditional nesting, returns from
+inside loops, more than four controls, deeper control nesting,
 recursive/reentrant frames, unrestricted user-call argument trees and
 nested call expressions, mixed parameter types, arbitrary signatures,
 recursive calls, and external REAL functions are not yet part of this native

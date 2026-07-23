@@ -1995,3 +1995,30 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   their public native MATH1 packaging. Dependency-sized `DegToRad` and
   `RadToDeg` OBJ modules, the other 26 missing MATH1 routines, general REAL
   bodies/calls, and recursive/reentrant frames remain pending.
+
+## 2026-07-22 Link-Selected MATH1 Angle Intrinsics
+
+- Added separate 20-byte `RT_F_DEG_TO_RAD.OBJ` and
+  `RT_F_RAD_TO_DEG.OBJ` modules. Each embeds one exact binary32 scale factor,
+  imports only `RT_F_MUL`, and is safe when its source and destination alias.
+- Native ACTC recognizes `DegToRad(REAL)` and `RadToDeg(REAL)` in the bounded
+  REAL postfix path. Each source reference emits only its selected wrapper;
+  ALINK then discovers multiplication and exceptional-value support through
+  ordinary OBJ1 dependency closure. Staging the sibling module does not load it.
+- Idun ACTC folds constant calls to binary32 literals and uses the same shared
+  wrapper for dynamic calls. The public MATH1 source bodies were replaced by
+  declarations so neither compiler duplicates conversion code.
+- Focused native ACTC/ALINK/VICE launches execute both directions. The complete
+  math-runtime gate passes all 45 ACTC-backed cases and 8 full-range direct
+  helper cases.
+- Pass U is 6,514 bytes with 1,678 bytes free under its dedicated 1,536-byte
+  gate and has SHA-256
+  `a28fa04d67df80246b662b82800b9bd62f74f9830ef329a8c7f6b8aa4bae10de`.
+  Passes L through T remain byte-identical.
+- Current inventories are 1,365 broad direct-PRG shapes, 195 non-runtime
+  source-backed object-emission shapes, and 300 compiled-runtime relocation
+  oracles. The native suite contains 860 tests, including 248 overlay tests;
+  the source-cache suite remains 198 tests.
+- Native MATH1 now exposes seventeen link-selected calls and lacks 26 public
+  routines. General REAL bodies/calls, recursive or reentrant frames, and the
+  remaining transcendental modules are the next dependency-ordered work.

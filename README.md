@@ -97,7 +97,7 @@ ALINK also writes `BIN/MAIN.DBG`. It is used only when launching
 The lower-level default linker gate is `make -C ../udos vice-action-alink`,
 which now verifies `ALINK.PRG -> BIN/MAIN.PRG`.
 The broad linker matrix is `make -C ../udos vice-action-alink-prg-matrix`,
-which currently enumerates 1363 direct-PRG object/link shapes.
+which currently enumerates 1365 direct-PRG object/link shapes.
 The non-runtime source-backed matrix contains 195 native ACTC/ALINK/VICE
 shapes, including canonical and permuted-storage versions of the shared finite
 two-REAL-parameter comparison fixture plus a reordered second-parameter return

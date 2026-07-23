@@ -922,13 +922,13 @@ General bound expressions, runtime steps, nested counter-to-REAL body
 expressions, mixed controls, and returns inside loops remain pending.
 
 Base-36 pass U, `ACTC_OVLU.BIN`, separately claims the bounded straight-line
-REAL-function form when it contains a folded four-byte REAL literal. It accepts
-one or two REAL parameters, binds the actual arity, and reconstructs the
-compiler's low-word/high-word literal pair into a hidden binary32 cell before
-ordinary arithmetic or calls consume it. The shared `DegToRad`/`RadToDeg`
+REAL-function form when it contains a folded four-byte REAL literal or a public
+`DegToRad`/`RadToDeg` intrinsic. It accepts one or two REAL parameters, binds
+the actual arity, reconstructs the compiler's low-word/high-word literal pair
+into a hidden binary32 cell, and emits ordinary imports for the two separately
+selected angle-conversion OBJ modules. The shared project-local conversion
 fixture materializes pi as `DB 0F 49 40`; native VICE prints pi and 180 while
 Idun's generated-6502 path compiles and links the byte-identical source. The
-6,456-byte image leaves 1,736 bytes free under a dedicated 1,536-byte gate, and
-passes L through T remain byte-identical. Dependency-sized library routine
-packaging, unrestricted signatures/calls, and general REAL bodies remain
-pending.
+6,514-byte image leaves 1,678 bytes free under a dedicated 1,536-byte gate, and
+passes L through T remain byte-identical. Unrestricted signatures/calls and
+general REAL bodies remain pending.

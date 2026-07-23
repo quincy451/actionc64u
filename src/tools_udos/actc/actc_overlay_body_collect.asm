@@ -2168,6 +2168,7 @@ condition_starts_with_local_real_value_or_fail_pattern_loop:
     tay
     lda pattern_ptr_local
     inx
+    inx
     stx real_lhs_index_local
     jsr symbol_buffer_matches_local_const
     bcc condition_starts_with_local_real_value_or_fail_ok_restore
@@ -2888,21 +2889,13 @@ pattern_fmod:
     .asciiz "FMOD"
 pattern_fhypot:
     .asciiz "FHYPOT"
+pattern_degtorad:
+    .asciiz "DEGTORAD"
+pattern_radtodeg:
+    .asciiz "RADTODEG"
 real_value_pattern_table_local:
     .word pattern_real_decl
-    .word pattern_fabs
-    .word pattern_fsqrt
-    .word pattern_fsign
-    .word pattern_ftrunc
-    .word pattern_ffloor
-    .word pattern_fceil
-    .word pattern_fround
-    .word pattern_ffrac
-    .word pattern_fmin
-    .word pattern_fmax
-    .word pattern_fmod
-    .word pattern_fhypot
-real_value_pattern_table_local_end:
+    .byte $00
 real_unary_pattern_table_local:
     .word pattern_fabs
     .byte 'a'
@@ -2920,6 +2913,10 @@ real_unary_pattern_table_local:
     .byte 'r'
     .word pattern_ffrac
     .byte 'f'
+    .word pattern_degtorad
+    .byte 'd'
+    .word pattern_radtodeg
+    .byte 'e'
 real_unary_pattern_table_local_end:
 real_binary_pattern_table_local:
     .word pattern_fmin
@@ -2933,6 +2930,7 @@ real_binary_pattern_table_local:
     .word pattern_fclamp
     .byte REAL_FUNCTION_FCLAMP
 real_binary_pattern_table_local_end:
+real_value_pattern_table_local_end:
 pattern_fclamp:
     .asciiz "FCLAMP"
 pattern_proc:

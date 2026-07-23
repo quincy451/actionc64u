@@ -15,7 +15,8 @@ The exponent bias is `127`.
 
 Supported forms include decimal literals, exponent notation, arithmetic
 operators, comparisons, `REAL(x)`, `INT(r)`, and the bounded named-value
-`FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FMin`, `FMax`, and `FClamp` calls.
+`FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`,
+`FMin`, `FMax`, `FClamp`, `DegToRad`, and `RadToDeg` calls.
 
 Rules:
 
@@ -44,6 +45,10 @@ Rules:
 - `FHypot(left,right)` uses a scaled maximum/minimum calculation to avoid
   avoidable intermediate overflow and underflow; two zero inputs return
   positive zero, and infinity takes precedence when paired with NaN
+- `DegToRad(value)` multiplies by binary32 `0x3C8EFA35` (`pi/180`);
+  `RadToDeg(value)` multiplies by binary32 `0x42652EE0` (`180/pi`). Both use
+  ordinary binary32 multiply semantics, including signed zero, infinity, NaN,
+  subnormal, overflow, and underflow behavior
 - `FClamp(value,lower,upper)` returns canonical quiet NaN if any argument is
   NaN or if `lower>upper`; otherwise it returns
   `FMin(FMax(value,lower),upper)` with the selected operand bits preserved
@@ -83,6 +88,9 @@ The linker-level REAL runtime surface uses stable helper symbols:
 - `rt_f_round`
 - `rt_f_frac`
 - `rt_f_mod`
+- `rt_f_hypot`
+- `rt_f_deg_to_rad`
+- `rt_f_rad_to_deg`
 - `rt_f_min`
 - `rt_f_max`
 - `rt_f_clamp`
@@ -167,6 +175,14 @@ The first implemented target-side helper ABI is intentionally narrow:
   It imports `rt_f_div`, `rt_f_trunc`, `rt_f_mul`, and `rt_f_sub` to implement
   `value-FTrunc(value/divisor)*divisor`; invalid input returns canonical quiet
   NaN, while a finite value modulo either infinity returns the original value
+- `rt_f_hypot` reads source pointers through `$02/$03` and `$04/$05`, writes
+  through `$06/$07`, supports destination aliasing either operand, and imports
+  the absolute-value, minimum/maximum, division, multiplication, addition, and
+  square-root closure for a scaled hypotenuse
+- `rt_f_deg_to_rad` and `rt_f_rad_to_deg` read through `$02/$03`, write through
+  `$06/$07`, and import `rt_f_mul`. Each 20-byte wrapper points `$04/$05` at
+  its embedded positive scale factor before multiplication; the underlying
+  helper preserves the source when the destination aliases it
 - `rt_f_min` and `rt_f_max` read source REAL32 pointers from `$02/$03` and
   `$04/$05`, write through `$06/$07`, and preserve the selected operand's exact
   representation. One NaN is ignored, two NaNs select the right operand, and
@@ -229,6 +245,10 @@ Examples:
   multiplication, subtraction, and special-value closure
 - `FHypot(a,b)` imports `rt_f_hypot` plus its absolute-value,
   minimum/maximum, division, multiplication, addition, and square-root closure
+- `DegToRad(r)` imports `rt_f_deg_to_rad` plus its multiplication and
+  special-value closure
+- `RadToDeg(r)` imports `rt_f_rad_to_deg` plus its multiplication and
+  special-value closure
 - `FMin(a,b)` imports `rt_f_min` and its comparison closure
 - `FMax(a,b)` imports `rt_f_max` and its comparison closure
 - `FClamp(value,lower,upper)` imports `rt_f_clamp` plus its
@@ -266,7 +286,8 @@ implemented REAL32 helper surface. It defines all eight portable MATH1
 constants, which ACTC folds without target storage or runtime imports, and
 documents the core source forms that ACTC already recognizes directly:
 `REAL(x)`, `INT(x)`, REAL arithmetic/comparison operators, `FAbs`, `FSqrt`,
-`FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FMin`, `FMax`, `FClamp`, and `PrintR` / `PrintRE`.
+`FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`,
+`FMin`, `FMax`, `FClamp`, `DegToRad`, `RadToDeg`, and `PrintR` / `PrintRE`.
 
 `SRC/MATH1_DEMO.ACT` validates the exported-library path by compiling a small
 REAL absolute-value program through ACTC, linking it with ALINK, and running

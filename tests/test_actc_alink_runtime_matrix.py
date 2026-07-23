@@ -378,6 +378,8 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
                 "FMIN",
                 "FMAX",
                 "FCLAMP",
+                "DEGTORAD",
+                "RADTODEG",
             },
         )
         math_shapes = self._makefile_runtime_matrix_shape_groups(self.make_text).get(
@@ -397,6 +399,8 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
             "actc_runtime_math1_ffrac_split_linked",
             "actc_runtime_math1_fmod_split_linked",
             "actc_runtime_math1_fhypot_split_linked",
+            "actc_runtime_math1_deg_to_rad_split_linked",
+            "actc_runtime_math1_rad_to_deg_split_linked",
             "actc_runtime_math1_fmin_split_linked",
             "actc_runtime_math1_fmax_split_linked",
             "actc_runtime_math1_fclamp_split_linked",
@@ -418,6 +422,8 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
             "rt_f_frac",
             "rt_f_mod",
             "rt_f_hypot",
+            "rt_f_deg_to_rad",
+            "rt_f_rad_to_deg",
             "rt_f_min",
             "rt_f_max",
             "rt_f_clamp",
@@ -1851,6 +1857,8 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
             "actc_runtime_math1_ffrac_split_linked",
             "actc_runtime_math1_fmod_split_linked",
             "actc_runtime_math1_fhypot_split_linked",
+            "actc_runtime_math1_deg_to_rad_split_linked",
+            "actc_runtime_math1_rad_to_deg_split_linked",
             "actc_runtime_math1_fmin_split_linked",
             "actc_runtime_math1_fmax_split_linked",
             "actc_runtime_math1_fclamp_split_linked",
@@ -2672,8 +2680,8 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
         import run_action_alink_prg_probe as probe
 
         shapes = probe.COMPILED_RUNTIME_LINK_ORACLE_SHAPES
-        self.assertEqual(len(shapes), 298)
-        self.assertEqual(len(set(shapes)), 298)
+        self.assertEqual(len(shapes), 300)
+        self.assertEqual(len(set(shapes)), 300)
         for shape in shapes:
             with self.subTest(shape=shape):
                 case = probe.DIRECT_PRG_CASES[shape]

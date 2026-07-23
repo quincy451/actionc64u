@@ -56,9 +56,14 @@ NRP_CONTROL_MASK = 1
 NRP_CONTROL_SLOT_MAX = NRP_FUNCTION_MAX*NRP_CONTROL_MAX
 .endif
 .if NRP_ENABLE_CONDITION
-NRP_HELPER_COUNT = 21
+NRP_HELPER_BASE_COUNT = 21
 .else
-NRP_HELPER_COUNT = 20
+NRP_HELPER_BASE_COUNT = 20
+.endif
+.if NRP_ENABLE_LITERAL
+NRP_HELPER_COUNT = NRP_HELPER_BASE_COUNT+2
+.else
+NRP_HELPER_COUNT = NRP_HELPER_BASE_COUNT
 .endif
 .if NRP_ENABLE_LOOP
 NRP_LOOP_MAX = 4
@@ -82,6 +87,7 @@ native_real_postfix_detect:
     sta nrp_call_edges+1
 .if NRP_ENABLE_LITERAL
     sta nrp_literal_seen
+    sta nrp_angle_seen
 .endif
 .if NRP_ENABLE_EARLY_RETURN
     sta nrp_early_return_seen
@@ -409,11 +415,14 @@ native_real_postfix_analyze_done:
     ora nrp_if_seen+1
     jeq native_real_postfix_detect_no
 .elseif NRP_ENABLE_LITERAL
+    lda nrp_angle_seen
+    bne :+
     lda nrp_program_mode
     cmp #NRP_PROGRAM_REAL_FUNCTION
     jne native_real_postfix_detect_no
     lda nrp_literal_seen
     jeq native_real_postfix_detect_no
+:
 .endif
     lda nrp_nested
     jeq native_real_postfix_detect_no
@@ -2062,6 +2071,14 @@ nrp_classify_external_no:
     clc
     rts
 nrp_classify_external_yes:
+.if NRP_ENABLE_LITERAL
+    cpx #(NRP_HELPER_COUNT-2)
+    bcc :+
+    lda #$01
+    sta nrp_angle_seen
+    sta nrp_nested
+:
+.endif
     lda nrp_helper_kind,x
     sec
     rts
@@ -3766,6 +3783,10 @@ nrp_helper_f_max: .asciiz "rt_f_max"
 nrp_helper_f_mod: .asciiz "rt_f_mod"
 nrp_helper_f_hypot: .asciiz "rt_f_hypot"
 nrp_helper_f_clamp: .asciiz "rt_f_clamp"
+.if NRP_ENABLE_LITERAL
+nrp_helper_f_deg_to_rad: .asciiz "rt_f_deg_to_rad"
+nrp_helper_f_rad_to_deg: .asciiz "rt_f_rad_to_deg"
+.endif
 
 nrp_helper_name_lo:
     .byte <nrp_helper_i_to_f,<nrp_helper_s_to_f,<nrp_helper_print_f
@@ -3778,6 +3799,9 @@ nrp_helper_name_lo:
     .byte <nrp_helper_f_sub,<nrp_helper_f_mul,<nrp_helper_f_div
     .byte <nrp_helper_f_min,<nrp_helper_f_max,<nrp_helper_f_mod
     .byte <nrp_helper_f_hypot,<nrp_helper_f_clamp
+.if NRP_ENABLE_LITERAL
+    .byte <nrp_helper_f_deg_to_rad,<nrp_helper_f_rad_to_deg
+.endif
 nrp_helper_name_hi:
     .byte >nrp_helper_i_to_f,>nrp_helper_s_to_f,>nrp_helper_print_f
 .if NRP_ENABLE_CONDITION
@@ -3789,6 +3813,9 @@ nrp_helper_name_hi:
     .byte >nrp_helper_f_sub,>nrp_helper_f_mul,>nrp_helper_f_div
     .byte >nrp_helper_f_min,>nrp_helper_f_max,>nrp_helper_f_mod
     .byte >nrp_helper_f_hypot,>nrp_helper_f_clamp
+.if NRP_ENABLE_LITERAL
+    .byte >nrp_helper_f_deg_to_rad,>nrp_helper_f_rad_to_deg
+.endif
 nrp_helper_kind:
     .byte NRP_HELPER_CONVERT,NRP_HELPER_CONVERT,NRP_HELPER_PRINT
 .if NRP_ENABLE_CONDITION
@@ -3799,6 +3826,9 @@ nrp_helper_kind:
     .byte NRP_HELPER_BINARY,NRP_HELPER_BINARY,NRP_HELPER_BINARY,NRP_HELPER_BINARY
     .byte NRP_HELPER_BINARY,NRP_HELPER_BINARY,NRP_HELPER_BINARY,NRP_HELPER_BINARY
     .byte NRP_HELPER_TERNARY
+.if NRP_ENABLE_LITERAL
+    .byte NRP_HELPER_UNARY,NRP_HELPER_UNARY
+.endif
 
 nrp_call_edge_bits:
     .byte $01,$02
@@ -4039,6 +4069,7 @@ nrp_literal_lo: .res 1
 nrp_literal_hi: .res 1
 .if NRP_ENABLE_LITERAL
 nrp_literal_seen: .res 1
+nrp_angle_seen: .res 1
 nrp_real_literal_b0: .res 1
 nrp_real_literal_b1: .res 1
 nrp_real_literal_b2: .res 1

@@ -6,9 +6,8 @@
 ;
 ; Current callable coverage is the core REAL32 proof surface: REAL(x), INT(x),
 ; REAL arithmetic/comparison operators, FAbs, FSqrt, FSign, FTrunc, FFloor, FCeil, FRound, FFrac,
-; FMod, FHypot, FMin, FMax, FClamp, and PrintR/PrintRE. ACTC can now lower the
-; portable DegToRad/RadToDeg bodies in project source, but those public library
-; calls remain deferred until matching dependency-sized OBJ modules exist.
+; FMod, FHypot, FMin, FMax, FClamp, DegToRad, RadToDeg, and PrintR/PrintRE.
+; Each callable imports an independent dependency-sized OBJ module.
 
 REAL CONST MATH_PI=3.14159265358979323846
 REAL CONST MATH_TWO_PI=6.28318530717958647692
@@ -35,3 +34,5 @@ REAL CONST MATH_SQRT2=1.41421356237309504880
 ; REAL FUNC FMin(REAL left,right)
 ; REAL FUNC FMax(REAL left,right)
 ; REAL FUNC FClamp(REAL value,lower,upper)
+; REAL FUNC DegToRad(REAL degrees)
+; REAL FUNC RadToDeg(REAL radians)

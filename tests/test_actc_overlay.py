@@ -9607,8 +9607,8 @@ class TestActcOverlay(unittest.TestCase):
         )
         self.assertIn(
             "x main 0 584\n"
-            "x degtorad 172 162\n"
-            "x radtodeg 334 162\n"
+            "x locald2r 172 162\n"
+            "x localr2d 334 162\n"
             "x __idata 496 40\n",
             obj,
         )
@@ -9622,10 +9622,79 @@ class TestActcOverlay(unittest.TestCase):
             ),
             3,
         )
-        self.assertIn("r 73 x degtorad\n", obj)
-        self.assertIn("r 107 x radtodeg\n", obj)
+        self.assertIn("r 73 x locald2r\n", obj)
+        self.assertIn("r 107 x localr2d\n", obj)
         self.assertIn("u rt_i_to_f\nu rt_f_div\nu rt_f_mul\nu rt_print_f\n", obj)
         self.assertIn("i 4059\ni 16457\n", obj)
+
+    def test_math1_angle_builtins_use_independent_runtime_imports(self) -> None:
+        math1_header = (self.root / "lib" / "math1.act").read_text(
+            encoding="ascii"
+        )
+        for name, call, expected, absent in (
+            (
+                "degrees-to-radians",
+                "DegToRad",
+                "rt_f_deg_to_rad",
+                "rt_f_rad_to_deg",
+            ),
+            (
+                "radians-to-degrees",
+                "RadToDeg",
+                "rt_f_rad_to_deg",
+                "rt_f_deg_to_rad",
+            ),
+        ):
+            with self.subTest(name=name):
+                obj = self.compile_overlay_object(
+                    (
+                        'INCLUDE "MATH1"\r'
+                        "MODULE MAIN\r"
+                        "REAL VALUE\r"
+                        "REAL RESULT\r"
+                        "PROC MAIN()\r"
+                        "VALUE=REAL(180)\r"
+                        f"RESULT={call}(VALUE)\r"
+                        "PrintRE(RESULT)\r"
+                    ),
+                    f"actc-overlay-math1-{name}",
+                    extra_build_env={
+                        "ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"
+                    },
+                    additional_sources={"MATH1.ACT": math1_header},
+                )
+
+                self.assertEqual(self.last_emit_overlay_pass, [5])
+                self.assertIn(f"u {expected}\n", obj)
+                self.assertNotIn(f"u {absent}\n", obj)
+                self.assertIn("u rt_i_to_f\n", obj)
+                self.assertIn("u rt_print_f\n", obj)
+
+    def test_math1_angle_builtins_are_available_in_pass_u_functions(self) -> None:
+        source = (
+            self.root
+            / "tests"
+            / "parity"
+            / "math1_angle_conversions_postfix.act"
+        ).read_text(encoding="ascii")
+        source = source.replace(
+            "RADIANS=LOCALD2R(DEGREES)",
+            "RADIANS=DegToRad(DEGREES)",
+        ).replace(
+            "RESULT_DEGREES=LOCALR2D(PI_VALUE)",
+            "RESULT_DEGREES=RadToDeg(PI_VALUE)",
+        )
+        obj = self.compile_overlay_object(
+            source.replace("\n", "\r"),
+            "actc-overlay-math1-angle-builtins-pass-u",
+            extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [30])
+        self.assertIn("u rt_f_deg_to_rad\n", obj)
+        self.assertIn("u rt_f_rad_to_deg\n", obj)
+        self.assertRegex(obj, r"(?m)^x locald2r [0-9]+ 162$")
+        self.assertRegex(obj, r"(?m)^x localr2d [0-9]+ 162$")
 
     def test_real_function_loop_pass_owns_depth_four_and_declines_fifth_loop(self) -> None:
         def nested_loop_source(depth: int) -> str:
@@ -11593,6 +11662,7 @@ class TestActcOverlay(unittest.TestCase):
         ).read_text(encoding="ascii")
         self.assertIn(".native_real_postfix_detect", labels)
         self.assertIn(".nrp_literal_seen", labels)
+        self.assertIn(".nrp_angle_seen", labels)
         self.assertIn(".nrp_function_param_count", labels)
 
     def test_native_real_while_emit_object_overlay_builds_with_expected_header(self) -> None:

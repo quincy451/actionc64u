@@ -30,6 +30,8 @@ SPECIAL_SQRT = 0x03
 SPECIAL_STORE_INFINITY = 0x04
 SPECIAL_COMPARE = 0x05
 ALINK_SYMBOL_MAX = 23
+DEGREES_TO_RADIANS_BITS = 0x3C8EFA35
+RADIANS_TO_DEGREES_BITS = 0x42652EE0
 
 
 def far_branch(builder: ObjectBuilder, opcode: int, target: str, tag: str) -> None:
@@ -656,6 +658,36 @@ def abs_module() -> ObjectBuilder:
     b.emit(0x60)
     b.export("rt_f_abs")
     return b
+
+
+def angle_scale_module(module: str, factor_bits: int) -> ObjectBuilder:
+    """Build an alias-safe unary angle conversion through binary32 multiply."""
+    b = ObjectBuilder(module)
+    b.local_reference(0xAD, "p")  # LDA factor pointer low byte.
+    b.zero_page(0x85, 0x04)
+    b.local_reference(0xAD, "ph")  # LDA factor pointer high byte.
+    b.zero_page(0x85, 0x05)
+    b.jsr("rt_f_mul")
+    b.emit(0x60)
+
+    b.label("p")
+    pointer_offset = len(b.code)
+    b.emit(0x00)
+    b.label("ph")
+    b.emit(0x00)
+    b.local_relocations.append((pointer_offset, "k"))
+    b.label("k")
+    b.emit(*factor_bits.to_bytes(4, "little"))
+    b.export(module)
+    return b
+
+
+def deg_to_rad_module() -> ObjectBuilder:
+    return angle_scale_module("rt_f_deg_to_rad", DEGREES_TO_RADIANS_BITS)
+
+
+def rad_to_deg_module() -> ObjectBuilder:
+    return angle_scale_module("rt_f_rad_to_deg", RADIANS_TO_DEGREES_BITS)
 
 
 def trunc_module() -> ObjectBuilder:
@@ -3316,6 +3348,8 @@ def main() -> int:
             frac_module(),
             mod_module(),
             hypot_module(),
+            deg_to_rad_module(),
+            rad_to_deg_module(),
             minmax_module("rt_f_min", maximum=False),
             minmax_module("rt_f_max", maximum=True),
             clamp_module(),

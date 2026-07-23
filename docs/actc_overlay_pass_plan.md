@@ -270,12 +270,13 @@ The overlay artifacts share one stable execution ABI:
   `ACTC_OVLU.BIN`, pass id `30`. It extends the bounded straight-line REAL
   function form to one- or two-REAL-parameter signatures and materializes
   folded binary32 constants from the existing two-word literal stream into
-  hidden four-byte cells. The shared angle-conversion fixture emits two
-  one-parameter functions, three copies of binary32 pi (`DB 0F 49 40`), and
-  ordinary `RT_F_DIV`/`RT_F_MUL` imports. Its 6,456-byte image leaves 1,736
-  bytes free under a dedicated 1,536-byte gate; passes L through T remain
-  byte-identical. General decimal expressions, arbitrary signatures, and
-  dependency-sized source-library packaging remain outside this pass.
+  hidden four-byte cells. It also claims public `DegToRad` and `RadToDeg`
+  intrinsic calls and emits imports for their separately selected OBJ modules.
+  The shared project-local angle-conversion fixture still emits three copies of
+  binary32 pi (`DB 0F 49 40`) plus ordinary `RT_F_DIV`/`RT_F_MUL` imports. Its
+  6,514-byte image leaves 1,678 bytes free under a dedicated 1,536-byte gate;
+  passes L through T remain byte-identical. General decimal expressions and
+  arbitrary signatures remain outside this pass.
 - `tools/build_actc_overlay_emit_native_object.sh` builds
   `build/udos_tools/ACTC_OVL8.BIN`, pass id `8`. In addition to straight-line
   word expressions and integer IF/DO control flow, it owns two word FOR loop

@@ -109,6 +109,10 @@ Current status:
   value, minimum, maximum, division, multiplication, addition, and square root.
   The destination may alias either input. Two zero inputs produce positive
   zero, and infinity takes precedence when paired with NaN.
+- `rt_f_deg_to_rad.obj` and `rt_f_rad_to_deg.obj` are separate 20-byte,
+  alias-safe unary wrappers around `rt_f_mul.obj`. They embed binary32
+  `pi/180` and `180/pi`, respectively, so ALINK includes only the conversion
+  named by source plus ordinary multiplication dependencies.
 - `rt_f_sqrt.obj` reads a REAL32 value through zero page `$02/$03`, writes the
   result through `$06/$07`, and handles every non-negative normal,
   subnormal, and signed-zero value using an exact 48-bit scaled radicand and

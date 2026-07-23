@@ -12,11 +12,14 @@ from fractions import Fraction
 from pathlib import Path
 
 from generate_math_runtime import (
+    DEGREES_TO_RADIANS_BITS,
+    RADIANS_TO_DEGREES_BITS,
     abs_module,
     addsub_core_module,
     addsub_wrapper_module,
     ceil_module,
     compare_module,
+    deg_to_rad_module,
     clamp_module,
     divide_module,
     floor_module,
@@ -26,6 +29,7 @@ from generate_math_runtime import (
     minmax_module,
     mod_module,
     multiply_module,
+    rad_to_deg_module,
     round_module,
     sign_module,
     special_value_module,
@@ -376,6 +380,10 @@ def expected_hypot(left: int, right: int) -> int:
     return expected_multiply(largest, root)
 
 
+def expected_angle_scale(value: int, factor: int) -> int:
+    return expected_multiply(value, factor)
+
+
 def expected_clamp(value: int, lower: int, upper: int) -> int:
     if is_nan(value) or is_nan(lower) or is_nan(upper):
         return CANONICAL_QNAN
@@ -445,6 +453,10 @@ def runtime_builders(operation: str):
             compare_module(),
             special,
         ]
+    if operation == "deg_to_rad":
+        return [deg_to_rad_module(), multiply_module(), special]
+    if operation == "rad_to_deg":
+        return [rad_to_deg_module(), multiply_module(), special]
     if operation in ("min", "max"):
         return [
             minmax_module(f"rt_f_{operation}", maximum=operation == "max"),
@@ -547,7 +559,7 @@ def verification_clamp_cases(
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/min/max/clamp code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/angle/min/max/clamp code against exact IEEE "
             "binary32"
         )
     )
@@ -603,6 +615,8 @@ def main() -> int:
             "frac",
             "mod",
             "hypot",
+            "deg_to_rad",
+            "rad_to_deg",
             "min",
             "max",
             "clamp",
@@ -661,6 +675,14 @@ def main() -> int:
                     expected = expected_mod(left, right)
                 elif operation == "hypot":
                     expected = expected_hypot(left, right)
+                elif operation == "deg_to_rad":
+                    expected = expected_angle_scale(
+                        left, DEGREES_TO_RADIANS_BITS
+                    )
+                elif operation == "rad_to_deg":
+                    expected = expected_angle_scale(
+                        left, RADIANS_TO_DEGREES_BITS
+                    )
                 elif operation == "clamp":
                     expected = expected_clamp(left, right, case[2])
                 else:
@@ -677,7 +699,18 @@ def main() -> int:
                 f"rt_f_{operation} {len(image)} linked bytes: "
                 f"{len(operation_cases)} exact edge/random cases passed"
             )
-            if operation in ("sign", "trunc", "floor", "ceil", "round", "frac", "mod", "hypot"):
+            if operation in (
+                "sign",
+                "trunc",
+                "floor",
+                "ceil",
+                "round",
+                "frac",
+                "mod",
+                "hypot",
+                "deg_to_rad",
+                "rad_to_deg",
+            ):
                 alias_completed = subprocess.run(
                     [str(harness_path), str(runtime_path), "alias"],
                     input="".join(
@@ -709,6 +742,14 @@ def main() -> int:
                         if operation == "frac"
                         else expected_mod(left, right)
                         if operation == "mod"
+                        else expected_angle_scale(
+                            left, DEGREES_TO_RADIANS_BITS
+                        )
+                        if operation == "deg_to_rad"
+                        else expected_angle_scale(
+                            left, RADIANS_TO_DEGREES_BITS
+                        )
+                        if operation == "rad_to_deg"
                         else expected_hypot(left, right)
                     )
                     if actual != expected:

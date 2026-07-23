@@ -165,7 +165,7 @@ Treat `vice-action-actc-alink-launch-object-emission-matrix` as the all
 source-backed ACTC object-emission launch matrix; it currently enumerates 195
 non-runtime, non-object-code source shapes.
 Treat `vice-action-alink-prg-matrix` as the broad direct-PRG object/link matrix;
-it currently enumerates 1363 shape probes.
+it currently enumerates 1365 shape probes.
 Treat `vice-action-alink-prg-object-code-matrices` as the focused direct
 object-code graph, behavior, and rejection gate.
 Treat `vice-action-actc-alink-launch-runtime-matrices` as the focused
@@ -219,19 +219,17 @@ implemented as permanent runner-global features.
 
 The current practical path is:
 
-1. Package `DegToRad` and `RadToDeg` as dependency-sized native OBJ modules and
-   prove ALINK includes each routine and its runtime closure only when referenced.
-2. Generalize the Pass U REAL-literal/function path for the remaining portable
+1. Generalize the Pass U REAL-literal/function path for the remaining portable
    MATH1 routines, then package each routine as a link-selected OBJ module.
-3. Widen arrays, pointers, records, typed calls, and recursive frames where
+2. Widen arrays, pointers, records, typed calls, and recursive frames where
    portable programs require them, with explicit C64/REU bounds.
-4. Map portable `MAIN(argc,argv)` to UDOS command-tail storage after native
+3. Map portable `MAIN(argc,argv)` to UDOS command-tail storage after native
    arrays are available; do not copy the Idun upload transport.
-5. Add application `REU BYTE ARRAY` lowering and program-owned source
+4. Add application `REU BYTE ARRAY` lowering and program-owned source
    `OVERLAY` sections; neither is the same as ACTC's internal REU/pass overlays.
-6. Implement ASP1/ABM1-backed `SPRITE`, `MSPRITE`, `BITMAP`, and `MBITMAP`
+5. Implement ASP1/ABM1-backed `SPRITE`, `MSPRITE`, `BITMAP`, and `MBITMAP`
    declarations with relocatable embedded data.
-7. Port expanded GFX1 groups, then implement native ACTSPRITE/ACTBITMAP and
+6. Port expanded GFX1 groups, then implement native ACTSPRITE/ACTBITMAP and
    ACTEDIT F8 resource dispatch.
 8. Add UDOS-appropriate formatting/help workflow parity and retain ACTDBG as
    the native debugging path; profiling remains an optional product decision.

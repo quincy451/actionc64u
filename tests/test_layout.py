@@ -143,21 +143,21 @@ class TestRepoLayout(unittest.TestCase):
         self.assertIn("The constant foundation is complete", parity)
         self.assertIn("round-to-nearest, ties-to-even", parity)
         self.assertIn("Dedicated pass K", parity)
-        self.assertIn("inventories are 1,363 broad direct-PRG shapes", flat_parity)
+        self.assertIn("inventories are 1,365 broad direct-PRG", flat_parity)
         self.assertIn("195 non-runtime source-backed object-emission shapes", flat_parity)
-        self.assertIn("298 compiled-runtime", parity)
-        self.assertIn("fifteen link-selected callable builtins", parity)
-        self.assertIn("remaining 28 MATH1 routines", parity)
+        self.assertIn("300 compiled-runtime", flat_parity)
+        self.assertIn("seventeen link-selected callable builtins", parity)
+        self.assertIn("remaining 26 MATH1 routines", parity)
         self.assertIn("RT_F_FLOOR.OBJ", parity)
         self.assertIn("RT_F_ROUND.OBJ", parity)
         self.assertIn("RT_F_FRAC.OBJ", parity)
         self.assertIn("RT_F_MOD.OBJ", parity)
         self.assertIn("RT_F_HYPOT.OBJ", parity)
-        self.assertIn("857 native ActionC64U unittests", parity)
-        self.assertIn("153 Idun/Alpine unittests", parity)
-        self.assertIn("138 Idun ASan/UBSan tests", parity)
+        self.assertIn("860 native ActionC64U unittests", parity)
+        self.assertIn("154 Idun/Alpine unittests", parity)
+        self.assertIn("139 Idun ASan/UBSan tests", parity)
         self.assertIn("21 Idun direct-PRG tests", parity)
-        self.assertIn("246-test overlay suite and 198-test source-cache suite", parity)
+        self.assertIn("248-test overlay suite and 198-test source-cache suite", parity)
         self.assertIn("Generalize native REAL", parity)
         self.assertIn("MATH1 reachable-only packaging", parity)
         self.assertIn("call-graph pruning", parity)
@@ -187,7 +187,7 @@ class TestRepoLayout(unittest.TestCase):
         self.assertIn("Pass R is 7,334 bytes with 858 bytes free", flat_parity)
         self.assertIn("Pass S is 7,828 bytes with 364 bytes free", flat_parity)
         self.assertIn("Pass T is 8,147 bytes with 45 bytes free", flat_parity)
-        self.assertIn("Pass U is 6,456 bytes with 1,736 bytes free", flat_parity)
+        self.assertIn("Pass U is 6,514 bytes with 1,678 bytes free", flat_parity)
         self.assertIn("complete ACTC compiler, passes 0 through U", parity)
         self.assertIn("The portable products are therefore not yet at full feature parity", parity)
         self.assertNotIn("binary32 folding remains", parity)
@@ -313,6 +313,8 @@ class TestRepoLayout(unittest.TestCase):
             "rt_f_frac",
             "rt_f_mod",
             "rt_f_hypot",
+            "rt_f_deg_to_rad",
+            "rt_f_rad_to_deg",
             "rt_f_min",
             "rt_f_max",
             "rt_f_clamp",

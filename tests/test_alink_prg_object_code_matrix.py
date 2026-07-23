@@ -1093,9 +1093,9 @@ class TestAlinkPrgObjectCodeMatrix(unittest.TestCase):
         self.assertEqual(case["source"].replace("\r", "\n"), fixture)
         self.assertIn(f"\t{shape} \\\n", self.make_text)
         self.assertIn("q 0 0 7 11\nq 1 0 14 11\nq 2 0 21 6\n", fragments)
-        self.assertIn("x main 0 584\nx degtorad 172 162\nx radtodeg 334 162\n", fragments)
-        self.assertIn("r 73 x degtorad\n", fragments)
-        self.assertIn("r 107 x radtodeg\n", fragments)
+        self.assertIn("x main 0 584\nx locald2r 172 162\nx localr2d 334 162\n", fragments)
+        self.assertIn("r 73 x locald2r\n", fragments)
+        self.assertIn("r 107 x localr2d\n", fragments)
         self.assertIn("A9 DB 91 02 C8 A9 0F 91 02 C8 A9 49 91 02", fragments)
         self.assertEqual(case["screen_fragments"], ["3.141592", "180"])
         self.assertEqual(
@@ -1111,6 +1111,57 @@ class TestAlinkPrgObjectCodeMatrix(unittest.TestCase):
         self.assertIn("LIB/RT_F_ADD.OBJ", case["unexpected_alink_loads"])
         self.assertIn("LIB/RT_F_SQRT.OBJ", case["unexpected_alink_loads"])
         self.assertTrue(case["expected_tail_from_compiled_object"])
+
+    def test_math1_angle_builtins_are_independent_link_selected_modules(self) -> None:
+        sys.path.insert(0, str(self.workspace / "udos" / "tools"))
+        import run_action_alink_prg_probe as probe
+
+        for shape, expected, absent, screen in (
+            (
+                "actc_runtime_math1_deg_to_rad_split_linked",
+                "RT_F_DEG_TO_RAD",
+                "RT_F_RAD_TO_DEG",
+                "3.141592",
+            ),
+            (
+                "actc_runtime_math1_rad_to_deg_split_linked",
+                "RT_F_RAD_TO_DEG",
+                "RT_F_DEG_TO_RAD",
+                "57.2957763671875",
+            ),
+        ):
+            with self.subTest(shape=shape):
+                case = probe.DIRECT_PRG_CASES[shape]
+                self.assertIn(f"\t{shape} \\\n", self.make_text)
+                self.assertIn(
+                    f"LIB/{expected}.OBJ",
+                    case["expected_alink_loads"],
+                )
+                self.assertIn(
+                    f"LIB/{absent}.OBJ",
+                    case["unexpected_alink_loads"],
+                )
+                self.assertIn(
+                    f"rt_f_{expected[5:].lower()}",
+                    case["runtime_library_objects"],
+                )
+                self.assertIn(
+                    f"rt_f_{absent[5:].lower()}",
+                    case["runtime_library_objects"],
+                )
+                self.assertIn(
+                    "LIB/RT_F_MUL.OBJ",
+                    case["expected_alink_loads"],
+                )
+                self.assertIn(
+                    "LIB/RT_F_SPECIAL.OBJ",
+                    case["expected_alink_loads"],
+                )
+                object_contract = "".join(case["expected_object_fragments"]).upper()
+                self.assertIn(f"U {expected}\n", object_contract)
+                self.assertNotIn(f"U {absent}\n", object_contract)
+                self.assertTrue(case["expected_tail_from_compiled_object"])
+                self.assertEqual(case["screen_fragments"], [screen])
 
     def test_full_range_multiply_probe_forces_staged_root_object_path(self) -> None:
         sys.path.insert(0, str(self.workspace / "udos" / "tools"))

@@ -1,0 +1,13 @@
+OBJ1
+x rt_f_deg_to_rad 0 20
+x RT_F_DEG_TO_RAD_P 14 1
+x RT_F_DEG_TO_RAD_PH 15 1
+x RT_F_DEG_TO_RAD_K 16 1
+b u0M
+u rt_f_mul
+m AD 00 00 85 04 AD 00 00 85 05 20 00 00 60 00 00 35 FA 8E 3C
+r 11 u0
+r 1 x RT_F_DEG_TO_RAD_P
+r 6 x RT_F_DEG_TO_RAD_PH
+r 14 x RT_F_DEG_TO_RAD_K
+n rt_f_deg_to_rad

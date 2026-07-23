@@ -46,6 +46,8 @@ class TestMathRuntime(unittest.TestCase):
             "frac",
             "mod",
             "hypot",
+            "deg_to_rad",
+            "rad_to_deg",
             "min",
             "max",
             "clamp",

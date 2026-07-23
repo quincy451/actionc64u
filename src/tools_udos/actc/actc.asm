@@ -13742,7 +13742,7 @@ build_object_content_with_overlay_machine_failure:
     ldy #>msg_emit_overlay
     jmp fail_with_ptr
 build_object_content_with_overlay_candidates:
-    ldx #$13
+    ldx #$14
 build_object_content_with_overlay_candidate_loop:
     lda emit_overlay_pass_table,x
     stx build_object_content_with_overlay_restore_index+1
@@ -13873,6 +13873,7 @@ emit_overlay_pass_table:
     .byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_EXTENDED_CONTROL_OBJECT
     .byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_FOR_OBJECT
     .byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_FOR_DYNAMIC_OBJECT
+    .byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_LITERAL_OBJECT
 .endif
 
 build_object_content_done_entry:

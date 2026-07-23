@@ -1971,3 +1971,27 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   composition, mixed loop/conditional nesting, returns inside loops, controls
   beyond four or depth four, unrestricted call trees, recursive/reentrant
   frames, mixed types, arbitrary signatures, and recursion remain pending.
+
+## 2026-07-22 Folded REAL Literals And One-Parameter Functions
+
+- Added pass U, `ACTC_OVLU.BIN` (id 30), for folded binary32 literals in the
+  bounded straight-line REAL-function form. It accepts one- or two-REAL-
+  parameter metadata, binds and calls the actual arity, and materializes each
+  low-word/high-word constant pair into hidden four-byte target storage.
+- Added byte-identical `math1_angle_conversions_postfix.act` fixtures with
+  project-local `DegToRad` and `RadToDeg` functions. Native ACTC emits pi as
+  `DB 0F 49 40`; ALINK loads only conversion, divide, multiply, print, and
+  exceptional-value closure modules. The direct PRG prints
+  `3.1415927410125732421875` and `180` in VICE. Idun ACTC/ALINK compiles and
+  links the same source.
+- Passes L through T remain byte-identical; pass T retains SHA-256
+  `e07b16dab80f22685e86c0b50c1018862ed5721eca1c07d66151ead5727fe3d3`.
+  Pass U is 6,456 bytes with 1,736 bytes free under its dedicated 1,536-byte
+  gate and has SHA-256
+  `61ccf0f12458f2ce220d36f0677afb93ad34eee639957eecb377e4c342f4a275`.
+- Current native inventories are 1,363 broad direct-PRG and 195 non-runtime
+  source-backed shapes; the compiled-runtime relocation oracle remains 298.
+- This delivers the lowering prerequisite for the two angle conversions, not
+  their public native MATH1 packaging. Dependency-sized `DegToRad` and
+  `RadToDeg` OBJ modules, the other 26 missing MATH1 routines, general REAL
+  bodies/calls, and recursive/reentrant frames remain pending.

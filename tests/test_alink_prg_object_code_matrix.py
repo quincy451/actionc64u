@@ -1075,6 +1075,43 @@ class TestAlinkPrgObjectCodeMatrix(unittest.TestCase):
         self.assertIn("LIB/RT_F_SPECIAL.OBJ", case["expected_alink_loads"])
         self.assertTrue(case["expected_tail_from_compiled_object"])
 
+    def test_math1_angle_conversions_use_literal_real_one_parameter_functions(self) -> None:
+        sys.path.insert(0, str(self.workspace / "udos" / "tools"))
+        import run_action_alink_prg_probe as probe
+
+        shape = "actc_math1_angle_conversions_postfix_linked"
+        case = probe.DIRECT_PRG_CASES[shape]
+        fragments = "".join(case["expected_object_fragments"])
+        fixture = (
+            self.workspace
+            / "actionc64u"
+            / "tests"
+            / "parity"
+            / "math1_angle_conversions_postfix.act"
+        ).read_text(encoding="ascii")
+
+        self.assertEqual(case["source"].replace("\r", "\n"), fixture)
+        self.assertIn(f"\t{shape} \\\n", self.make_text)
+        self.assertIn("q 0 0 7 11\nq 1 0 14 11\nq 2 0 21 6\n", fragments)
+        self.assertIn("x main 0 584\nx degtorad 172 162\nx radtodeg 334 162\n", fragments)
+        self.assertIn("r 73 x degtorad\n", fragments)
+        self.assertIn("r 107 x radtodeg\n", fragments)
+        self.assertIn("A9 DB 91 02 C8 A9 0F 91 02 C8 A9 49 91 02", fragments)
+        self.assertEqual(case["screen_fragments"], ["3.141592", "180"])
+        self.assertEqual(
+            case["expected_alink_loads"],
+            [
+                "LIB/RT_I_TO_F.OBJ",
+                "LIB/RT_F_DIV.OBJ",
+                "LIB/RT_F_MUL.OBJ",
+                "LIB/RT_PRINT_F.OBJ",
+                "LIB/RT_F_SPECIAL.OBJ",
+            ],
+        )
+        self.assertIn("LIB/RT_F_ADD.OBJ", case["unexpected_alink_loads"])
+        self.assertIn("LIB/RT_F_SQRT.OBJ", case["unexpected_alink_loads"])
+        self.assertTrue(case["expected_tail_from_compiled_object"])
+
     def test_full_range_multiply_probe_forces_staged_root_object_path(self) -> None:
         sys.path.insert(0, str(self.workspace / "udos" / "tools"))
         import run_action_alink_prg_probe as probe

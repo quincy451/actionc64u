@@ -11,6 +11,9 @@ NRP_ENABLE_FOR = ACTC_EMIT_NATIVE_REAL_POSTFIX_FOR_ONLY + NRP_ENABLE_FOR_DYNAMIC
 NRP_ENABLE_GENERIC_LOOP = ACTC_EMIT_NATIVE_REAL_POSTFIX_LOOP_ONLY + NRP_ENABLE_LOOP_EXIT
 NRP_ENABLE_LOOP = NRP_ENABLE_GENERIC_LOOP + NRP_ENABLE_FOR
 NRP_ENABLE_CONDITION = NRP_ENABLE_CONTROL + NRP_ENABLE_LOOP
+NRP_ENABLE_LITERAL = ACTC_EMIT_NATIVE_REAL_POSTFIX_LITERAL_ONLY
+NRP_ENABLE_VARIABLE_ARITY = NRP_ENABLE_LITERAL
+NRP_ENABLE_WORD_VALUES = NRP_ENABLE_FOR + NRP_ENABLE_LITERAL
 
 NRP_MODE_ANALYZE = 0
 NRP_MODE_MACHINE = 1
@@ -77,6 +80,9 @@ native_real_postfix_detect:
     sta nrp_program_mode
     sta nrp_call_edges
     sta nrp_call_edges+1
+.if NRP_ENABLE_LITERAL
+    sta nrp_literal_seen
+.endif
 .if NRP_ENABLE_EARLY_RETURN
     sta nrp_early_return_seen
 .endif
@@ -196,8 +202,22 @@ native_real_postfix_detect_function_meta_loop:
     jsr load_context_ptr_to_work_zp
     ldy #$00
     lda (ACTC_OVERLAY_WORK_ZP),y
+.if NRP_ENABLE_VARIABLE_ARITY
+    sta nrp_saved_index
+    and #(ACTC_PROC_META_FUNCTION | ACTC_PROC_META_REAL_RETURN)
+    cmp #(ACTC_PROC_META_FUNCTION | ACTC_PROC_META_REAL_RETURN)
+    jne native_real_postfix_detect_no
+    lda nrp_saved_index
+    and #ACTC_PROC_META_PARAM_COUNT_MASK
+    jeq native_real_postfix_detect_no
+    cmp #$03
+    jcs native_real_postfix_detect_no
+    ldx nrp_function_index
+    sta nrp_function_param_count,x
+.else
     cmp #(ACTC_PROC_META_FUNCTION | ACTC_PROC_META_REAL_RETURN | 2)
     jne native_real_postfix_detect_no
+.endif
     iny
     lda (ACTC_OVERLAY_WORK_ZP),y
     cmp nrp_expected_var_index
@@ -208,7 +228,11 @@ native_real_postfix_detect_function_meta_loop:
     lda (ACTC_OVERLAY_WORK_ZP),y
     sta nrp_function_local_count,x
     clc
+.if NRP_ENABLE_VARIABLE_ARITY
+    adc nrp_function_param_count,x
+.else
     adc #$02
+.endif
     jcs native_real_postfix_detect_no
     clc
     adc nrp_expected_var_index
@@ -384,6 +408,12 @@ native_real_postfix_analyze_done:
     lda nrp_if_seen
     ora nrp_if_seen+1
     jeq native_real_postfix_detect_no
+.elseif NRP_ENABLE_LITERAL
+    lda nrp_program_mode
+    cmp #NRP_PROGRAM_REAL_FUNCTION
+    jne native_real_postfix_detect_no
+    lda nrp_literal_seen
+    jeq native_real_postfix_detect_no
 .endif
     lda nrp_nested
     jeq native_real_postfix_detect_no
@@ -507,8 +537,15 @@ nrp_parse_body:
     lda nrp_proc_index
     cmp nrp_function_count
     bcs :+
+.if NRP_ENABLE_VARIABLE_ARITY
+    tax
+    lda nrp_function_param_count,x
+    sta nrp_param_count
+    sta nrp_param_binds_left
+.else
     lda #$02
     sta nrp_param_binds_left
+.endif
 :
 nrp_parse_body_loop:
     jsr nrp_read_body
@@ -596,7 +633,7 @@ nrp_parse_push_int:
     jcc nrp_parse_body_fail
     cmp #36
     jcs nrp_parse_body_fail
-.if NRP_ENABLE_FOR
+.if NRP_ENABLE_WORD_VALUES
     sta nrp_literal_index
     jsr nrp_load_literal_word
     jcc nrp_parse_body_fail
@@ -884,12 +921,31 @@ nrp_parse_local_call:
     sta nrp_nested
     jsr nrp_record_call_edge
 nrp_parse_local_call_allowed:
+.if NRP_ENABLE_VARIABLE_ARITY
+    ldx nrp_call_export_index
+    lda nrp_function_param_count,x
+    sta nrp_call_param_count
+    cmp #$02
+    bne nrp_parse_local_call_first_arg
+.endif
     jsr nrp_pop_real_to_operand2
     jcc nrp_parse_body_fail
+nrp_parse_local_call_first_arg:
     jsr nrp_pop_real_to_operand1
     jcc nrp_parse_body_fail
     ; A temporary consumed by another local call requires Pass L ownership.
+.if NRP_ENABLE_VARIABLE_ARITY
+    lda nrp_call_param_count
+    cmp #$02
+    bne :+
+.endif
     jsr nrp_mark_nested_operands_2
+.if NRP_ENABLE_VARIABLE_ARITY
+    jmp :++
+:
+    jsr nrp_mark_nested_operand1
+:
+.endif
     lda nrp_preserve_frame
     beq :+
     jsr nrp_emit_frame_save
@@ -899,11 +955,19 @@ nrp_parse_local_call_allowed:
     lda nrp_operand1_index
     sta nrp_name_index
     jsr nrp_emit_push_name_pointer
+.if NRP_ENABLE_VARIABLE_ARITY
+    lda nrp_call_param_count
+    cmp #$02
+    bne :+
+.endif
     lda nrp_operand2_kind
     sta nrp_name_kind
     lda nrp_operand2_index
     sta nrp_name_index
     jsr nrp_emit_push_name_pointer
+.if NRP_ENABLE_VARIABLE_ARITY
+:
+.endif
     jsr nrp_emit_call_export
     lda nrp_preserve_frame
     beq nrp_parse_local_call_copy_return
@@ -1031,7 +1095,9 @@ nrp_map_condition_store:
 nrp_map_condition_no:
     clc
     rts
+.endif
 
+.if NRP_ENABLE_CONDITION + NRP_ENABLE_WORD_VALUES
 nrp_load_literal_word:
     lda #ACTC_OVERLAY_CTX_INT_COUNT_PTR_LO
     jsr load_count_from_context
@@ -1791,7 +1857,7 @@ nrp_push_value:
     sta nrp_stack_kind,y
     txa
     sta nrp_stack_index,y
-.if NRP_ENABLE_FOR
+.if NRP_ENABLE_WORD_VALUES
     lda nrp_value_lo
     sta nrp_stack_value_lo,y
     lda nrp_value_hi
@@ -1810,7 +1876,7 @@ nrp_pop_value:
     beq nrp_pop_value_no
     dec nrp_stack_depth
     ldy nrp_stack_depth
-.if NRP_ENABLE_FOR
+.if NRP_ENABLE_WORD_VALUES
     lda nrp_stack_value_lo,y
     sta nrp_value_lo
     lda nrp_stack_value_hi,y
@@ -1824,6 +1890,66 @@ nrp_pop_value_no:
     clc
     rts
 
+.if NRP_ENABLE_LITERAL
+nrp_pop_real_to_operand1:
+    jsr nrp_pop_real_value
+    bcc nrp_pop_real_no
+    sta nrp_operand1_kind
+    stx nrp_operand1_index
+    sec
+    rts
+nrp_pop_real_to_operand2:
+    jsr nrp_pop_real_value
+    bcc nrp_pop_real_no
+    sta nrp_operand2_kind
+    stx nrp_operand2_index
+    sec
+    rts
+nrp_pop_real_to_operand3:
+    jsr nrp_pop_real_value
+    bcc nrp_pop_real_no
+    sta nrp_operand3_kind
+    stx nrp_operand3_index
+    sec
+    rts
+nrp_pop_real_value:
+    jsr nrp_pop_value
+    bcc nrp_pop_real_no
+    cmp #NRP_VALUE_VAR
+    beq nrp_pop_real_value_ok
+    cmp #NRP_VALUE_TEMP
+    beq nrp_pop_real_value_ok
+.if NRP_ENABLE_LITERAL
+    cmp #NRP_VALUE_INT
+    bne nrp_pop_real_no
+    lda nrp_value_lo
+    sta nrp_real_literal_b2
+    lda nrp_value_hi
+    sta nrp_real_literal_b3
+    jsr nrp_pop_value
+    bcc nrp_pop_real_no
+    cmp #NRP_VALUE_INT
+    bne nrp_pop_real_no
+    lda nrp_value_lo
+    sta nrp_real_literal_b0
+    lda nrp_value_hi
+    sta nrp_real_literal_b1
+    jsr nrp_allocate_temp
+    bcc nrp_pop_real_no
+    stx nrp_dest_index
+    jsr nrp_emit_real_literal_temp
+    lda #$01
+    sta nrp_literal_seen
+    sta nrp_nested
+    lda #NRP_VALUE_TEMP
+    ldx nrp_dest_index
+.else
+    bne nrp_pop_real_no
+.endif
+nrp_pop_real_value_ok:
+    sec
+    rts
+.else
 nrp_pop_real_to_operand1:
     jsr nrp_pop_value
     bcc nrp_pop_real_no
@@ -1860,6 +1986,7 @@ nrp_pop_real_to_operand3:
     stx nrp_operand3_index
     sec
     rts
+.endif
 nrp_pop_real_no:
     clc
     rts
@@ -1938,6 +2065,41 @@ nrp_classify_external_yes:
     lda nrp_helper_kind,x
     sec
     rts
+
+.if NRP_ENABLE_LITERAL
+nrp_emit_real_literal_temp:
+    lda #NRP_VALUE_TEMP
+    sta nrp_name_kind
+    lda nrp_dest_index
+    sta nrp_name_index
+    lda #$02
+    jsr nrp_emit_pointer
+    lda nrp_real_literal_b0
+    sta nrp_literal_store_template+3
+    lda nrp_real_literal_b1
+    sta nrp_literal_store_template+8
+    lda nrp_real_literal_b2
+    sta nrp_literal_store_template+13
+    lda nrp_real_literal_b3
+    sta nrp_literal_store_template+18
+    lda nrp_mode
+    cmp #NRP_MODE_MACHINE
+    beq nrp_emit_real_literal_temp_machine
+    lda #(nrp_literal_store_template_end-nrp_literal_store_template)
+    jmp nrp_advance_code
+nrp_emit_real_literal_temp_machine:
+    lda #$00
+    sta nrp_saved_index
+nrp_emit_real_literal_temp_machine_loop:
+    ldx nrp_saved_index
+    lda nrp_literal_store_template,x
+    jsr nrp_emit_machine_byte
+    inc nrp_saved_index
+    lda nrp_saved_index
+    cmp #(nrp_literal_store_template_end-nrp_literal_store_template)
+    bcc nrp_emit_real_literal_temp_machine_loop
+    rts
+.endif
 
 nrp_emit_conversion:
     lda #NRP_VALUE_TEMP
@@ -2364,7 +2526,11 @@ nrp_emit_loop_back_jump_machine:
 nrp_emit_param_bind:
     ; Preserve JSR's return address while reverse-popping caller argument pointers.
     lda nrp_param_binds_left
+.if NRP_ENABLE_VARIABLE_ARITY
+    cmp nrp_param_count
+.else
     cmp #$02
+.endif
     bne :+
     jsr nrp_emit_save_return
 :
@@ -2442,7 +2608,11 @@ nrp_emit_frame_save:
     ldx nrp_proc_index
     lda nrp_function_local_count,x
     clc
+.if NRP_ENABLE_VARIABLE_ARITY
+    adc nrp_function_param_count,x
+.else
     adc #$02
+.endif
     sta nrp_frame_slots_left
 nrp_emit_frame_save_var_loop:
     lda #NRP_VALUE_VAR
@@ -2522,7 +2692,11 @@ nrp_emit_frame_restore_vars:
     ldx nrp_proc_index
     lda nrp_function_local_count,x
     clc
+.if NRP_ENABLE_VARIABLE_ARITY
+    adc nrp_function_param_count,x
+.else
     adc #$02
+.endif
     sta nrp_frame_slots_left
     clc
     adc nrp_param_base
@@ -3629,6 +3803,15 @@ nrp_helper_kind:
 nrp_call_edge_bits:
     .byte $01,$02
 
+.if NRP_ENABLE_LITERAL
+nrp_literal_store_template:
+    .byte $A0,$00,$A9,$00,$91,$02,$C8
+    .byte $A9,$00,$91,$02,$C8
+    .byte $A9,$00,$91,$02,$C8
+    .byte $A9,$00,$91,$02
+nrp_literal_store_template_end:
+.endif
+
 .if NRP_ENABLE_FOR
 nrp_for_load_ax_template:
     .byte $A0,$01,$B1,$06,$AA,$88,$B1,$06
@@ -3703,11 +3886,13 @@ nrp_data_slots: .res 1
 nrp_stack_depth: .res 1
 nrp_stack_kind: .res NRP_STACK_MAX
 nrp_stack_index: .res NRP_STACK_MAX
-.if NRP_ENABLE_FOR
+.if NRP_ENABLE_WORD_VALUES
 nrp_stack_value_lo: .res NRP_STACK_MAX
 nrp_stack_value_hi: .res NRP_STACK_MAX
 nrp_value_lo: .res 1
 nrp_value_hi: .res 1
+.endif
+.if NRP_ENABLE_FOR
 nrp_var_kind: .res NRP_TEMP_MAX
 .endif
 nrp_pending_load: .res 1
@@ -3722,6 +3907,11 @@ nrp_param_base: .res 1
 nrp_expected_var_index: .res 1
 nrp_function_param_base: .res NRP_FUNCTION_MAX
 nrp_function_local_count: .res NRP_FUNCTION_MAX
+.if NRP_ENABLE_VARIABLE_ARITY
+nrp_function_param_count: .res NRP_FUNCTION_MAX
+nrp_param_count: .res 1
+nrp_call_param_count: .res 1
+.endif
 nrp_call_edges: .res NRP_FUNCTION_MAX
 nrp_param_binds_left: .res 1
 nrp_preserve_frame: .res 1
@@ -3847,6 +4037,13 @@ nrp_rejected_call_graph: .res 1
 nrp_literal_index: .res 1
 nrp_literal_lo: .res 1
 nrp_literal_hi: .res 1
+.if NRP_ENABLE_LITERAL
+nrp_literal_seen: .res 1
+nrp_real_literal_b0: .res 1
+nrp_real_literal_b1: .res 1
+nrp_real_literal_b2: .res 1
+nrp_real_literal_b3: .res 1
+.endif
 .if NRP_ENABLE_FOR
 nrp_conversion_source_kind: .res 1
 nrp_conversion_word_index: .res 1

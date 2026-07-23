@@ -31,6 +31,7 @@ class TestActcOverlay(unittest.TestCase):
     ACTC_NATIVE_REAL_POSTFIX_LOOP_EXIT_EMIT_MIN_HEADROOM = 0x300
     ACTC_NATIVE_REAL_POSTFIX_FOR_EMIT_MIN_HEADROOM = 0x100
     ACTC_NATIVE_REAL_POSTFIX_FOR_DYNAMIC_EMIT_MIN_HEADROOM = 0x20
+    ACTC_NATIVE_REAL_POSTFIX_LITERAL_EMIT_MIN_HEADROOM = 0x600
     ACTC_OVERLAY_WINDOW_SIZE = 0x2000
     ACTC_PREPROCESS_CODE_WINDOW_SIZE = 0x2000
 
@@ -220,8 +221,9 @@ class TestActcOverlay(unittest.TestCase):
         self.assertIn("ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_LOOP_EXIT_OBJECT = $1B", overlay_abi_text)
         self.assertIn("ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_FOR_OBJECT = $1C", overlay_abi_text)
         self.assertIn("ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_FOR_DYNAMIC_OBJECT = $1D", overlay_abi_text)
-        self.assertIn("ACTC_OVERLAY_PASS_COUNT = $1E", overlay_abi_text)
-        self.assertIn("ldx #$13\nbuild_object_content_with_overlay_candidate_loop:", actc_text)
+        self.assertIn("ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_LITERAL_OBJECT = $1E", overlay_abi_text)
+        self.assertIn("ACTC_OVERLAY_PASS_COUNT = $1F", overlay_abi_text)
+        self.assertIn("ldx #$14\nbuild_object_content_with_overlay_candidate_loop:", actc_text)
         self.assertIn("cmp #10\n    bcc :+", actc_text)
         self.assertIn(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_OBJECT", actc_text)
         self.assertIn(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_WHILE_OBJECT", actc_text)
@@ -239,6 +241,7 @@ class TestActcOverlay(unittest.TestCase):
         self.assertIn(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_LOOP_EXIT_OBJECT", actc_text)
         self.assertIn(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_FOR_OBJECT", actc_text)
         self.assertIn(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_FOR_DYNAMIC_OBJECT", actc_text)
+        self.assertIn(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_LITERAL_OBJECT", actc_text)
         self.assertLess(
             actc_text.index(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_EXTENDED_CONTROL_OBJECT"),
             actc_text.index(".byte ACTC_OVERLAY_PASS_EMIT_NATIVE_REAL_POSTFIX_FOR_OBJECT"),
@@ -682,6 +685,15 @@ class TestActcOverlay(unittest.TestCase):
                 )
             ]
         )
+        self.run_checked(
+            [
+                str(
+                    self.root
+                    / "tools"
+                    / "build_actc_overlay_emit_native_real_postfix_literal_object.sh"
+                )
+            ]
+        )
 
     def assert_body_overlay_map_keeps_headroom(self, map_name: str, overlay_name: str) -> None:
         map_text = (self.build_dir / map_name).read_text(encoding="ascii")
@@ -799,7 +811,7 @@ class TestActcOverlay(unittest.TestCase):
             self.last_emit_overlay_pass = summary["dumps"]["actc_overlay_requested_pass"]
             self.assertIn(
                 self.last_emit_overlay_pass,
-                ([5], [8], [9], [10], [11], [12], [13], [14], [15], [16], [17], [19], [20], [21], [22], [23], [24], [25], [26], [27], [28], [29]),
+                ([5], [8], [9], [10], [11], [12], [13], [14], [15], [16], [17], [19], [20], [21], [22], [23], [24], [25], [26], [27], [28], [29], [30]),
                 msg=result.stdout,
             )
             self.assertTrue(
@@ -9569,6 +9581,52 @@ class TestActcOverlay(unittest.TestCase):
             obj,
         )
 
+    def test_real_function_literals_use_pass_u_with_one_parameter_frames(self) -> None:
+        source = (
+            self.root
+            / "tests"
+            / "parity"
+            / "math1_angle_conversions_postfix.act"
+        ).read_text(encoding="ascii").replace("\n", "\r")
+        obj = self.compile_overlay_object(
+            source,
+            "actc-overlay-math1-angle-conversions",
+            extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [30])
+        self.assertIn("q 0 0 7 11\nq 1 0 14 11\nq 2 0 21 6\n", obj)
+        self.assertIn(
+            "V p r 0 4 0 7 25\n"
+            "V l r 0 5 0 8 6\n"
+            "V l r 0 6 0 9 6\n"
+            "V p r 1 7 0 14 25\n"
+            "V l r 1 8 0 15 6\n"
+            "V l r 1 9 0 16 6\n",
+            obj,
+        )
+        self.assertIn(
+            "x main 0 584\n"
+            "x degtorad 172 162\n"
+            "x radtodeg 334 162\n"
+            "x __idata 496 40\n",
+            obj,
+        )
+        self.assertEqual(obj.count("b u0u1u2u3M\n"), 3)
+        body_lines = [line for line in obj.splitlines() if line.startswith("b ")]
+        self.assertTrue(all(re.fullmatch(r"b (?:u[0-9A-Za-z])*M", line) for line in body_lines))
+        self.assertEqual(
+            obj.count(
+                "A0 00 A9 DB 91 02 C8 A9 0F 91 02 C8 "
+                "A9 49 91 02 C8 A9 40 91 02"
+            ),
+            3,
+        )
+        self.assertIn("r 73 x degtorad\n", obj)
+        self.assertIn("r 107 x radtodeg\n", obj)
+        self.assertIn("u rt_i_to_f\nu rt_f_div\nu rt_f_mul\nu rt_print_f\n", obj)
+        self.assertIn("i 4059\ni 16457\n", obj)
+
     def test_real_function_loop_pass_owns_depth_four_and_declines_fifth_loop(self) -> None:
         def nested_loop_source(depth: int) -> str:
             return (
@@ -11498,6 +11556,44 @@ class TestActcOverlay(unittest.TestCase):
         self.assertIn(".native_real_postfix_detect", labels)
         self.assertIn(".nrp_for_dynamic_seen_any", labels)
         self.assertIn(".nrp_for_final_temp", labels)
+
+    def test_native_real_postfix_literal_emit_object_overlay_builds_with_expected_header(self) -> None:
+        self.require_toolchain()
+        self.run_checked(
+            [
+                str(
+                    self.root
+                    / "tools"
+                    / "build_actc_overlay_emit_native_real_postfix_literal_object.sh"
+                )
+            ]
+        )
+
+        overlay = self.build_dir / "ACTC_OVLU.BIN"
+        data = overlay.read_bytes()
+        self.assertGreaterEqual(len(data), 18)
+        self.assertEqual(data[0:4], b"ACOV")
+        self.assertEqual(data[4], self.ACTC_OVERLAY_ABI_VERSION)
+        self.assertEqual(data[5], 30)
+
+        load_base = data[6] | (data[7] << 8)
+        entry = data[8] | (data[9] << 8)
+        length = data[10] | (data[11] << 8)
+        self.assertEqual(load_base, 0xA000)
+        self.assertEqual(entry, 0xA000 + 14)
+        self.assertEqual(length, len(data))
+        self.assert_emit_overlay_map_keeps_headroom(
+            "actc_overlay_emit_native_real_postfix_literal_object.map",
+            "ACTC_OVLU.BIN",
+            self.ACTC_NATIVE_REAL_POSTFIX_LITERAL_EMIT_MIN_HEADROOM,
+        )
+        labels = (
+            self.build_dir
+            / "actc_overlay_emit_native_real_postfix_literal_object.labels"
+        ).read_text(encoding="ascii")
+        self.assertIn(".native_real_postfix_detect", labels)
+        self.assertIn(".nrp_literal_seen", labels)
+        self.assertIn(".nrp_function_param_count", labels)
 
     def test_native_real_while_emit_object_overlay_builds_with_expected_header(self) -> None:
         self.require_toolchain()

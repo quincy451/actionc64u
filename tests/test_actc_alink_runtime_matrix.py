@@ -1872,6 +1872,7 @@ class TestActcAlinkRuntimeMatrix(unittest.TestCase):
             "ACTION_ACTC_ALINK_MATH_RUNTIME_SHAPES",
         )
         self.assertIn("real_const_printre_folded", all_math_shapes)
+        self.assertIn("actc_math1_angle_conversions_postfix_linked", all_math_shapes)
 
         direct_math_shapes = self._makefile_shape_group(
             self.make_text,

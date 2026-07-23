@@ -387,7 +387,12 @@ write_proc_export_decl_fail:
 write_proc_local_var_decl:
     lda proc_flags_current
     and #ACTC_PROC_META_MACHINE
-    bne write_proc_local_var_decl_fail
+    beq :+
+    jmp write_proc_local_var_decl_fail
+:
+    lda #$00
+    sta proc_local_decl_grouped_current
+write_proc_local_var_decl_loop:
     jsr skip_inline_spaces
     jsr write_var_debug_offset_window
     jsr clear_var_name_window
@@ -401,9 +406,34 @@ write_proc_local_var_decl:
     bcc write_proc_local_var_decl_fail
     ldx var_total_count
     jsr call_store_var_debug_offset
+    jsr skip_inline_spaces
+    lda #','
+    jsr overlay_source_match_expected_char
+    bcc write_proc_local_var_decl_comma
+    lda proc_local_decl_grouped_current
+    beq write_proc_local_var_decl_validate_tail
+    jsr require_line_end
+    bcs write_proc_local_var_decl_fail
+    jmp write_proc_local_var_decl_store_final
+write_proc_local_var_decl_validate_tail:
     jsr validate_decl_tail
     bcs write_proc_local_var_decl_fail
+write_proc_local_var_decl_store_final:
     jsr clear_decl_init_current
+    jsr write_proc_local_var_decl_store
+    rts
+write_proc_local_var_decl_comma:
+    lda #','
+    jsr overlay_source_consume_expected_char
+    bcs write_proc_local_var_decl_fail
+    lda #$01
+    sta proc_local_decl_grouped_current
+    jsr clear_decl_init_current
+    jsr write_proc_local_var_decl_store
+    bcs write_proc_local_var_decl_fail
+    jmp write_proc_local_var_decl_loop
+
+write_proc_local_var_decl_store:
     jsr write_var_meta_window
     ldx var_total_count
     jsr store_var_name_cache_x
@@ -417,7 +447,6 @@ write_proc_local_var_decl:
     ldx current_proc_index
     jsr call_store_proc_meta
     clc
-write_proc_local_var_decl_done:
     rts
 write_proc_local_var_decl_fail:
     sec
@@ -3449,6 +3478,8 @@ proc_param_base_current:
 proc_local_count_current:
     .byte $00
 proc_local_base_current:
+    .byte $00
+proc_local_decl_grouped_current:
     .byte $00
 routine_binding_current:
     .byte $00

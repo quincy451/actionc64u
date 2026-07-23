@@ -1112,6 +1112,34 @@ class TestAlinkPrgObjectCodeMatrix(unittest.TestCase):
         self.assertIn("LIB/RT_F_SQRT.OBJ", case["unexpected_alink_loads"])
         self.assertTrue(case["expected_tail_from_compiled_object"])
 
+    def test_literal_control_grouped_locals_use_combined_pass_u_object(self) -> None:
+        sys.path.insert(0, str(self.workspace / "udos" / "tools"))
+        import run_action_alink_prg_probe as probe
+
+        shape = "actc_real_function_literal_clamp_comma_locals_postfix_linked"
+        case = probe.DIRECT_PRG_CASES[shape]
+        fragments = "".join(case["expected_object_fragments"])
+        fixture = (
+            self.workspace
+            / "actionc64u"
+            / "tests"
+            / "parity"
+            / "real_function_literal_clamp_comma_locals_postfix.act"
+        ).read_text(encoding="ascii")
+
+        self.assertEqual(case["source"].replace("\r", "\n"), fixture)
+        self.assertIn(f"\t{shape} \\\n", self.make_text)
+        self.assertIn("REAL PRODUCT,LOWER,UPPER,ZEROLOCAL", case["source"])
+        self.assertIn("x limit 243 282\n", fragments)
+        for label in ("__rf00", "__rf01", "__rf02"):
+            self.assertIn(f"x {label} ", fragments)
+        self.assertIn("u rt_f_mul\nu rt_f_cmp\n", fragments)
+        self.assertEqual(case["screen_fragments"], ["-1", "0", "1"])
+        self.assertIn("LIB/RT_F_MUL.OBJ", case["expected_alink_loads"])
+        self.assertIn("LIB/RT_F_CMP.OBJ", case["expected_alink_loads"])
+        self.assertIn("LIB/RT_F_SPECIAL.OBJ", case["expected_alink_loads"])
+        self.assertTrue(case["expected_tail_from_compiled_object"])
+
     def test_math1_angle_builtins_are_independent_link_selected_modules(self) -> None:
         sys.path.insert(0, str(self.workspace / "udos" / "tools"))
         import run_action_alink_prg_probe as probe

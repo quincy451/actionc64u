@@ -392,7 +392,16 @@ native_real_postfix_analyze_done:
     jsr nrp_validate_call_graph
     jcc native_real_postfix_detect_no
 :
-.if NRP_ENABLE_FOR_DYNAMIC
+.if NRP_ENABLE_LITERAL
+    lda nrp_angle_seen
+    bne :+
+    lda nrp_program_mode
+    cmp #NRP_PROGRAM_REAL_FUNCTION
+    jne native_real_postfix_detect_no
+    lda nrp_literal_seen
+    jeq native_real_postfix_detect_no
+:
+.elseif NRP_ENABLE_FOR_DYNAMIC
     lda nrp_for_dynamic_seen_any
     jeq native_real_postfix_detect_no
 .elseif NRP_ENABLE_FOR
@@ -414,15 +423,6 @@ native_real_postfix_analyze_done:
     lda nrp_if_seen
     ora nrp_if_seen+1
     jeq native_real_postfix_detect_no
-.elseif NRP_ENABLE_LITERAL
-    lda nrp_angle_seen
-    bne :+
-    lda nrp_program_mode
-    cmp #NRP_PROGRAM_REAL_FUNCTION
-    jne native_real_postfix_detect_no
-    lda nrp_literal_seen
-    jeq native_real_postfix_detect_no
-:
 .endif
     lda nrp_nested
     jeq native_real_postfix_detect_no

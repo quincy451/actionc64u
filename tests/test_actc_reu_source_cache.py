@@ -2087,6 +2087,24 @@ class TestActcReuSourceCache(unittest.TestCase):
             self.assertNotIn("lda (ACTC_OVERLAY_SCAN_ZP),y", body, msg=label)
             self.assertNotIn("jsr advance_source_scan", body, msg=label)
 
+    def test_decl_count_overlay_grouped_locals_use_expected_char_helpers(self) -> None:
+        overlay_path = self.root / "src" / "tools_udos" / "actc" / "actc_overlay_decl_counts.asm"
+        overlay_text = overlay_path.read_text(encoding="ascii")
+        match = re.search(
+            r"write_proc_local_var_decl:\n(?P<body>.*?)\nparse_proc_params:",
+            overlay_text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        assert match is not None
+        body = match.group("body")
+        self.assertIn("lda #','", body)
+        self.assertIn("jsr overlay_source_match_expected_char", body)
+        self.assertIn("jsr overlay_source_consume_expected_char", body)
+        self.assertIn("jsr require_line_end", body)
+        self.assertNotIn("lda (ACTC_OVERLAY_SCAN_ZP),y", body)
+        self.assertNotIn("jsr advance_source_scan", body)
+
     def test_decl_count_overlay_keyword_reads_use_peek_wrapper(self) -> None:
         overlay_path = self.root / "src" / "tools_udos" / "actc" / "actc_overlay_decl_counts.asm"
         overlay_text = overlay_path.read_text(encoding="ascii")

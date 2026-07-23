@@ -211,13 +211,10 @@ collect_proc_body_ops_overlay_scalar_decl_after_keyword:
     jsr call_skip_inline_spaces_context
     jsr match_line_end_local
     bcc collect_proc_body_ops_overlay_local_skip_line
-    lda #'='
-    jsr match_scan_char_local
-    bcc :+
-    jmp collect_proc_body_ops_overlay_bad_var
-:   jmp collect_proc_body_ops_overlay_local_after_equals
-collect_proc_body_ops_overlay_local_skip_line:
-    jmp collect_proc_body_ops_overlay_skip_line
+    cmp #','
+    beq collect_proc_body_ops_overlay_local_skip_line
+    cmp #'='
+    bne collect_proc_body_ops_overlay_local_bad_var
 collect_proc_body_ops_overlay_local_after_equals:
     lda #ACTC_OVERLAY_CTX_ASSIGNMENT_TARGET_INDEX_PTR_LO
     jsr load_x_from_context_byte_ptr
@@ -271,6 +268,10 @@ collect_proc_body_ops_overlay_try_local_int_after_value:
     lda #'S'
     jsr call_loaded_target_with_a
     jmp collect_proc_body_ops_overlay_skip_line
+collect_proc_body_ops_overlay_local_skip_line:
+    jmp collect_proc_body_ops_overlay_skip_line
+collect_proc_body_ops_overlay_local_bad_var:
+    jmp collect_proc_body_ops_overlay_bad_var
 
 collect_proc_body_ops_overlay_try_for:
     lda #<pattern_for

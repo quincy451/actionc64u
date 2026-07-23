@@ -464,6 +464,23 @@ alter that invocation's bound. General bound expressions, nonconstant steps,
 and composing `REAL(I)` into the nested REAL body expression are not yet
 accepted by this collector/emitter path.
 
+Pass U accepts folded binary32 literals in one- or two-REAL-parameter functions
+and combines them with up to four pass-P conditionals and immediate returns.
+Uninitialized locals of one type may be grouped on one declaration:
+
+```action
+REAL FUNC LIMIT(REAL VALUE)
+  REAL PRODUCT,LOWER,UPPER,ZEROLOCAL
+  ...
+```
+
+Each grouped name receives its own static storage/debug record and is checked
+against parameters and preceding locals. A trailing comma, duplicate name,
+parameter collision, or initializer on a grouped local declaration is an
+error. Use a following assignment when initialization is required. The native
+bound remains four controls per function and requires a terminal fallback
+return.
+
 Mixed loop/conditional nesting, returns from inside loops, more than four
 controls, deeper control nesting,
 recursive/reentrant frames, unrestricted user-call argument trees and

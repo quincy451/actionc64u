@@ -162,10 +162,10 @@ Treat `vice-action-alink` as the default direct-native linker gate that emits
 `BIN/MAIN.PRG`.
 Treat `vice-action-actc-alink-launch` as the helper-free higher-level default.
 Treat `vice-action-actc-alink-launch-object-emission-matrix` as the all
-source-backed ACTC object-emission launch matrix; it currently enumerates 195
+source-backed ACTC object-emission launch matrix; it currently enumerates 196
 non-runtime, non-object-code source shapes.
 Treat `vice-action-alink-prg-matrix` as the broad direct-PRG object/link matrix;
-it currently enumerates 1365 shape probes.
+it currently enumerates 1366 shape probes.
 Treat `vice-action-alink-prg-object-code-matrices` as the focused direct
 object-code graph, behavior, and rejection gate.
 Treat `vice-action-actc-alink-launch-runtime-matrices` as the focused
@@ -219,8 +219,10 @@ implemented as permanent runner-global features.
 
 The current practical path is:
 
-1. Generalize the Pass U REAL-literal/function path for the remaining portable
-   MATH1 routines, then package each routine as a link-selected OBJ module.
+1. Extend the combined Pass U REAL-literal/control path beyond comma-grouped
+   uninitialized locals to the nested expressions and calls used by the
+   remaining portable MATH1 routines, then package each routine as a
+   link-selected OBJ module.
 2. Widen arrays, pointers, records, typed calls, and recursive frames where
    portable programs require them, with explicit C64/REU bounds.
 3. Map portable `MAIN(argc,argv)` to UDOS command-tail storage after native

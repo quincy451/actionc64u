@@ -267,16 +267,20 @@ The overlay artifacts share one stable execution ABI:
   body expressions, mixed controls, and returns inside loops remain outside
   this pass.
 - `tools/build_actc_overlay_emit_native_real_postfix_literal_object.sh` builds
-  `ACTC_OVLU.BIN`, pass id `30`. It extends the bounded straight-line REAL
-  function form to one- or two-REAL-parameter signatures and materializes
-  folded binary32 constants from the existing two-word literal stream into
-  hidden four-byte cells. It also claims public `DegToRad` and `RadToDeg`
+  `ACTC_OVLU.BIN`, pass id `30`. It combines folded binary32 materialization
+  with pass-P conditional/early-return lowering for one- or two-REAL-parameter
+  functions. Procedure/function locals may be comma-grouped when the
+  declaration has no initializer; every name is independently checked against
+  parameters and prior locals. It also claims public `DegToRad` and `RadToDeg`
   intrinsic calls and emits imports for their separately selected OBJ modules.
-  The shared project-local angle-conversion fixture still emits three copies of
-  binary32 pi (`DB 0F 49 40`) plus ordinary `RT_F_DIV`/`RT_F_MUL` imports. Its
-  6,514-byte image leaves 1,678 bytes free under a dedicated 1,536-byte gate;
-  passes L through T remain byte-identical. General decimal expressions and
-  arbitrary signatures remain outside this pass.
+  The shared clamp fixture uses four grouped REAL locals and three early-return
+  controls; native and Idun generated-6502 execution both produce `-1`, `0`,
+  and `1`. The shared angle fixture still emits binary32 pi (`DB 0F 49 40`)
+  plus ordinary `RT_F_DIV`/`RT_F_MUL` imports. The 7,487-byte image leaves 705
+  bytes free under a dedicated 640-byte gate; passes L through T remain
+  byte-identical. Initialized grouped locals, unrestricted nested expressions,
+  arbitrary signatures, and recursive/reentrant frames remain outside this
+  pass.
 - `tools/build_actc_overlay_emit_native_object.sh` builds
   `build/udos_tools/ACTC_OVL8.BIN`, pass id `8`. In addition to straight-line
   word expressions and integer IF/DO control flow, it owns two word FOR loop

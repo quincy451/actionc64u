@@ -31,7 +31,7 @@ class TestActcOverlay(unittest.TestCase):
     ACTC_NATIVE_REAL_POSTFIX_LOOP_EXIT_EMIT_MIN_HEADROOM = 0x300
     ACTC_NATIVE_REAL_POSTFIX_FOR_EMIT_MIN_HEADROOM = 0x100
     ACTC_NATIVE_REAL_POSTFIX_FOR_DYNAMIC_EMIT_MIN_HEADROOM = 0x20
-    ACTC_NATIVE_REAL_POSTFIX_LITERAL_EMIT_MIN_HEADROOM = 0x600
+    ACTC_NATIVE_REAL_POSTFIX_LITERAL_EMIT_MIN_HEADROOM = 0x280
     ACTC_OVERLAY_WINDOW_SIZE = 0x2000
     ACTC_PREPROCESS_CODE_WINDOW_SIZE = 0x2000
 
@@ -9627,6 +9627,28 @@ class TestActcOverlay(unittest.TestCase):
         self.assertIn("u rt_i_to_f\nu rt_f_div\nu rt_f_mul\nu rt_print_f\n", obj)
         self.assertIn("i 4059\ni 16457\n", obj)
 
+    def test_real_function_literal_controls_accept_grouped_real_locals(self) -> None:
+        source = (
+            self.root
+            / "tests"
+            / "parity"
+            / "real_function_literal_clamp_comma_locals_postfix.act"
+        ).read_text(encoding="ascii").replace("\n", "\r")
+        obj = self.compile_overlay_object(
+            source,
+            "actc-overlay-real-literal-control-comma-locals",
+            extra_build_env={"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [30])
+        self.assertIn("V l r 0 ", obj)
+        for name in ("product", "lower", "upper", "zerolocal"):
+            self.assertRegex(obj, rf"(?m)^v {name} ")
+        for label in ("__rf00", "__rf01", "__rf02"):
+            self.assertRegex(obj, rf"(?m)^x {label} ")
+        self.assertIn("u rt_f_cmp\n", obj)
+        self.assertIn("u rt_f_mul\n", obj)
+
     def test_math1_angle_builtins_use_independent_runtime_imports(self) -> None:
         math1_header = (self.root / "lib" / "math1.act").read_text(
             encoding="ascii"
@@ -11661,6 +11683,8 @@ class TestActcOverlay(unittest.TestCase):
             / "actc_overlay_emit_native_real_postfix_literal_object.labels"
         ).read_text(encoding="ascii")
         self.assertIn(".native_real_postfix_detect", labels)
+        self.assertIn(".nrp_control_stack", labels)
+        self.assertIn(".nrp_early_return_seen", labels)
         self.assertIn(".nrp_literal_seen", labels)
         self.assertIn(".nrp_angle_seen", labels)
         self.assertIn(".nrp_function_param_count", labels)
@@ -13288,6 +13312,10 @@ class TestActcOverlay(unittest.TestCase):
             "param_shadows_module": "MODULE MAIN\rINT A\rPROC MAIN(A)\rRETURN\r",
             "local_duplicates_param": "MODULE MAIN\rPROC MAIN(P)\rINT P\rRETURN\r",
             "duplicate_proc_local": "MODULE MAIN\rPROC MAIN()\rINT L\rBYTE L\rRETURN\r",
+            "duplicate_grouped_proc_local": "MODULE MAIN\rPROC MAIN()\rINT L,L\rRETURN\r",
+            "grouped_local_duplicates_param": "MODULE MAIN\rPROC MAIN(P)\rINT L,P\rRETURN\r",
+            "grouped_local_trailing_comma": "MODULE MAIN\rPROC MAIN()\rINT L,\rRETURN\r",
+            "grouped_local_initializer": "MODULE MAIN\rPROC MAIN()\rINT L,R=1\rRETURN\r",
             "bad_module_var_name": "MODULE MAIN\rINT 1A\rPROC MAIN()\rRETURN\r",
             "bad_proc_tail": "MODULE MAIN\rPROC MAIN BAD\rRETURN\r",
             "empty_initializer": "MODULE MAIN\rINT A=\rPROC MAIN()\rRETURN\r",

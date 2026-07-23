@@ -464,9 +464,9 @@ make sync-native-check NATIVE_ACTION_ROOT=/path/to/actionc64u
 
 ## Validation Snapshot
 
-The 2026-07-22 current cross-product baseline passed:
+The 2026-07-23 current cross-product baseline passed:
 
-- 860 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
+- 863 native ActionC64U unittests, including compiler-overlay capacity, OBJ1,
   ALINK closure, IEEE-754, ACTEDIT, ACTDBG, Linux compatibility, export, and
   release-image checks;
 - 133 UDOS integration tests, with one intentional embedded-AUTOEXEC capacity
@@ -809,12 +809,17 @@ ascending default-step and descending `STEP -2` CARD-counter loops; both
 products store 4.0 and 7.0, and native VICE prints `47`. Pass T then stages
 named CARD initial/final bounds in nested loops; both products store 7.0 twice,
 and native VICE prints `77`. Pass U then folds binary32 REAL constants and casts
-inside one- or two-parameter REAL functions. The shared MATH1 angle-conversion
+inside one- or two-parameter REAL functions and combines that support with up
+to four pass-P conditional/early-return controls. The shared MATH1 angle-conversion
 fixture compiles and links in both products, while native VICE prints pi and 180
 through project-local `LOCALD2R` and `LOCALR2D` bodies. Public intrinsic
 packaging then adds separately selected angle-conversion modules and live VICE
-proofs for both directions. Current inventories are 1,365 broad direct-PRG
-shapes, 195 non-runtime source-backed object-emission shapes, and 300
+proofs for both directions. Shared
+`real_function_literal_clamp_comma_locals_postfix.act` combines four grouped
+REAL locals, multiplication, three comparisons, and three immediate returns;
+both generated 6502 programs store `-1`, `0`, and `1`. Current
+inventories are 1,366 broad direct-PRG shapes, 196 non-runtime source-backed
+object-emission shapes, and 300
 compiled-runtime relocation-oracle cases. Pass L is 6,124 bytes with 2,068
 bytes free; pass M is 6,998 bytes with
 1,194 bytes free; pass N is 7,120 bytes with 1,072 bytes free under its 1 KiB
@@ -823,8 +828,8 @@ pass-P image is 7,147 bytes with 1,045 bytes free under the same gate. The
 pass-Q image is 7,151 bytes with 1,041 bytes free under the same gate. Pass R is
 7,334 bytes with 858 bytes free under its dedicated 768-byte gate. Pass S is
 7,828 bytes with 364 bytes free under its dedicated 256-byte gate. Pass T is
-8,147 bytes with 45 bytes free under its dedicated 32-byte gate. Pass U is 6,514
-bytes with 1,678 bytes free under its dedicated 1,536-byte gate. The public
+8,147 bytes with 45 bytes free under its dedicated 32-byte gate. Pass U is 7,487
+bytes with 705 bytes free under its dedicated 640-byte gate. The public
 MATH1 gap is now 26 routines.
 
 Pass 1 now contains only the streamed module-header validator. Moving the
@@ -841,7 +846,7 @@ label index, and emitter state occupy the reserved `$9E00-$9F1E` range. Pass J
 is 7,901 bytes with 291 bytes free under its 256-byte reserve; pass A is 7,418
 bytes with 774 bytes free under its 768-byte reserve; pass K is 5,877 bytes with
 2,315 bytes free. The complete
-248-test overlay suite and 198-test source-cache suite pass with this layout.
+249-test overlay suite and 199-test source-cache suite pass with this layout.
 
 Shipped and ordinary harness builds default to
 `ACTC_ENABLE_REAL_CONST_EVALUATOR=1`. The legacy all-resident body, layout, and

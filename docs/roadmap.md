@@ -2022,3 +2022,31 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
 - Native MATH1 now exposes seventeen link-selected calls and lacks 26 public
   routines. General REAL bodies/calls, recursive or reentrant frames, and the
   remaining transcendental modules are the next dependency-ordered work.
+
+## 2026-07-23 Grouped REAL Locals And Combined Pass U Controls
+
+- Native declaration pass 2 now accepts comma-grouped uninitialized locals in
+  procedures and functions. It validates every name independently and rejects
+  duplicates, parameter collisions, trailing commas, and grouped
+  initializers. Pass 6 treats the validated declaration as nonexecutable while
+  retaining its 8,094-byte image and 98-byte reserve.
+- Pass U now combines folded binary32 literals with pass-P conditional and
+  early-return lowering. The byte-identical
+  `real_function_literal_clamp_comma_locals_postfix.act` fixture uses four
+  grouped REAL locals, multiplication, three comparisons, and three immediate
+  returns. Native ACTC emits ordinary OBJ1 code-label relocations and imports
+  only conversion, multiplication, comparison, print, and exceptional-value
+  closure; native VICE and Idun generated-6502 execution both produce `-1`,
+  `0`, and `1`.
+- Pass U is 7,487 bytes with 705 bytes free under its dedicated 640-byte gate
+  and has SHA-256
+  `4ac6d04fb682ac317b4919f9b1bf1e4aae2ac8442a21e0f76812f001195e2524`.
+  Passes L through T remain byte-identical.
+- Current inventories are 1,366 broad direct-PRG shapes, 196 non-runtime
+  source-backed object-emission shapes, and 300 compiled-runtime relocation
+  oracles. The native suite contains 863 tests, including 249 overlay and 199
+  source-cache tests.
+- This removes the first declaration/control combination blocker from the
+  portable MATH1 source. Initialized grouped locals, private underscore
+  identifiers, unrestricted nested literal expressions/calls, recursive or
+  reentrant frames, and the remaining 26 public MATH1 routines remain pending.

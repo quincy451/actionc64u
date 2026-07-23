@@ -921,14 +921,19 @@ bytes under a dedicated 32-byte reserve while pass S remains byte-identical.
 General bound expressions, runtime steps, nested counter-to-REAL body
 expressions, mixed controls, and returns inside loops remain pending.
 
-Base-36 pass U, `ACTC_OVLU.BIN`, separately claims the bounded straight-line
-REAL-function form when it contains a folded four-byte REAL literal or a public
-`DegToRad`/`RadToDeg` intrinsic. It accepts one or two REAL parameters, binds
-the actual arity, reconstructs the compiler's low-word/high-word literal pair
-into a hidden binary32 cell, and emits ordinary imports for the two separately
-selected angle-conversion OBJ modules. The shared project-local conversion
-fixture materializes pi as `DB 0F 49 40`; native VICE prints pi and 180 while
-Idun's generated-6502 path compiles and links the byte-identical source. The
-6,514-byte image leaves 1,678 bytes free under a dedicated 1,536-byte gate, and
-passes L through T remain byte-identical. Unrestricted signatures/calls and
-general REAL bodies remain pending.
+Base-36 pass U, `ACTC_OVLU.BIN`, claims the bounded REAL-function form when it
+contains a folded four-byte REAL literal or a public `DegToRad`/`RadToDeg`
+intrinsic, and it permits up to four pass-P conditional/early-return controls
+in that form. Control-only functions remain owned by their earlier passes. It
+accepts one or two REAL parameters, binds the actual arity, reconstructs each
+low-word/high-word literal pair into a hidden binary32 cell, and emits ordinary
+imports for separately selected helpers. The declaration scan now records each
+name in comma-grouped uninitialized procedure/function-local declarations; the
+body scan recognizes the grouped declaration as nonexecutable. The shared
+clamp fixture combines four grouped REAL locals, multiplication, three
+relations, and three early returns; native VICE and Idun generated-6502
+execution both produce `-1`, `0`, and `1`. The angle fixture continues to
+materialize pi as `DB 0F 49 40`. The 7,487-byte image leaves 705 bytes free
+under a dedicated 640-byte gate, and passes L through T remain byte-identical.
+Initialized grouped locals, unrestricted signatures/calls, and general nested
+REAL bodies remain pending.

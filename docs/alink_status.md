@@ -9,7 +9,7 @@ Current state:
   verified by `make -C ../udos vice-action-actc-alink-launch`.
 - Broad direct-PRG object/link coverage is verified by
   `make -C ../udos vice-action-alink-prg-matrix`.
-- The broad direct-PRG matrix currently enumerates 1366 probe shapes from
+- The broad direct-PRG matrix currently enumerates 1367 probe shapes from
   `udos/tools/run_action_alink_prg_probe.py`.
 - The source-backed sequential, nested, early-return, loop, and folded-REAL
   function cases prove passes N through U's multiple internal code exports, shared and out-of-order
@@ -99,10 +99,11 @@ Current state:
   from the other linker tables in bank `$03`.
 - Generated chain probes exercise all 64 reachable external entries and reject
   a 65th dependency before loading it or creating an output PRG.
-- Five-byte relocation records have an independent 128-record capacity in the
-  existing `$300`-byte REU region and do not compete with the 64-entry reachable
-  external closure. The exact binary32 formatter exercises 73 records in one
-  ordinary OBJ module.
+- Five-byte relocation records have an independent 255-record capacity in a
+  `$500`-byte REU region and do not compete with the 64-entry reachable
+  external closure. The exact binary32 formatter exercises 73 records and the
+  link-selected exponential helper exercises 233 records in ordinary OBJ
+  modules.
 - ALINK contains no runtime-helper recognizer, abstract-body compiler, or
   fixed-address PRG synthesizer. Every accepted body is an OBJ1 `M` machine
   record, and unsupported compact bodies fail with `UNSUPPORTED BODY`.

@@ -273,7 +273,7 @@ Current state:
   transitive closure, prunes staged sibling helpers, and writes binary32 5.0 in
   VICE. Arbitrary trees, nested calls, locals, and multiple statements remain
   outside this bounded emitter.
-- The bounded REAL value parser also recognizes `FSign(A)`, `FTrunc(A)`, `FFloor(A)`, `FCeil(A)`, `FRound(A)`, `FFrac(A)`, `FMod(A,B)`, `FHypot(A,B)`,
+- The bounded REAL value parser also recognizes `FSign(A)`, `FTrunc(A)`, `FFloor(A)`, `FCeil(A)`, `FRound(A)`, `FFrac(A)`, `FMod(A,B)`, `FHypot(A,B)`, `FExp(A)`,
   `FMin(A,B)`, and `FMax(A,B)` for named REAL operands in assignment, print, and condition
   positions. ACTC emits ordinary imports for the selected helper. The
   dependency-free 123-byte sign helper canonicalizes NaN, preserves signed
@@ -288,9 +288,11 @@ Current state:
   subtraction. The 245-byte remainder helper imports division, truncation,
   multiplication, and subtraction. The 503-byte scaled hypotenuse helper
   imports absolute value, minimum, maximum, division, multiplication, addition,
-  and square root; the 77-byte selectors reach comparison and exceptional-value
+  and square root. The 1,465-byte exponential helper imports division, floor,
+  REAL-to-INT conversion, multiplication, subtraction, and addition; the
+  77-byte selectors reach comparison and exceptional-value
   support transitively. Exact checks and focused live VICE launches prove that
-  unrelated helpers are pruned. This completes ten
+  unrelated helpers are pruned. This completes eleven
   utility routines, not general MATH1 source lowering. Pass K separately owns
   a bounded three-initializer `FClamp` assignment/print root. It captures all
   eight named-storage uses, so initializer order, clamp arguments, destination,

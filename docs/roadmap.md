@@ -2050,3 +2050,28 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   portable MATH1 source. Initialized grouped locals, private underscore
   identifiers, unrestricted nested literal expressions/calls, recursive or
   reentrant frames, and the remaining 26 public MATH1 routines remain pending.
+
+## 2026-07-23 Link-Selected MATH1 Exponential
+
+- Added the 1,465-byte `RT_F_EXP.OBJ` dependency root. It implements the
+  portable MATH1 binary32 `ln(2)` range reduction and degree-8 polynomial,
+  supports source/destination aliasing, and imports only division, floor,
+  REAL-to-INT conversion, multiplication, subtraction, and addition.
+- Native ACTC recognizes `FExp(REAL)` in bounded postfix assignments, prints,
+  conditions, and REAL-function trees. The focused ACTC/ALINK/VICE launch
+  prints `2.718281...` for `FExp(1)` and proves unrelated MATH1 objects remain
+  unloaded.
+- Expanded ALINK's dedicated relocation table from 128 records in `$300` bytes
+  to the full byte-indexed 255 records in `$500` bytes. `RT_F_EXP.OBJ` exercises
+  233 ordinary relocation records without adding a runtime recognizer or
+  linker-side compiler.
+- Synchronized the generated runtime and manifest into Idun. Linux ACTC now
+  selects the same `RT_F_EXP.OBJ` instead of compiling the portable source body;
+  the existing 16-result MATH1 VICE program remains green.
+- Current inventories are 1,367 broad direct-PRG shapes, 196 non-runtime
+  source-backed object-emission shapes, and 301 compiled-runtime relocation
+  oracles. The native suite contains 864 tests, including 250 overlay and 199
+  source-cache tests.
+- Native MATH1 now exposes eighteen link-selected calls and lacks 25 public
+  routines. General REAL bodies/calls, recursive or reentrant frames, and the
+  remaining transcendental modules remain dependency-ordered work.

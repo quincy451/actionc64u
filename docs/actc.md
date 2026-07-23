@@ -65,7 +65,7 @@ Current contract:
   `+`, `-`, `*`, `/`, `FMin`, `FMax`, `FMod`, or `FHypot`. It emits the result
   into a hidden four-byte cell before returning its address, which keeps
   alias-unsafe helpers isolated from both parameters. Separately, the bounded REAL value parser lowers
-  `FSign(A)`, `FTrunc(A)`, `FFloor(A)`, `FCeil(A)`, `FRound(A)`, `FFrac(A)`, `FMod(A,B)`, `FHypot(A,B)`, `FMin(A,B)`, and `FMax(A,B)` with named REAL operands in
+  `FSign(A)`, `FTrunc(A)`, `FFloor(A)`, `FCeil(A)`, `FRound(A)`, `FFrac(A)`, `FMod(A,B)`, `FHypot(A,B)`, `FExp(A)`, `FMin(A,B)`, and `FMax(A,B)` with named REAL operands in
   assignments, REAL printing, and conditions. Those calls use independently
   selected helpers with complete MATH1 NaN/signed-zero semantics. Pass L also
   accepts bounded nested combinations of those helpers plus `FAbs`, `FSqrt`,

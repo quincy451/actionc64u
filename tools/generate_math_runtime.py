@@ -32,6 +32,20 @@ SPECIAL_COMPARE = 0x05
 ALINK_SYMBOL_MAX = 23
 DEGREES_TO_RADIANS_BITS = 0x3C8EFA35
 RADIANS_TO_DEGREES_BITS = 0x42652EE0
+EXP_UPPER_BITS = 0x42B17218
+EXP_LOWER_BITS = 0xC2CFF1B5
+EXP_LN2_BITS = 0x3F317218
+EXP_COEFFICIENT_BITS = (
+    0x3F800000,
+    0x3F800000,
+    0x3F000000,
+    0x3E2AAAAB,
+    0x3D2AAAAB,
+    0x3C088889,
+    0x3AB60B61,
+    0x39500D01,
+    0x37D00D01,
+)
 
 
 def far_branch(builder: ObjectBuilder, opcode: int, target: str, tag: str) -> None:
@@ -1347,6 +1361,243 @@ def hypot_module() -> ObjectBuilder:
     b.emit(0x00, 0x00, 0x80, 0x3F)
 
     b.export("rt_f_hypot")
+    return b
+
+
+def exp_module() -> ObjectBuilder:
+    """Build the portable MATH1 degree-8 binary32 exponential."""
+    b = ObjectBuilder("rt_f_exp")
+
+    pointer_targets = (
+        "destination",
+        "value",
+        "quotient",
+        "exponent",
+        "product",
+        "reduced",
+        "accum",
+        "work",
+        "ln2",
+        "two",
+        *(f"c{index}" for index in range(len(EXP_COEFFICIENT_BITS))),
+        "nan",
+        "inf",
+        "zero",
+    )
+    pointer_offsets = {
+        target: index * 2 for index, target in enumerate(pointer_targets)
+    }
+
+    def load_local_pointer(target: str, destination: int) -> None:
+        b.immediate(0xA2, pointer_offsets[target])
+        b.local_reference(0xBD, "pt")
+        b.zero_page(0x85, destination)
+        b.emit(0xE8)
+        b.local_reference(0xBD, "pt")
+        b.zero_page(0x85, destination + 1)
+
+    def load_input_byte(index: int) -> None:
+        b.immediate(0xA0, index)
+        b.emit(0xB1, 0x02)
+
+    def compare_magnitude(
+        bits: int, *, clear_sign: bool, overflow: str, tag: str
+    ) -> None:
+        if clear_sign:
+            bits &= 0x7FFFFFFF
+        encoded = bits.to_bytes(4, "little")
+        for index in range(3, -1, -1):
+            load_input_byte(index)
+            if index == 3 and clear_sign:
+                b.immediate(0x29, 0x7F)
+            b.immediate(0xC9, encoded[index])
+            b.branch(0x90, "input_ok")
+            far_branch(b, 0xD0, overflow, f"{tag}_{index}")
+        b.jmp_local("input_ok")
+
+    # Every dependency owns zero-page scratch, so preserve the caller-visible
+    # pointers and value before invoking any helper.
+    b.immediate(0xA2, pointer_offsets["destination"])
+    b.zero_page(0xA5, 0x06)
+    b.local_reference(0x9D, "pt")
+    b.emit(0xE8)
+    b.zero_page(0xA5, 0x07)
+    b.local_reference(0x9D, "pt")
+    b.immediate(0xA0, 0x00)
+    b.label("save")
+    b.emit(0xB1, 0x02)
+    b.local_reference(0x99, "value")
+    b.emit(0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "save")
+
+    # Handle NaN and infinities without passing them through finite reduction.
+    load_input_byte(3)
+    b.immediate(0x29, 0x7F)
+    b.immediate(0xC9, 0x7F)
+    b.branch(0xD0, "finite")
+    load_input_byte(2)
+    b.branch(0x10, "finite")
+    b.immediate(0x29, 0x7F)
+    b.immediate(0xA0, 0x01)
+    b.emit(0x11, 0x02)
+    b.immediate(0xA0, 0x00)
+    b.emit(0x11, 0x02)
+    far_branch(b, 0xD0, "return_nan", "exp_nan")
+    load_input_byte(3)
+    far_branch(b, 0x30, "return_zero", "exp_negative_infinity")
+    b.jmp_local("return_inf")
+
+    # These are the same finite cutoffs used by the portable MATH1 source.
+    b.label("finite")
+    load_input_byte(3)
+    b.branch(0x30, "negative")
+    compare_magnitude(
+        EXP_UPPER_BITS,
+        clear_sign=False,
+        overflow="return_inf",
+        tag="upper",
+    )
+    b.label("negative")
+    compare_magnitude(
+        EXP_LOWER_BITS,
+        clear_sign=True,
+        overflow="return_zero",
+        tag="lower",
+    )
+
+    b.label("input_ok")
+    b.jmp_local("calculate")
+
+    b.label("return_nan")
+    load_local_pointer("nan", 0x02)
+    b.jmp_local("copy_return")
+    b.label("return_inf")
+    load_local_pointer("inf", 0x02)
+    b.jmp_local("copy_return")
+    b.label("return_zero")
+    load_local_pointer("zero", 0x02)
+    b.label("copy_return")
+    load_local_pointer("destination", 0x06)
+    b.jmp_local("copy4")
+
+    b.label("copy4")
+    b.immediate(0xA0, 0x00)
+    b.label("copy_loop")
+    b.emit(0xB1, 0x02, 0x91, 0x06, 0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "copy_loop")
+    b.emit(0x60)
+
+    b.label("calculate")
+    load_local_pointer("value", 0x02)
+    load_local_pointer("ln2", 0x04)
+    load_local_pointer("quotient", 0x06)
+    b.jsr("rt_f_div")
+
+    load_local_pointer("quotient", 0x02)
+    load_local_pointer("exponent", 0x06)
+    b.jsr("rt_f_floor")
+
+    load_local_pointer("exponent", 0x02)
+    b.jsr("rt_f_to_i")
+    b.local_reference(0x8D, "count")
+    b.local_reference(0x8E, "count_hi")
+
+    load_local_pointer("exponent", 0x02)
+    load_local_pointer("ln2", 0x04)
+    load_local_pointer("product", 0x06)
+    b.jsr("rt_f_mul")
+    load_local_pointer("value", 0x02)
+    load_local_pointer("product", 0x04)
+    load_local_pointer("reduced", 0x06)
+    b.jsr("rt_f_sub")
+
+    # Horner evaluation exactly matches lib/math1.act, rounding to binary32
+    # after every multiplication and addition.
+    load_local_pointer(f"c{len(EXP_COEFFICIENT_BITS) - 1}", 0x02)
+    load_local_pointer("accum", 0x06)
+    b.local_reference(0x20, "copy4")
+    for index in range(len(EXP_COEFFICIENT_BITS) - 2, -1, -1):
+        load_local_pointer("reduced", 0x02)
+        load_local_pointer("accum", 0x04)
+        load_local_pointer("work", 0x06)
+        b.jsr("rt_f_mul")
+        load_local_pointer(f"c{index}", 0x02)
+        load_local_pointer("work", 0x04)
+        load_local_pointer("accum", 0x06)
+        b.jsr("rt_f_add")
+
+    b.local_reference(0xAD, "count_hi")
+    b.branch(0x30, "scale_negative")
+    b.local_reference(0xAD, "count")
+    far_branch(b, 0xF0, "finish", "exp_no_scale")
+    b.label("scale_positive")
+    load_local_pointer("accum", 0x02)
+    load_local_pointer("accum", 0x04)
+    load_local_pointer("work", 0x06)
+    b.jsr("rt_f_add")
+    load_local_pointer("work", 0x02)
+    load_local_pointer("accum", 0x06)
+    b.local_reference(0x20, "copy4")
+    b.local_reference(0xCE, "count")
+    b.branch(0xD0, "scale_positive")
+    b.jmp_local("finish")
+
+    b.label("scale_negative")
+    load_local_pointer("accum", 0x02)
+    load_local_pointer("two", 0x04)
+    load_local_pointer("work", 0x06)
+    b.jsr("rt_f_div")
+    load_local_pointer("work", 0x02)
+    load_local_pointer("accum", 0x06)
+    b.local_reference(0x20, "copy4")
+    b.local_reference(0xEE, "count")
+    b.branch(0xD0, "scale_negative_check")
+    b.local_reference(0xEE, "count_hi")
+    b.label("scale_negative_check")
+    b.local_reference(0xAD, "count")
+    b.local_reference(0x0D, "count_hi")
+    b.branch(0xD0, "scale_negative")
+
+    b.label("finish")
+    load_local_pointer("accum", 0x02)
+    b.jmp_local("copy_return")
+
+    b.label("pt")
+    b.emit(0x00, 0x00)
+    for target in pointer_targets[1:]:
+        offset = len(b.code)
+        b.emit(0x00, 0x00)
+        b.local_relocations.append((offset, target))
+    for label in (
+        "value",
+        "quotient",
+        "exponent",
+        "product",
+        "reduced",
+        "accum",
+        "work",
+    ):
+        for index in range(4):
+            b.label(label if index == 0 else f"{label}_{index}")
+            b.emit(0x00)
+    b.label("count")
+    b.emit(0x00)
+    b.label("count_hi")
+    b.emit(0x00)
+    for label, bits in (
+        ("ln2", EXP_LN2_BITS),
+        ("two", 0x40000000),
+        *((f"c{index}", bits) for index, bits in enumerate(EXP_COEFFICIENT_BITS)),
+        ("nan", 0x7FC00000),
+        ("inf", 0x7F800000),
+        ("zero", 0x00000000),
+    ):
+        b.label(label)
+        b.emit(*bits.to_bytes(4, "little"))
+
+    b.export("rt_f_exp")
     return b
 
 
@@ -3348,6 +3599,7 @@ def main() -> int:
             frac_module(),
             mod_module(),
             hypot_module(),
+            exp_module(),
             deg_to_rad_module(),
             rad_to_deg_module(),
             minmax_module("rt_f_min", maximum=False),

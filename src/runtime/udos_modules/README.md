@@ -109,6 +109,11 @@ Current status:
   value, minimum, maximum, division, multiplication, addition, and square root.
   The destination may alias either input. Two zero inputs produce positive
   zero, and infinity takes precedence when paired with NaN.
+- `rt_f_exp.obj` reads a REAL32 value through `$02/$03`, writes through
+  `$06/$07`, and implements the portable MATH1 range-reduced degree-8
+  exponential. It is safe when source and destination alias and imports only
+  division, floor, REAL-to-INT conversion, multiplication, subtraction, and
+  addition dependencies.
 - `rt_f_deg_to_rad.obj` and `rt_f_rad_to_deg.obj` are separate 20-byte,
   alias-safe unary wrappers around `rt_f_mul.obj`. They embed binary32
   `pi/180` and `180/pi`, respectively, so ALINK includes only the conversion

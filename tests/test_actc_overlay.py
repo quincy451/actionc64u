@@ -8595,6 +8595,19 @@ class TestActcOverlay(unittest.TestCase):
                 "IF FHypot(A,B)<C THEN\rPrintE(\"OK\")\rFI\rRETURN\r",
                 ("rt_f_hypot", "rt_f_cmp"),
             ),
+            (
+                "exp-print-position",
+                "MODULE MAIN\rREAL A\rPROC MAIN()\r"
+                "A=REAL(1)\rPrintRE(FExp(A))\rRETURN\r",
+                ("rt_f_exp", "rt_print_f"),
+            ),
+            (
+                "exp-condition-position",
+                "MODULE MAIN\rREAL A\rREAL B\rPROC MAIN()\r"
+                "A=REAL(1)\rB=REAL(3)\r"
+                "IF FExp(A)<B THEN\rPrintE(\"OK\")\rFI\rRETURN\r",
+                ("rt_f_exp", "rt_f_cmp"),
+            ),
         )
         for name, source, expected_modules in position_cases:
             with self.subTest(name=name):
@@ -8615,6 +8628,7 @@ class TestActcOverlay(unittest.TestCase):
                     "rt_f_frac",
                     "rt_f_mod",
                     "rt_f_hypot",
+                    "rt_f_exp",
                     "rt_f_min",
                     "rt_f_max",
                 ):
@@ -9691,6 +9705,36 @@ class TestActcOverlay(unittest.TestCase):
                 self.assertNotIn(f"u {absent}\n", obj)
                 self.assertIn("u rt_i_to_f\n", obj)
                 self.assertIn("u rt_print_f\n", obj)
+
+    def test_math1_exp_builtin_uses_an_independent_runtime_import(self) -> None:
+        math1_header = (self.root / "lib" / "math1.act").read_text(
+            encoding="ascii"
+        )
+        self.assertIn("; REAL FUNC FExp(REAL value)", math1_header)
+        obj = self.compile_overlay_object(
+            (
+                'INCLUDE "MATH1"\r'
+                "MODULE MAIN\r"
+                "REAL VALUE\r"
+                "REAL RESULT\r"
+                "PROC MAIN()\r"
+                "VALUE=REAL(1)\r"
+                "RESULT=FExp(VALUE)\r"
+                "PrintRE(RESULT)\r"
+            ),
+            "actc-overlay-math1-exp",
+            extra_build_env={
+                "ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"
+            },
+            additional_sources={"MATH1.ACT": math1_header},
+        )
+
+        self.assertEqual(self.last_emit_overlay_pass, [5])
+        self.assertIn("u rt_f_exp\n", obj)
+        for absent in ("rt_f_abs", "rt_f_hypot", "rt_f_deg_to_rad"):
+            self.assertNotIn(f"u {absent}\n", obj)
+        self.assertIn("u rt_i_to_f\n", obj)
+        self.assertIn("u rt_print_f\n", obj)
 
     def test_math1_angle_builtins_are_available_in_pass_u_functions(self) -> None:
         source = (

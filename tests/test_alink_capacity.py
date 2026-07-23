@@ -112,8 +112,8 @@ class TestAlinkCapacity(unittest.TestCase):
         self.assertEqual(body_base, 0x041000)
         self.assertNotEqual(reloc_base >> 16, body_base >> 16)
         self.assertEqual(reloc_record_bytes, 5)
-        self.assertEqual(reloc_reu_bytes, 0x300)
-        self.assertEqual(reloc_max, 128)
+        self.assertEqual(reloc_reu_bytes, 0x500)
+        self.assertEqual(reloc_max, 255)
         self.assertLessEqual(reloc_max * reloc_record_bytes, reloc_reu_bytes)
         self.assertLessEqual(reloc_base + reloc_reu_bytes, root_export_base)
         self.assertNotIn("ALINK_RUNTIME_STORE_REU_BASE", alink_text)
@@ -164,6 +164,13 @@ class TestAlinkCapacity(unittest.TestCase):
         print_relocs = sum(line.startswith("r ") for line in print_object.splitlines())
         self.assertGreater(print_relocs, 64)
         self.assertLessEqual(print_relocs, reloc_max)
+
+        exp_object = (
+            self.root / "src" / "runtime" / "udos_modules" / "rt_f_exp.obj"
+        ).read_text(encoding="ascii")
+        exp_relocs = sum(line.startswith("r ") for line in exp_object.splitlines())
+        self.assertGreater(exp_relocs, 128)
+        self.assertLessEqual(exp_relocs, reloc_max)
 
     def segment_bounds(self, map_text: str, segment: str) -> tuple[int, int]:
         match = re.search(

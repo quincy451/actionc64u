@@ -6,6 +6,7 @@ import os
 import random
 import shlex
 import shutil
+import struct
 import subprocess
 import tempfile
 from fractions import Fraction
@@ -13,6 +14,10 @@ from pathlib import Path
 
 from generate_math_runtime import (
     DEGREES_TO_RADIANS_BITS,
+    EXP_COEFFICIENT_BITS,
+    EXP_LN2_BITS,
+    EXP_LOWER_BITS,
+    EXP_UPPER_BITS,
     RADIANS_TO_DEGREES_BITS,
     abs_module,
     addsub_core_module,
@@ -22,7 +27,9 @@ from generate_math_runtime import (
     deg_to_rad_module,
     clamp_module,
     divide_module,
+    exp_module,
     floor_module,
+    float_to_int_module,
     frac_module,
     hypot_module,
     link_runtime_builders,
@@ -71,15 +78,15 @@ int main(int argc, char **argv)
 {
     enum {
         load_addr = 0x2000,
-        left_addr = 0x3000,
-        right_addr = 0x3010,
-        upper_addr = 0x3020,
-        result_addr = 0x3030,
+        left_addr = 0x5000,
+        right_addr = 0x5010,
+        upper_addr = 0x5020,
+        result_addr = 0x5030,
         stop_addr = 0x1000,
     };
     static M6502_Memory memory;
     static M6502_Callbacks callbacks;
-    static uint8_t image[4096];
+    static uint8_t image[8192];
     FILE *runtime;
     M6502 *cpu;
     size_t image_size;
@@ -393,6 +400,32 @@ def expected_clamp(value: int, lower: int, upper: int) -> int:
     return expected_minmax(bounded_low, upper, maximum=False)
 
 
+def expected_exp(value: int) -> int:
+    if is_nan(value):
+        return CANONICAL_QNAN
+    if value == 0x7F800000 or expected_compare(value, EXP_UPPER_BITS) > 0:
+        return 0x7F800000
+    if value == 0xFF800000 or expected_compare(value, EXP_LOWER_BITS) < 0:
+        return 0
+
+    quotient = expected_division(value, EXP_LN2_BITS)
+    exponent = expected_floor(quotient)
+    count = int(exact_finite(exponent))
+    product = expected_multiply(exponent, EXP_LN2_BITS)
+    reduced = expected_addsub(value, product, True)
+    result = EXP_COEFFICIENT_BITS[-1]
+    for coefficient in reversed(EXP_COEFFICIENT_BITS[:-1]):
+        result = expected_multiply(reduced, result)
+        result = expected_addsub(coefficient, result, False)
+    while count > 0:
+        result = expected_addsub(result, result, False)
+        count -= 1
+    while count < 0:
+        result = expected_division(result, 0x40000000)
+        count += 1
+    return result
+
+
 def runtime_builders(operation: str):
     special = special_value_module()
     if operation == "add":
@@ -451,6 +484,19 @@ def runtime_builders(operation: str):
             addsub_core_module(),
             square_root_module(),
             compare_module(),
+            special,
+        ]
+    if operation == "exp":
+        return [
+            exp_module(),
+            divide_module(),
+            floor_module(),
+            trunc_module(),
+            float_to_int_module(),
+            multiply_module(),
+            addsub_wrapper_module("rt_f_sub", True),
+            addsub_wrapper_module("rt_f_add", False),
+            addsub_core_module(),
             special,
         ]
     if operation == "deg_to_rad":
@@ -556,10 +602,49 @@ def verification_clamp_cases(
     return cases
 
 
+def verification_exp_cases(
+    random_count: int, seed: int
+) -> list[tuple[int, int]]:
+    values = [
+        0x00000000,
+        0x80000000,
+        0x00000001,
+        0x007FFFFF,
+        0x00800000,
+        0x3F800000,
+        0xBF800000,
+        0x7F800000,
+        0xFF800000,
+        0x7F800001,
+        0x7FC00000,
+        0xFFC00001,
+        0xFF7FFFFF,
+        EXP_UPPER_BITS - 1,
+        EXP_UPPER_BITS,
+        EXP_UPPER_BITS + 1,
+        EXP_LOWER_BITS - 1,
+        EXP_LOWER_BITS,
+        EXP_LOWER_BITS + 1,
+    ]
+    values.extend(
+        int.from_bytes(struct.pack("<f", value), "little")
+        for value in (-100.0, -10.0, -0.5, -0.1, 0.1, 0.5, 10.0, 80.0)
+    )
+    randomizer = random.Random(seed ^ 0xE7)
+    values.extend(
+        int.from_bytes(
+            struct.pack("<f", randomizer.uniform(-103.97208404541016, 88.72283935546875)),
+            "little",
+        )
+        for _ in range(random_count)
+    )
+    return [(value, 0) for value in values]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/angle/min/max/clamp code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/exp/angle/min/max/clamp code against exact IEEE "
             "binary32"
         )
     )
@@ -580,6 +665,7 @@ def main() -> int:
 
     cases = verification_cases(args.random_cases, args.seed)
     clamp_cases = verification_clamp_cases(args.random_cases, args.seed)
+    exp_cases = verification_exp_cases(args.random_cases, args.seed)
     with tempfile.TemporaryDirectory(prefix="action-f-ieee-") as temporary:
         work = Path(temporary)
         source_path = work / "verify.c"
@@ -615,13 +701,20 @@ def main() -> int:
             "frac",
             "mod",
             "hypot",
+            "exp",
             "deg_to_rad",
             "rad_to_deg",
             "min",
             "max",
             "clamp",
         ):
-            operation_cases = clamp_cases if operation == "clamp" else cases
+            operation_cases = (
+                clamp_cases
+                if operation == "clamp"
+                else exp_cases
+                if operation == "exp"
+                else cases
+            )
             runtime_path = work / f"rt_f_{operation}.bin"
             image = link_runtime_builders(runtime_builders(operation), LOAD_ADDR)
             runtime_path.write_bytes(image)
@@ -675,6 +768,8 @@ def main() -> int:
                     expected = expected_mod(left, right)
                 elif operation == "hypot":
                     expected = expected_hypot(left, right)
+                elif operation == "exp":
+                    expected = expected_exp(left)
                 elif operation == "deg_to_rad":
                     expected = expected_angle_scale(
                         left, DEGREES_TO_RADIANS_BITS
@@ -708,6 +803,7 @@ def main() -> int:
                 "frac",
                 "mod",
                 "hypot",
+                "exp",
                 "deg_to_rad",
                 "rad_to_deg",
             ):
@@ -742,6 +838,8 @@ def main() -> int:
                         if operation == "frac"
                         else expected_mod(left, right)
                         if operation == "mod"
+                        else expected_exp(left)
+                        if operation == "exp"
                         else expected_angle_scale(
                             left, DEGREES_TO_RADIANS_BITS
                         )

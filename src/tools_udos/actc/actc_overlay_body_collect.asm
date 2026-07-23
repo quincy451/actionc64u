@@ -1020,12 +1020,8 @@ match_line_end_local:
     jsr match_scan_char_local
     bcc match_line_end_local_ok
     lda #13
-    jsr match_scan_char_local
-    bcc match_line_end_local_ok
-    sec
-    rts
+    jmp match_scan_char_local
 match_line_end_local_ok:
-    clc
     rts
 
 peek_decimal_digit_value_local:
@@ -1163,10 +1159,6 @@ emit_real_assignment_local_try_runtime:
     jsr emit_runtime_real_value_local_or_fail
     bcs emit_real_assignment_local_after_value_fail
     jmp emit_real_binary_assignment_local_ok
-emit_real_assignment_local_after_value_fail:
-    sec
-    rts
-
 emit_real_binary_assignment_local_ok:
     jsr call_require_line_end_context
     bcs emit_real_binary_assignment_local_fail
@@ -1181,6 +1173,7 @@ emit_real_binary_assignment_local_ok:
     jsr call_loaded_target_with_a
     clc
     rts
+emit_real_assignment_local_after_value_fail:
 emit_real_binary_assignment_local_fail:
     sec
     rts
@@ -2890,6 +2883,8 @@ pattern_fmod:
     .asciiz "FMOD"
 pattern_fhypot:
     .asciiz "FHYPOT"
+pattern_fexp:
+    .asciiz "FEXP"
 pattern_degtorad:
     .asciiz "DEGTORAD"
 pattern_radtodeg:
@@ -2914,6 +2909,8 @@ real_unary_pattern_table_local:
     .byte 'r'
     .word pattern_ffrac
     .byte 'f'
+    .word pattern_fexp
+    .byte 'x'
     .word pattern_degtorad
     .byte 'd'
     .word pattern_radtodeg

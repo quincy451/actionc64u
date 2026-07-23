@@ -16,7 +16,7 @@ The exponent bias is `127`.
 Supported forms include decimal literals, exponent notation, arithmetic
 operators, comparisons, `REAL(x)`, `INT(r)`, and the bounded named-value
 `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`,
-`FMin`, `FMax`, `FClamp`, `DegToRad`, and `RadToDeg` calls.
+`FExp`, `FMin`, `FMax`, `FClamp`, `DegToRad`, and `RadToDeg` calls.
 
 Rules:
 
@@ -45,6 +45,9 @@ Rules:
 - `FHypot(left,right)` uses a scaled maximum/minimum calculation to avoid
   avoidable intermediate overflow and underflow; two zero inputs return
   positive zero, and infinity takes precedence when paired with NaN
+- `FExp(value)` uses binary32 `ln(2)` range reduction and a degree-8 polynomial;
+  NaN returns canonical quiet NaN, positive overflow returns infinity, and
+  negative underflow returns positive zero
 - `DegToRad(value)` multiplies by binary32 `0x3C8EFA35` (`pi/180`);
   `RadToDeg(value)` multiplies by binary32 `0x42652EE0` (`180/pi`). Both use
   ordinary binary32 multiply semantics, including signed zero, infinity, NaN,
@@ -89,6 +92,7 @@ The linker-level REAL runtime surface uses stable helper symbols:
 - `rt_f_frac`
 - `rt_f_mod`
 - `rt_f_hypot`
+- `rt_f_exp`
 - `rt_f_deg_to_rad`
 - `rt_f_rad_to_deg`
 - `rt_f_min`
@@ -179,6 +183,10 @@ The first implemented target-side helper ABI is intentionally narrow:
   through `$06/$07`, supports destination aliasing either operand, and imports
   the absolute-value, minimum/maximum, division, multiplication, addition, and
   square-root closure for a scaled hypotenuse
+- `rt_f_exp` reads through `$02/$03`, writes through `$06/$07`, supports
+  source/destination aliasing, and imports only the division, floor,
+  REAL-to-INT, multiplication, subtraction, and addition closure used by the
+  portable range-reduced degree-8 algorithm
 - `rt_f_deg_to_rad` and `rt_f_rad_to_deg` read through `$02/$03`, write through
   `$06/$07`, and import `rt_f_mul`. Each 20-byte wrapper points `$04/$05` at
   its embedded positive scale factor before multiplication; the underlying
@@ -245,6 +253,8 @@ Examples:
   multiplication, subtraction, and special-value closure
 - `FHypot(a,b)` imports `rt_f_hypot` plus its absolute-value,
   minimum/maximum, division, multiplication, addition, and square-root closure
+- `FExp(r)` imports `rt_f_exp` plus its division, floor, conversion,
+  multiplication, subtraction, and addition closure
 - `DegToRad(r)` imports `rt_f_deg_to_rad` plus its multiplication and
   special-value closure
 - `RadToDeg(r)` imports `rt_f_rad_to_deg` plus its multiplication and
@@ -287,7 +297,8 @@ constants, which ACTC folds without target storage or runtime imports, and
 documents the core source forms that ACTC already recognizes directly:
 `REAL(x)`, `INT(x)`, REAL arithmetic/comparison operators, `FAbs`, `FSqrt`,
 `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`,
-`FMin`, `FMax`, `FClamp`, `DegToRad`, `RadToDeg`, and `PrintR` / `PrintRE`.
+`FExp`, `FMin`, `FMax`, `FClamp`, `DegToRad`, `RadToDeg`, and `PrintR` /
+`PrintRE`.
 
 `SRC/MATH1_DEMO.ACT` validates the exported-library path by compiling a small
 REAL absolute-value program through ACTC, linking it with ALINK, and running
@@ -301,7 +312,7 @@ implemented.
 The core REAL32 runtime helpers now implement default IEEE-754 binary32 value
 semantics for addition, subtraction, multiplication, division, remainder,
 square root, comparison, sign, truncation/floor/ceiling/rounding, minimum/maximum/clamp
-selection, and signed decimal printing across
+selection, exponential approximation, and signed decimal printing across
 finite values, subnormals, signed zeroes, infinities, and NaNs. REAL-to-INT
 remains the language conversion
 defined above: out-of-range or non-finite input returns zero. The helpers

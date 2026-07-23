@@ -47,6 +47,8 @@ class TestMathRuntime(unittest.TestCase):
             "mod",
             "hypot",
             "pow",
+            "wrap_pi",
+            "sin",
             "exp",
             "ln",
             "log2",

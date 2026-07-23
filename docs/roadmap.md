@@ -2167,3 +2167,34 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   and 7,439 bytes.
 - Native MATH1 now exposes twenty-two link-selected calls and lacks 21 public
   routines. Shared trigonometric range reduction is the next dependency group.
+
+## 2026-07-23 Link-Selected MATH1 Sine
+
+- Added the independent 586-byte `RT_F_SIN.OBJ` root and private 225-byte
+  `RT_F_WRAP_PI.OBJ` dependency. The latter reduces input to binary32
+  `[-pi,pi]`; FSin folds that value to `[-pi/2,pi/2]` and evaluates the
+  portable degree-11 odd polynomial with binary32 rounding after each
+  operation.
+- Both modules preserve the source and destination before helper calls, so
+  in-place operation is safe. NaN and either infinity produce canonical quiet
+  NaN through the ordinary remainder closure.
+- Native ACTC recognizes `FSin(A)` in bounded assignment, print, condition, and
+  REAL-function expression positions. The focused ACTC/ALINK/VICE direct PRG
+  prints `0.909297...` for `FSin(2)` and proves staged FPow, FExp, and FLn
+  siblings remain absent.
+- The exact host verifier covers edge and random values plus in-place aliasing.
+  The generator, both object modules, and shared manifest are synchronized to
+  Idun, where Linux ACTC now emits `RT_F_SIN` instead of the portable source
+  body.
+- Current inventories are 1,372 broad direct-PRG shapes, 196 non-runtime
+  source-backed object-emission shapes, and 306 compiled-runtime relocation
+  oracles. The native suite remains 866 tests, including 252 overlay and 199
+  source-cache tests; Idun retains 154 host, 139 sanitizer, and 21 direct-PRG
+  tests.
+- Every overlay remains above its reserve. Pass 6 is 8,096 bytes with exactly
+  96 bytes free; pass 7 is 6,896 bytes with 1,296 bytes free; passes L through
+  U are respectively 6,098, 6,967, 7,089, 7,092, 7,116, 7,120, 7,303, 7,797,
+  8,116, and 7,446 bytes.
+- Native MATH1 now exposes twenty-three link-selected calls and lacks 20 public
+  routines. FCos is the next dependency-ordered public routine, but pass 6
+  requires compaction before another builtin name can be admitted.

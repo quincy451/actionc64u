@@ -2874,6 +2874,8 @@ pattern_fhypot:
     .asciiz "FHYPOT"
 pattern_fpow:
     .asciiz "FPOW"
+pattern_fsin:
+    .asciiz "FSIN"
 pattern_fexp:
     .asciiz "FEXP"
 pattern_fln:
@@ -2897,6 +2899,7 @@ real_unary_pattern_table_local:
     .byte <pattern_fceil, 'l'
     .byte <pattern_fround, 'r'
     .byte <pattern_ffrac, 'f'
+    .byte <pattern_fsin, 's'
     .byte <pattern_fexp, 'x'
     .byte <pattern_fln, 'n'
     .byte <pattern_flog2, 'b'
@@ -2911,6 +2914,7 @@ real_unary_pattern_table_local_end:
 .assert >pattern_fabs = >pattern_fceil, error, "unary patterns must share one page"
 .assert >pattern_fabs = >pattern_fround, error, "unary patterns must share one page"
 .assert >pattern_fabs = >pattern_ffrac, error, "unary patterns must share one page"
+.assert >pattern_fabs = >pattern_fsin, error, "unary patterns must share one page"
 .assert >pattern_fabs = >pattern_fexp, error, "unary patterns must share one page"
 .assert >pattern_fabs = >pattern_fln, error, "unary patterns must share one page"
 .assert >pattern_fabs = >pattern_flog2, error, "unary patterns must share one page"

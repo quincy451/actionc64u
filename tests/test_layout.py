@@ -143,11 +143,11 @@ class TestRepoLayout(unittest.TestCase):
         self.assertIn("The constant foundation is complete", parity)
         self.assertIn("round-to-nearest, ties-to-even", parity)
         self.assertIn("Dedicated pass K", parity)
-        self.assertIn("inventories are 1,371 broad direct-PRG", flat_parity)
+        self.assertIn("inventories are 1,372 broad direct-PRG", flat_parity)
         self.assertIn("196 non-runtime source-backed object-emission shapes", flat_parity)
-        self.assertIn("305 compiled-runtime", flat_parity)
-        self.assertIn("twenty-two link-selected callable builtins", parity)
-        self.assertIn("remaining 21 MATH1 routines", parity)
+        self.assertIn("306 compiled-runtime", flat_parity)
+        self.assertIn("twenty-three link-selected callable builtins", parity)
+        self.assertIn("remaining 20 MATH1 routines", parity)
         self.assertIn("RT_F_FLOOR.OBJ", parity)
         self.assertIn("RT_F_ROUND.OBJ", parity)
         self.assertIn("RT_F_FRAC.OBJ", parity)
@@ -157,6 +157,8 @@ class TestRepoLayout(unittest.TestCase):
         self.assertIn("RT_F_LN.OBJ", parity)
         self.assertIn("RT_F_LOG2.OBJ", parity)
         self.assertIn("RT_F_LOG10.OBJ", parity)
+        self.assertIn("RT_F_SIN.OBJ", parity)
+        self.assertIn("RT_F_WRAP_PI.OBJ", parity)
         self.assertIn("866 native ActionC64U unittests", parity)
         self.assertIn("154 Idun/Alpine unittests", parity)
         self.assertIn("139 Idun ASan/UBSan tests", parity)
@@ -183,16 +185,16 @@ class TestRepoLayout(unittest.TestCase):
         self.assertIn("real_function_for_postfix.act", parity)
         self.assertIn("real_function_dynamic_for_postfix.act", parity)
         self.assertIn("real_function_literal_clamp_comma_locals_postfix.act", parity)
-        self.assertIn("Pass L is 6,091 bytes with 2,101 bytes free", flat_parity)
-        self.assertIn("pass M is 6,960 bytes with 1,232 bytes free", flat_parity)
-        self.assertIn("pass N is 7,082 bytes with 1,110 bytes free", flat_parity)
-        self.assertIn("pass O is 7,085 bytes with 1,107 bytes free", flat_parity)
-        self.assertIn("pass-P image is 7,109 bytes with 1,083 bytes free", flat_parity)
-        self.assertIn("pass-Q image is 7,113 bytes with 1,079 bytes free", flat_parity)
-        self.assertIn("Pass R is 7,296 bytes with 896 bytes free", flat_parity)
-        self.assertIn("Pass S is 7,790 bytes with 402 bytes free", flat_parity)
-        self.assertIn("Pass T is 8,109 bytes with 83 bytes free", flat_parity)
-        self.assertIn("Pass U is 7,439 bytes with 753 bytes free", flat_parity)
+        self.assertIn("Pass L is 6,098 bytes with 2,094 bytes free", flat_parity)
+        self.assertIn("pass M is 6,967 bytes with 1,225 bytes free", flat_parity)
+        self.assertIn("pass N is 7,089 bytes with 1,103 bytes free", flat_parity)
+        self.assertIn("pass O is 7,092 bytes with 1,100 bytes free", flat_parity)
+        self.assertIn("pass-P image is 7,116 bytes with 1,076 bytes free", flat_parity)
+        self.assertIn("pass-Q image is 7,120 bytes with 1,072 bytes free", flat_parity)
+        self.assertIn("Pass R is 7,303 bytes with 889 bytes free", flat_parity)
+        self.assertIn("Pass S is 7,797 bytes with 395 bytes free", flat_parity)
+        self.assertIn("Pass T is 8,116 bytes with 76 bytes free", flat_parity)
+        self.assertIn("Pass U is 7,446 bytes with 746 bytes free", flat_parity)
         self.assertIn("complete ACTC compiler, passes 0 through U", parity)
         self.assertIn("The portable products are therefore not yet at full feature parity", parity)
         self.assertNotIn("binary32 folding remains", parity)
@@ -319,10 +321,12 @@ class TestRepoLayout(unittest.TestCase):
             "rt_f_mod",
             "rt_f_hypot",
             "rt_f_pow",
+            "rt_f_sin",
             "rt_f_exp",
             "rt_f_ln",
             "rt_f_log2",
             "rt_f_log10",
+            "rt_f_wrap_pi",
             "rt_f_deg_to_rad",
             "rt_f_rad_to_deg",
             "rt_f_min",

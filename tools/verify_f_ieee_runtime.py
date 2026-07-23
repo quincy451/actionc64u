@@ -22,7 +22,13 @@ from generate_math_runtime import (
     LN10_BITS,
     LN_ODD_DENOMINATOR_BITS,
     LN_SQRT2_BITS,
+    MATH_HALF_PI_BITS,
+    MATH_NEG_HALF_PI_BITS,
+    MATH_NEG_PI_BITS,
+    MATH_PI_BITS,
+    MATH_TWO_PI_BITS,
     RADIANS_TO_DEGREES_BITS,
+    SIN_COEFFICIENT_BITS,
     abs_module,
     addsub_core_module,
     addsub_wrapper_module,
@@ -47,9 +53,11 @@ from generate_math_runtime import (
     rad_to_deg_module,
     round_module,
     sign_module,
+    sin_module,
     special_value_module,
     square_root_module,
     trunc_module,
+    wrap_pi_module,
 )
 from verify_f_div_runtime import expected_division
 from verify_f_sqrt_runtime import expected_square_root
@@ -493,6 +501,44 @@ def expected_pow(base: int, exponent: int) -> int:
     return magnitude
 
 
+def expected_wrap_pi(value: int) -> int:
+    if is_nan(value) or value & 0x7FFFFFFF == 0x7F800000:
+        return CANONICAL_QNAN
+    result = expected_mod(value, MATH_TWO_PI_BITS)
+    if expected_compare(result, MATH_PI_BITS) > 0:
+        return expected_addsub(result, MATH_TWO_PI_BITS, True)
+    if expected_compare(result, MATH_NEG_PI_BITS) < 0:
+        return expected_addsub(result, MATH_TWO_PI_BITS, False)
+    return result
+
+
+def expected_sin(value: int) -> int:
+    angle = expected_wrap_pi(value)
+    if is_nan(angle):
+        return CANONICAL_QNAN
+    if expected_compare(angle, MATH_HALF_PI_BITS) > 0:
+        folded = expected_addsub(MATH_PI_BITS, angle, True)
+    elif expected_compare(angle, MATH_NEG_HALF_PI_BITS) < 0:
+        folded = expected_addsub(MATH_NEG_PI_BITS, angle, True)
+    else:
+        folded = angle
+
+    square = expected_multiply(folded, folded)
+    accumulator = SIN_COEFFICIENT_BITS[-1]
+    for coefficient in reversed(SIN_COEFFICIENT_BITS[:-1]):
+        accumulator = expected_addsub(
+            coefficient,
+            expected_multiply(square, accumulator),
+            False,
+        )
+    polynomial = expected_addsub(
+        0x3F800000,
+        expected_multiply(square, accumulator),
+        False,
+    )
+    return expected_multiply(folded, polynomial)
+
+
 def runtime_builders(operation: str):
     special = special_value_module()
     if operation == "add":
@@ -603,6 +649,25 @@ def runtime_builders(operation: str):
             addsub_core_module(),
             special,
         ]
+    if operation in ("wrap_pi", "sin"):
+        builders = []
+        if operation == "sin":
+            builders.append(sin_module())
+        builders.extend(
+            [
+                wrap_pi_module(),
+                mod_module(),
+                divide_module(),
+                trunc_module(),
+                multiply_module(),
+                compare_module(),
+                addsub_wrapper_module("rt_f_sub", True),
+                addsub_wrapper_module("rt_f_add", False),
+                addsub_core_module(),
+                special,
+            ]
+        )
+        return builders
     if operation == "deg_to_rad":
         return [deg_to_rad_module(), multiply_module(), special]
     if operation == "rad_to_deg":
@@ -835,10 +900,64 @@ def verification_pow_cases(
     return cases
 
 
+def verification_trig_cases(
+    random_count: int, seed: int
+) -> list[tuple[int, int]]:
+    values = [
+        0x00000000,
+        0x80000000,
+        0x00000001,
+        0x007FFFFF,
+        0x00800000,
+        MATH_NEG_PI_BITS,
+        MATH_NEG_HALF_PI_BITS,
+        MATH_HALF_PI_BITS,
+        MATH_PI_BITS,
+        MATH_TWO_PI_BITS,
+        MATH_NEG_PI_BITS - 1,
+        MATH_NEG_PI_BITS + 1,
+        MATH_NEG_HALF_PI_BITS - 1,
+        MATH_NEG_HALF_PI_BITS + 1,
+        MATH_HALF_PI_BITS - 1,
+        MATH_HALF_PI_BITS + 1,
+        MATH_PI_BITS - 1,
+        MATH_PI_BITS + 1,
+        MATH_TWO_PI_BITS - 1,
+        MATH_TWO_PI_BITS + 1,
+        0x7F7FFFFF,
+        0xFF7FFFFF,
+        0x7F800000,
+        0xFF800000,
+        0x7F800001,
+        0x7FC00000,
+        0xFFC00001,
+    ]
+    values.extend(
+        int.from_bytes(struct.pack("<f", value), "little")
+        for value in (
+            -1000.0,
+            -10.0,
+            -7.0,
+            -4.0,
+            -0.5,
+            0.5,
+            0.7853981633974483,
+            2.0,
+            4.0,
+            7.0,
+            10.0,
+            1000.0,
+        )
+    )
+    randomizer = random.Random(seed ^ 0x51A)
+    values.extend(randomizer.getrandbits(32) for _ in range(random_count))
+    return [(value, 0) for value in values]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/exp/ln/log2/log10/pow/angle/min/max/clamp code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/exp/ln/log2/log10/pow/wrap/sin/angle/min/max/clamp code against exact IEEE "
             "binary32"
         )
     )
@@ -862,6 +981,7 @@ def main() -> int:
     exp_cases = verification_exp_cases(args.random_cases, args.seed)
     ln_cases = verification_ln_cases(args.random_cases, args.seed)
     pow_cases = verification_pow_cases(args.random_cases, args.seed)
+    trig_cases = verification_trig_cases(args.random_cases, args.seed)
     with tempfile.TemporaryDirectory(prefix="action-f-ieee-") as temporary:
         work = Path(temporary)
         source_path = work / "verify.c"
@@ -902,6 +1022,8 @@ def main() -> int:
             "log2",
             "log10",
             "pow",
+            "wrap_pi",
+            "sin",
             "deg_to_rad",
             "rad_to_deg",
             "min",
@@ -917,6 +1039,8 @@ def main() -> int:
                 if operation in ("ln", "log2", "log10")
                 else pow_cases
                 if operation == "pow"
+                else trig_cases
+                if operation in ("wrap_pi", "sin")
                 else cases
             )
             runtime_path = work / f"rt_f_{operation}.bin"
@@ -982,6 +1106,10 @@ def main() -> int:
                     expected = expected_logarithm(left, LN10_BITS)
                 elif operation == "pow":
                     expected = expected_pow(left, right)
+                elif operation == "wrap_pi":
+                    expected = expected_wrap_pi(left)
+                elif operation == "sin":
+                    expected = expected_sin(left)
                 elif operation == "deg_to_rad":
                     expected = expected_angle_scale(
                         left, DEGREES_TO_RADIANS_BITS
@@ -1020,6 +1148,8 @@ def main() -> int:
                 "log2",
                 "log10",
                 "pow",
+                "wrap_pi",
+                "sin",
                 "deg_to_rad",
                 "rad_to_deg",
             ):
@@ -1064,6 +1194,10 @@ def main() -> int:
                         if operation == "log10"
                         else expected_pow(left, right)
                         if operation == "pow"
+                        else expected_wrap_pi(left)
+                        if operation == "wrap_pi"
+                        else expected_sin(left)
+                        if operation == "sin"
                         else expected_angle_scale(
                             left, DEGREES_TO_RADIANS_BITS
                         )

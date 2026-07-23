@@ -57,6 +57,18 @@ LN_ODD_DENOMINATOR_BITS = (
     0x41500000,
 )
 LN10_BITS = 0x40135D8E
+MATH_PI_BITS = 0x40490FDB
+MATH_TWO_PI_BITS = 0x40C90FDB
+MATH_HALF_PI_BITS = 0x3FC90FDB
+MATH_NEG_PI_BITS = 0xC0490FDB
+MATH_NEG_HALF_PI_BITS = 0xBFC90FDB
+SIN_COEFFICIENT_BITS = (
+    0xBE2AAAAB,
+    0x3C088898,
+    0xB9500C05,
+    0x3638B88E,
+    0xB2CD26CE,
+)
 
 
 def far_branch(builder: ObjectBuilder, opcode: int, target: str, tag: str) -> None:
@@ -2292,6 +2304,287 @@ def pow_module() -> ObjectBuilder:
     return b
 
 
+def wrap_pi_module() -> ObjectBuilder:
+    """Build the private portable MATH1 [-pi, pi] range reducer."""
+    b = ObjectBuilder("rt_f_wrap_pi")
+
+    pointer_targets = (
+        "destination",
+        "source",
+        "result",
+        "adjusted",
+        "two_pi",
+        "pi",
+        "neg_pi",
+    )
+    pointer_offsets = {
+        target: index * 2 for index, target in enumerate(pointer_targets)
+    }
+
+    def load_local_pointer(target: str, destination: int) -> None:
+        b.immediate(0xA0, pointer_offsets[target])
+        b.immediate(0xA2, destination)
+        b.local_reference(0x20, "setp")
+
+    def return_local(target: str) -> None:
+        b.immediate(0xA0, pointer_offsets[target])
+        b.jmp_local("copy")
+
+    # All arithmetic dependencies reuse the public zero-page pointer area.
+    # Preserve the destination and source before the first helper call.
+    b.zero_page(0xA5, 0x06)
+    b.local_reference(0x8D, "pt")
+    b.zero_page(0xA5, 0x07)
+    b.local_reference(0x8D, "pth")
+    b.immediate(0xA0, 0x00)
+    b.label("save")
+    b.emit(0xB1, 0x02)
+    b.local_reference(0x99, "source")
+    b.emit(0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "save")
+
+    load_local_pointer("source", 0x02)
+    load_local_pointer("two_pi", 0x04)
+    load_local_pointer("result", 0x06)
+    b.jsr("rt_f_mod")
+
+    load_local_pointer("result", 0x02)
+    load_local_pointer("pi", 0x04)
+    b.jsr("rt_f_cmp")
+    b.immediate(0xC9, 0x01)
+    b.branch(0xF0, "above")
+
+    load_local_pointer("result", 0x02)
+    load_local_pointer("neg_pi", 0x04)
+    b.jsr("rt_f_cmp")
+    b.immediate(0xC9, 0xFF)
+    b.branch(0xF0, "below")
+    return_local("result")
+
+    b.label("above")
+    load_local_pointer("result", 0x02)
+    load_local_pointer("two_pi", 0x04)
+    load_local_pointer("adjusted", 0x06)
+    b.jsr("rt_f_sub")
+    return_local("adjusted")
+
+    b.label("below")
+    load_local_pointer("result", 0x02)
+    load_local_pointer("two_pi", 0x04)
+    load_local_pointer("adjusted", 0x06)
+    b.jsr("rt_f_add")
+    return_local("adjusted")
+
+    # Y selects a pointer-table entry and X selects a public zero-page pointer
+    # slot ($02, $04, or $06).
+    b.label("setp")
+    b.local_reference(0xB9, "pt")
+    b.emit(0x95, 0x00, 0xC8)
+    b.local_reference(0xB9, "pt")
+    b.emit(0x95, 0x01, 0x60)
+
+    # Copy the Y-selected value to the caller's saved destination.
+    b.label("copy")
+    b.immediate(0xA2, 0x02)
+    b.local_reference(0x20, "setp")
+    b.immediate(0xA0, pointer_offsets["destination"])
+    b.immediate(0xA2, 0x06)
+    b.local_reference(0x20, "setp")
+    b.immediate(0xA0, 0x00)
+    b.label("copy_loop")
+    b.emit(0xB1, 0x02, 0x91, 0x06, 0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "copy_loop")
+    b.emit(0x60)
+
+    b.label("pt")
+    b.emit(0x00)
+    b.label("pth")
+    b.emit(0x00)
+    for target in pointer_targets[1:]:
+        offset = len(b.code)
+        b.emit(0x00, 0x00)
+        b.local_relocations.append((offset, target))
+
+    for label in ("source", "result", "adjusted"):
+        b.label(label)
+        b.emit(0x00, 0x00, 0x00, 0x00)
+    for label, bits in (
+        ("two_pi", MATH_TWO_PI_BITS),
+        ("pi", MATH_PI_BITS),
+        ("neg_pi", MATH_NEG_PI_BITS),
+    ):
+        b.label(label)
+        b.emit(*bits.to_bytes(4, "little"))
+
+    b.export("rt_f_wrap_pi")
+    return b
+
+
+def sin_module() -> ObjectBuilder:
+    """Build the portable MATH1 sine range reduction and polynomial."""
+    b = ObjectBuilder("rt_f_sin")
+
+    pointer_targets = (
+        "destination",
+        "source",
+        "angle",
+        "folded",
+        "square",
+        "acc_a",
+        "acc_b",
+        "temp",
+        "one",
+        "pi",
+        "half_pi",
+        "neg_pi",
+        "neg_half_pi",
+        "c1",
+        "c2",
+        "c3",
+        "c4",
+        "c5",
+    )
+    pointer_offsets = {
+        target: index * 2 for index, target in enumerate(pointer_targets)
+    }
+
+    def load_local_pointer(target: str, destination: int) -> None:
+        b.immediate(0xA0, pointer_offsets[target])
+        b.immediate(0xA2, destination)
+        b.local_reference(0x20, "setp")
+
+    def copy_local(source: str, destination: str) -> None:
+        load_local_pointer(source, 0x02)
+        load_local_pointer(destination, 0x06)
+        b.local_reference(0x20, "copy4")
+
+    def multiply(left: str, right: str, destination: str) -> None:
+        load_local_pointer(left, 0x02)
+        load_local_pointer(right, 0x04)
+        load_local_pointer(destination, 0x06)
+        b.jsr("rt_f_mul")
+
+    def add(left: str, right: str, destination: str) -> None:
+        load_local_pointer(left, 0x02)
+        load_local_pointer(right, 0x04)
+        load_local_pointer(destination, 0x06)
+        b.jsr("rt_f_add")
+
+    # Preserve the caller's source and destination before dependency calls.
+    b.zero_page(0xA5, 0x06)
+    b.local_reference(0x8D, "pt")
+    b.zero_page(0xA5, 0x07)
+    b.local_reference(0x8D, "pth")
+    b.immediate(0xA0, 0x00)
+    b.label("save")
+    b.emit(0xB1, 0x02)
+    b.local_reference(0x99, "source")
+    b.emit(0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "save")
+
+    load_local_pointer("source", 0x02)
+    load_local_pointer("angle", 0x06)
+    b.jsr("rt_f_wrap_pi")
+
+    load_local_pointer("angle", 0x02)
+    load_local_pointer("half_pi", 0x04)
+    b.jsr("rt_f_cmp")
+    b.immediate(0xC9, 0x01)
+    b.branch(0xF0, "fold_pos")
+
+    load_local_pointer("angle", 0x02)
+    load_local_pointer("neg_half_pi", 0x04)
+    b.jsr("rt_f_cmp")
+    b.immediate(0xC9, 0xFF)
+    b.branch(0xF0, "fold_neg")
+    copy_local("angle", "folded")
+    b.jmp_local("polynomial")
+
+    b.label("fold_pos")
+    load_local_pointer("pi", 0x02)
+    load_local_pointer("angle", 0x04)
+    load_local_pointer("folded", 0x06)
+    b.jsr("rt_f_sub")
+    b.jmp_local("polynomial")
+
+    b.label("fold_neg")
+    load_local_pointer("neg_pi", 0x02)
+    load_local_pointer("angle", 0x04)
+    load_local_pointer("folded", 0x06)
+    b.jsr("rt_f_sub")
+
+    # Evaluate the source polynomial from the innermost coefficient outward,
+    # preserving binary32 rounding at every multiply and add.
+    b.label("polynomial")
+    multiply("folded", "folded", "square")
+    copy_local("c5", "acc_a")
+    accumulator = "acc_a"
+    other = "acc_b"
+    for coefficient in ("c4", "c3", "c2", "c1"):
+        multiply("square", accumulator, "temp")
+        add(coefficient, "temp", other)
+        accumulator, other = other, accumulator
+    multiply("square", accumulator, "temp")
+    add("one", "temp", other)
+    multiply("folded", other, "destination")
+    b.emit(0x60)
+
+    b.label("setp")
+    b.local_reference(0xB9, "pt")
+    b.emit(0x95, 0x00, 0xC8)
+    b.local_reference(0xB9, "pt")
+    b.emit(0x95, 0x01, 0x60)
+
+    b.label("copy4")
+    b.immediate(0xA0, 0x00)
+    b.label("copy_loop")
+    b.emit(0xB1, 0x02, 0x91, 0x06, 0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "copy_loop")
+    b.emit(0x60)
+
+    b.label("pt")
+    b.emit(0x00)
+    b.label("pth")
+    b.emit(0x00)
+    for target in pointer_targets[1:]:
+        offset = len(b.code)
+        b.emit(0x00, 0x00)
+        b.local_relocations.append((offset, target))
+
+    for label in (
+        "source",
+        "angle",
+        "folded",
+        "square",
+        "acc_a",
+        "acc_b",
+        "temp",
+    ):
+        b.label(label)
+        b.emit(0x00, 0x00, 0x00, 0x00)
+    for label, bits in (
+        ("one", 0x3F800000),
+        ("pi", MATH_PI_BITS),
+        ("half_pi", MATH_HALF_PI_BITS),
+        ("neg_pi", MATH_NEG_PI_BITS),
+        ("neg_half_pi", MATH_NEG_HALF_PI_BITS),
+        ("c1", SIN_COEFFICIENT_BITS[0]),
+        ("c2", SIN_COEFFICIENT_BITS[1]),
+        ("c3", SIN_COEFFICIENT_BITS[2]),
+        ("c4", SIN_COEFFICIENT_BITS[3]),
+        ("c5", SIN_COEFFICIENT_BITS[4]),
+    ):
+        b.label(label)
+        b.emit(*bits.to_bytes(4, "little"))
+
+    b.export("rt_f_sin")
+    return b
+
+
 def float_to_int_module() -> ObjectBuilder:
     """Build finite binary32 to signed 16-bit truncation toward zero."""
     b = ObjectBuilder("rt_f_to_i")
@@ -4295,6 +4588,8 @@ def main() -> int:
             log2_module(),
             log10_module(),
             pow_module(),
+            wrap_pi_module(),
+            sin_module(),
             deg_to_rad_module(),
             rad_to_deg_module(),
             minmax_module("rt_f_min", maximum=False),

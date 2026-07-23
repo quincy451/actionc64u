@@ -8609,6 +8609,19 @@ class TestActcOverlay(unittest.TestCase):
                 ("rt_f_pow", "rt_f_cmp"),
             ),
             (
+                "sin-print-position",
+                "MODULE MAIN\rREAL A\rPROC MAIN()\r"
+                "A=REAL(2)\rPrintRE(FSin(A))\rRETURN\r",
+                ("rt_f_sin", "rt_print_f"),
+            ),
+            (
+                "sin-condition-position",
+                "MODULE MAIN\rREAL A\rREAL B\rPROC MAIN()\r"
+                "A=REAL(2)\rB=REAL(1)\r"
+                "IF FSin(A)<B THEN\rPrintE(\"OK\")\rFI\rRETURN\r",
+                ("rt_f_sin", "rt_f_cmp"),
+            ),
+            (
                 "exp-print-position",
                 "MODULE MAIN\rREAL A\rPROC MAIN()\r"
                 "A=REAL(1)\rPrintRE(FExp(A))\rRETURN\r",
@@ -8681,6 +8694,7 @@ class TestActcOverlay(unittest.TestCase):
                     "rt_f_mod",
                     "rt_f_hypot",
                     "rt_f_pow",
+                    "rt_f_sin",
                     "rt_f_exp",
                     "rt_f_ln",
                     "rt_f_log2",
@@ -8722,6 +8736,7 @@ class TestActcOverlay(unittest.TestCase):
                     "rt_f_mod",
                     "rt_f_hypot",
                     "rt_f_pow",
+                    "rt_f_sin",
                 ):
                     if other_module != runtime_module:
                         self.assertNotIn(f"u {other_module}\n", obj)

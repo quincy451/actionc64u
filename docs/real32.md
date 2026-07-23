@@ -16,7 +16,7 @@ The exponent bias is `127`.
 Supported forms include decimal literals, exponent notation, arithmetic
 operators, comparisons, `REAL(x)`, `INT(r)`, and the bounded named-value
 `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`,
-`FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FMin`, `FMax`, `FClamp`,
+`FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FMin`, `FMax`, `FClamp`,
 `DegToRad`, and `RadToDeg` calls.
 
 Rules:
@@ -53,6 +53,10 @@ Rules:
 - `FExp(value)` uses binary32 `ln(2)` range reduction and a degree-8 polynomial;
   NaN returns canonical quiet NaN, positive overflow returns infinity, and
   negative underflow returns positive zero
+- `FSin(value)` reduces the input to binary32 `[-pi,pi]`, folds it to
+  `[-pi/2,pi/2]`, and evaluates the portable degree-11 odd polynomial with
+  binary32 rounding after every operation; NaN and either infinity return
+  canonical quiet NaN
 - `DegToRad(value)` multiplies by binary32 `0x3C8EFA35` (`pi/180`);
   `RadToDeg(value)` multiplies by binary32 `0x42652EE0` (`180/pi`). Both use
   ordinary binary32 multiply semantics, including signed zero, infinity, NaN,
@@ -100,6 +104,7 @@ The linker-level REAL runtime surface uses stable helper symbols:
 - `rt_f_pow`
 - `rt_f_exp`
 - `rt_f_ln`
+- `rt_f_sin`
 - `rt_f_deg_to_rad`
 - `rt_f_rad_to_deg`
 - `rt_f_min`
@@ -112,9 +117,10 @@ The linker-level REAL runtime surface uses stable helper symbols:
 - `rt_f_to_i`
 - `rt_print_f`
 
-`rt_f_special` is an internal dependency selected transitively by ALINK for
-arithmetic, comparison, and square-root helpers. Source code does not import it
-directly.
+`rt_f_special` and `rt_f_wrap_pi` are internal dependencies selected
+transitively by ALINK. The former supports arithmetic, comparison, and
+square-root helpers; the latter performs FSin's portable `[-pi,pi]` reduction.
+Source code does not import either helper directly.
 
 ## Target Helper ABI
 
@@ -202,6 +208,13 @@ The first implemented target-side helper ABI is intentionally narrow:
   source/destination aliasing, and imports only subtraction, addition,
   division, and multiplication for positive-value range reduction and the
   portable six-term odd logarithm series
+- `rt_f_wrap_pi` reads through `$02/$03`, writes through `$06/$07`, supports
+  source/destination aliasing, and imports remainder, comparison, subtraction,
+  and addition to reduce finite input to binary32 `[-pi,pi]`
+- `rt_f_sin` reads through `$02/$03`, writes through `$06/$07`, supports
+  source/destination aliasing, and imports `rt_f_wrap_pi`, comparison,
+  subtraction, multiplication, and addition to fold the angle and evaluate
+  the portable degree-11 odd polynomial
 - `rt_f_deg_to_rad` and `rt_f_rad_to_deg` read through `$02/$03`, write through
   `$06/$07`, and import `rt_f_mul`. Each 20-byte wrapper points `$04/$05` at
   its embedded positive scale factor before multiplication; the underlying
@@ -277,6 +290,9 @@ Examples:
 - `FLog2(r)` and `FLog10(r)` import `rt_f_log2` or `rt_f_log10`,
   respectively; each wrapper reaches `rt_f_ln`, `rt_f_div`, and only that
   arithmetic closure
+- `FSin(r)` imports `rt_f_sin`, its private `rt_f_wrap_pi` dependency, and
+  only the required remainder/comparison/addition/subtraction/multiplication
+  closure
 - `DegToRad(r)` imports `rt_f_deg_to_rad` plus its multiplication and
   special-value closure
 - `RadToDeg(r)` imports `rt_f_rad_to_deg` plus its multiplication and
@@ -319,15 +335,15 @@ constants, which ACTC folds without target storage or runtime imports, and
 documents the core source forms that ACTC already recognizes directly:
 `REAL(x)`, `INT(x)`, REAL arithmetic/comparison operators, `FAbs`, `FSqrt`,
 `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`,
-`FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FMin`, `FMax`, `FClamp`, `DegToRad`,
+`FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FMin`, `FMax`, `FClamp`, `DegToRad`,
 `RadToDeg`, and `PrintR` / `PrintRE`.
 
 `SRC/MATH1_DEMO.ACT` validates the exported-library path by compiling a small
 REAL absolute-value program through ACTC, linking it with ALINK, and running
 the linked `.PRG` directly. `FSqrt` covers all non-negative finite REAL32
-inputs; broader math functions such as trig remain deferred
-until matching link-selected `RT_*.OBJ` modules and their call ABI are
-implemented.
+inputs. `FSin` is the first link-selected trigonometric routine; the remaining
+trigonometric and hyperbolic calls stay deferred until matching `RT_*.OBJ`
+modules and compiler mappings are implemented.
 
 ## Current Status
 
@@ -338,8 +354,9 @@ selection, exponential/natural-logarithm approximation, and signed decimal print
 finite values, subnormals, signed zeroes, infinities, and NaNs. REAL-to-INT
 remains the language conversion
 defined above: out-of-range or non-finite input returns zero. The helpers
-preserve lookup, dead-strip behavior, and the direct-PRG ABI; broader functions
-such as trigonometry remain separate future link-selected modules.
+preserve lookup, dead-strip behavior, and the direct-PRG ABI. Sine now uses a
+link-selected range-reduction and polynomial closure; the remaining
+trigonometric functions remain separate future modules.
 
 The active implementation goal is direct linked PRG output with ALINK-owned
 helper selection.

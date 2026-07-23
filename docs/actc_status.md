@@ -154,24 +154,24 @@ Current state:
   ASMBLOCK insertion, local-label and variable relocations, dynamic arithmetic,
   link-selected helpers, and
   DO/WHILE EXIT lowering. It leaves 593 bytes free under its dedicated
-  128-byte minimum reserve. `ACTC_OVL6.BIN` is 8,077 bytes with 115 bytes free
-  under a 96-byte gate. `ACTC_OVL7.BIN` is 6,801 bytes with 1,391 bytes free in
+  128-byte minimum reserve. `ACTC_OVL6.BIN` is 8,094 bytes with 98 bytes free
+  under a 96-byte gate. `ACTC_OVL7.BIN` is 6,840 bytes with 1,352 bytes free in
   its 8 KiB window, and raw-block-capable `ACTC_OVL4.BIN` is 5,603 bytes.
   Function-aware pass G is 6,645 bytes with 1,547 bytes free under a 512-byte
   gate. Universal mixed pass H is 8,064 bytes with exactly 128 bytes free under a
   128-byte gate. Fixed-address and register-machine pass J is 7,901 bytes with
   291 bytes free under a 256-byte gate. REAL function/ternary pass K is 5,877
   bytes with 2,315 bytes free in its 8 KiB window. Nested REAL postfix pass L
-  is 6,067 bytes with 2,125 bytes free. Function-control pass M is 6,936 bytes
-  with 1,256 bytes free under its dedicated 1 KiB gate. Two-control pass N is
-  7,058 bytes with 1,134 bytes free under the same gate. Four-control pass O is
-  7,061 bytes with 1,131 bytes free. Conditional-early-return pass P is 7,085
-  bytes with 1,107 bytes free. REAL-function loop pass Q is 7,089 bytes with
-  1,103 bytes free. Plain-loop/nearest-EXIT pass R is 7,272 bytes with 920
+  is 6,084 bytes with 2,108 bytes free. Function-control pass M is 6,953 bytes
+  with 1,239 bytes free under its dedicated 1 KiB gate. Two-control pass N is
+  7,075 bytes with 1,117 bytes free under the same gate. Four-control pass O is
+  7,078 bytes with 1,114 bytes free. Conditional-early-return pass P is 7,102
+  bytes with 1,090 bytes free. REAL-function loop pass Q is 7,106 bytes with
+  1,086 bytes free. Plain-loop/nearest-EXIT pass R is 7,289 bytes with 903
   bytes free under its dedicated 768-byte gate. Constant-bound CARD-counter
-  `FOR` pass S is 7,766 bytes with 426 bytes free under its dedicated 256-byte
-  gate. Named-bound `FOR` pass T is 8,085 bytes with 107 bytes free under its
-  dedicated 32-byte gate. Literal/control pass U is 7,415 bytes with 777 bytes
+  `FOR` pass S is 7,783 bytes with 409 bytes free under its dedicated 256-byte
+  gate. Named-bound `FOR` pass T is 8,102 bytes with 90 bytes free under its
+  dedicated 32-byte gate. Literal/control pass U is 7,432 bytes with 760 bytes
   free under its dedicated 640-byte gate. Native REAL emitter
   pass A is 7,418 bytes with 774 bytes free under its 768-byte growth reserve.
   Passes H and J share pass 9's typed-parameter bind prologue, so runtime helper calls
@@ -274,7 +274,7 @@ Current state:
   transitive closure, prunes staged sibling helpers, and writes binary32 5.0 in
   VICE. Arbitrary trees, nested calls, locals, and multiple statements remain
   outside this bounded emitter.
-- The bounded REAL value parser also recognizes `FSign(A)`, `FTrunc(A)`, `FFloor(A)`, `FCeil(A)`, `FRound(A)`, `FFrac(A)`, `FMod(A,B)`, `FHypot(A,B)`, `FExp(A)`, `FLn(A)`,
+- The bounded REAL value parser also recognizes `FSign(A)`, `FTrunc(A)`, `FFloor(A)`, `FCeil(A)`, `FRound(A)`, `FFrac(A)`, `FMod(A,B)`, `FHypot(A,B)`, `FExp(A)`, `FLn(A)`, `FLog2(A)`, `FLog10(A)`,
   `FMin(A,B)`, and `FMax(A,B)` for named REAL operands in assignment, print, and condition
   positions. ACTC emits ordinary imports for the selected helper. The
   dependency-free 123-byte sign helper canonicalizes NaN, preserves signed
@@ -366,7 +366,7 @@ Current state:
   expression trees, both root-to-function selectors, function-local storage,
   backward and forward acyclic function edges, a nested local-call operand,
   nested user-call arguments with independent result spills, and reachable-only
-  runtime objects. Pass L is 6,067 bytes with 2,125 bytes free.
+  runtime objects. Pass L is 6,084 bytes with 2,108 bytes free.
   Pass M extends the same ABI with one nonnested `IF`/`ELSE` per REAL function,
   six REAL relations through `rt_f_cmp`, relocatable internal false/end labels,
   supported expressions in both arms, and one terminal return. Its direct PRG

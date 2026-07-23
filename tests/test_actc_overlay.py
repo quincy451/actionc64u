@@ -8621,6 +8621,32 @@ class TestActcOverlay(unittest.TestCase):
                 "IF FLn(A)<B THEN\rPrintE(\"OK\")\rFI\rRETURN\r",
                 ("rt_f_ln", "rt_f_cmp"),
             ),
+            (
+                "log2-print-position",
+                "MODULE MAIN\rREAL A\rPROC MAIN()\r"
+                "A=REAL(8)\rPrintRE(FLog2(A))\rRETURN\r",
+                ("rt_f_log2", "rt_print_f"),
+            ),
+            (
+                "log2-condition-position",
+                "MODULE MAIN\rREAL A\rREAL B\rPROC MAIN()\r"
+                "A=REAL(8)\rB=REAL(4)\r"
+                "IF FLog2(A)<B THEN\rPrintE(\"OK\")\rFI\rRETURN\r",
+                ("rt_f_log2", "rt_f_cmp"),
+            ),
+            (
+                "log10-print-position",
+                "MODULE MAIN\rREAL A\rPROC MAIN()\r"
+                "A=REAL(1000)\rPrintRE(FLog10(A))\rRETURN\r",
+                ("rt_f_log10", "rt_print_f"),
+            ),
+            (
+                "log10-condition-position",
+                "MODULE MAIN\rREAL A\rREAL B\rPROC MAIN()\r"
+                "A=REAL(1000)\rB=REAL(4)\r"
+                "IF FLog10(A)<B THEN\rPrintE(\"OK\")\rFI\rRETURN\r",
+                ("rt_f_log10", "rt_f_cmp"),
+            ),
         )
         for name, source, expected_modules in position_cases:
             with self.subTest(name=name):
@@ -8643,6 +8669,8 @@ class TestActcOverlay(unittest.TestCase):
                     "rt_f_hypot",
                     "rt_f_exp",
                     "rt_f_ln",
+                    "rt_f_log2",
+                    "rt_f_log10",
                     "rt_f_min",
                     "rt_f_max",
                 ):
@@ -9779,6 +9807,45 @@ class TestActcOverlay(unittest.TestCase):
             self.assertNotIn(f"u {absent}\n", obj)
         self.assertIn("u rt_i_to_f\n", obj)
         self.assertIn("u rt_print_f\n", obj)
+
+    def test_math1_log_wrappers_use_independent_runtime_imports(self) -> None:
+        math1_header = (self.root / "lib" / "math1.act").read_text(
+            encoding="ascii"
+        )
+        cases = (
+            ("FLog2", "8", "rt_f_log2", "rt_f_log10"),
+            ("FLog10", "1000", "rt_f_log10", "rt_f_log2"),
+        )
+        for function, value, expected, absent in cases:
+            with self.subTest(function=function):
+                self.assertIn(
+                    f"; REAL FUNC {function}(REAL value)",
+                    math1_header,
+                )
+                obj = self.compile_overlay_object(
+                    (
+                        'INCLUDE "MATH1"\r'
+                        "MODULE MAIN\r"
+                        "REAL VALUE\r"
+                        "REAL RESULT\r"
+                        "PROC MAIN()\r"
+                        f"VALUE=REAL({value})\r"
+                        f"RESULT={function}(VALUE)\r"
+                        "PrintRE(RESULT)\r"
+                    ),
+                    f"actc-overlay-math1-{function.lower()}",
+                    extra_build_env={
+                        "ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"
+                    },
+                    additional_sources={"MATH1.ACT": math1_header},
+                )
+
+                self.assertEqual(self.last_emit_overlay_pass, [5])
+                self.assertIn(f"u {expected}\n", obj)
+                for unrelated in (absent, "rt_f_exp", "rt_f_deg_to_rad"):
+                    self.assertNotIn(f"u {unrelated}\n", obj)
+                self.assertIn("u rt_i_to_f\n", obj)
+                self.assertIn("u rt_print_f\n", obj)
 
     def test_math1_angle_builtins_are_available_in_pass_u_functions(self) -> None:
         source = (

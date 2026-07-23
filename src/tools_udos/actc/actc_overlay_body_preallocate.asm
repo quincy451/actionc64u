@@ -927,6 +927,14 @@ preallocate_real_unary_print_external_from_scan_y_overlay:
     ldy #>pattern_fln
     jsr symbol_buffer_matches_local_const
     bcc preallocate_real_unary_print_external_from_scan_y_overlay_fln
+    lda #<pattern_flog2
+    ldy #>pattern_flog2
+    jsr symbol_buffer_matches_local_const
+    bcc preallocate_real_unary_print_external_from_scan_y_overlay_flog2
+    lda #<pattern_flog10
+    ldy #>pattern_flog10
+    jsr symbol_buffer_matches_local_const
+    bcc preallocate_real_unary_print_external_from_scan_y_overlay_flog10
     lda #<pattern_degtorad
     ldy #>pattern_degtorad
     jsr symbol_buffer_matches_local_const
@@ -966,6 +974,12 @@ preallocate_real_unary_print_external_from_scan_y_overlay_fexp:
     bne preallocate_real_unary_print_external_from_scan_y_overlay_operator
 preallocate_real_unary_print_external_from_scan_y_overlay_fln:
     lda #'n'
+    bne preallocate_real_unary_print_external_from_scan_y_overlay_operator
+preallocate_real_unary_print_external_from_scan_y_overlay_flog2:
+    lda #'b'
+    bne preallocate_real_unary_print_external_from_scan_y_overlay_operator
+preallocate_real_unary_print_external_from_scan_y_overlay_flog10:
+    lda #'t'
     bne preallocate_real_unary_print_external_from_scan_y_overlay_operator
 preallocate_real_unary_print_external_from_scan_y_overlay_degtorad:
     lda #'d'
@@ -2350,6 +2364,10 @@ pattern_fexp:
     .asciiz "FEXP"
 pattern_fln:
     .asciiz "FLN"
+pattern_flog2:
+    .asciiz "FLOG2"
+pattern_flog10:
+    .asciiz "FLOG10"
 pattern_fclamp:
     .asciiz "FCLAMP"
 pattern_degtorad:

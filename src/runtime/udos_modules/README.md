@@ -120,6 +120,10 @@ Current status:
   alias, imports only subtraction, addition, division, and multiplication, and
   returns negative infinity for either zero sign and canonical NaN for negative
   nonzero inputs.
+- `rt_f_log2.obj` and `rt_f_log10.obj` are separate alias-safe unary wrappers
+  that stage `rt_f_ln.obj` into private storage and divide by embedded binary32
+  `ln(2)` and `ln(10)` constants. Each wrapper selects only itself, natural
+  logarithm, division, and the resulting arithmetic closure.
 - `rt_f_deg_to_rad.obj` and `rt_f_rad_to_deg.obj` are separate 20-byte,
   alias-safe unary wrappers around `rt_f_mul.obj`. They embed binary32
   `pi/180` and `180/pi`, respectively, so ALINK includes only the conversion

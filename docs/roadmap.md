@@ -2108,3 +2108,30 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   and 7,415 bytes.
 - Native MATH1 now exposes nineteen link-selected calls and lacks 24 public
   routines. `FLog2` and `FLog10` are the next dependency-ordered wrappers.
+
+## 2026-07-23 Link-Selected MATH1 Base Logarithms
+
+- Added independent 71-byte `RT_F_LOG2.OBJ` and `RT_F_LOG10.OBJ` dependency
+  roots. Each stages `RT_F_LN.OBJ` into private storage and divides by an
+  embedded binary32 `ln(2)` or `ln(10)` denominator through `RT_F_DIV.OBJ`.
+- Preserved the FLn domain contract and source/destination alias safety without
+  adding linker-side math recognition or a runtime launcher. Each wrapper
+  imports only FLn and division, and ALINK prunes the unused sibling.
+- Native ACTC recognizes both unary calls in bounded assignments, prints,
+  conditions, and REAL-function trees. Focused direct PRGs print `3` for
+  `FLog2(8)` and `FLog10(1000)`.
+- Synchronized both objects, their generator, and the shared manifest into
+  Idun. Linux ACTC selects the same wrappers instead of compiling the portable
+  source bodies, and its generated 17-result MATH1 PRG exercises FLog2.
+- Current inventories are 1,370 broad direct-PRG shapes, 196 non-runtime
+  source-backed object-emission shapes, and 304 compiled-runtime relocation
+  oracles. The native suite contains 866 tests, including 252 overlay and 199
+  source-cache tests.
+- Compact selector and suffix tables keep every overlay above its reserve.
+  Pass 6 is 8,094 bytes with 98 bytes free; pass 7 is 6,840 bytes with 1,352
+  bytes free; passes L through U are respectively 6,084, 6,953, 7,075, 7,078,
+  7,102, 7,106, 7,289, 7,783, 8,102, and 7,432 bytes.
+- Native MATH1 now exposes twenty-one link-selected calls and lacks 22 public
+  routines. `FPow` is the next dependency-ordered routine, but pass 6 has only
+  two bytes above its enforced 96-byte reserve and must be compacted before
+  another builtin name is added.

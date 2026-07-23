@@ -19,6 +19,7 @@ from generate_math_runtime import (
     EXP_LOWER_BITS,
     EXP_UPPER_BITS,
     LN_INVERSE_SQRT2_BITS,
+    LN10_BITS,
     LN_ODD_DENOMINATOR_BITS,
     LN_SQRT2_BITS,
     RADIANS_TO_DEGREES_BITS,
@@ -37,6 +38,8 @@ from generate_math_runtime import (
     hypot_module,
     link_runtime_builders,
     ln_module,
+    log10_module,
+    log2_module,
     minmax_module,
     mod_module,
     multiply_module,
@@ -462,6 +465,10 @@ def expected_ln(value: int) -> int:
     return expected_addsub(doubled, exponent_term, False)
 
 
+def expected_logarithm(value: int, denominator: int) -> int:
+    return expected_division(expected_ln(value), denominator)
+
+
 def runtime_builders(operation: str):
     special = special_value_module()
     if operation == "add":
@@ -537,6 +544,17 @@ def runtime_builders(operation: str):
         ]
     if operation == "ln":
         return [
+            ln_module(),
+            divide_module(),
+            multiply_module(),
+            addsub_wrapper_module("rt_f_sub", True),
+            addsub_wrapper_module("rt_f_add", False),
+            addsub_core_module(),
+            special,
+        ]
+    if operation in ("log2", "log10"):
+        return [
+            log2_module() if operation == "log2" else log10_module(),
             ln_module(),
             divide_module(),
             multiply_module(),
@@ -728,7 +746,7 @@ def verification_ln_cases(
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/exp/ln/angle/min/max/clamp code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/exp/ln/log2/log10/angle/min/max/clamp code against exact IEEE "
             "binary32"
         )
     )
@@ -788,6 +806,8 @@ def main() -> int:
             "hypot",
             "exp",
             "ln",
+            "log2",
+            "log10",
             "deg_to_rad",
             "rad_to_deg",
             "min",
@@ -800,7 +820,7 @@ def main() -> int:
                 else exp_cases
                 if operation == "exp"
                 else ln_cases
-                if operation == "ln"
+                if operation in ("ln", "log2", "log10")
                 else cases
             )
             runtime_path = work / f"rt_f_{operation}.bin"
@@ -860,6 +880,10 @@ def main() -> int:
                     expected = expected_exp(left)
                 elif operation == "ln":
                     expected = expected_ln(left)
+                elif operation == "log2":
+                    expected = expected_logarithm(left, EXP_LN2_BITS)
+                elif operation == "log10":
+                    expected = expected_logarithm(left, LN10_BITS)
                 elif operation == "deg_to_rad":
                     expected = expected_angle_scale(
                         left, DEGREES_TO_RADIANS_BITS
@@ -895,6 +919,8 @@ def main() -> int:
                 "hypot",
                 "exp",
                 "ln",
+                "log2",
+                "log10",
                 "deg_to_rad",
                 "rad_to_deg",
             ):
@@ -933,6 +959,10 @@ def main() -> int:
                         if operation == "exp"
                         else expected_ln(left)
                         if operation == "ln"
+                        else expected_logarithm(left, EXP_LN2_BITS)
+                        if operation == "log2"
+                        else expected_logarithm(left, LN10_BITS)
+                        if operation == "log10"
                         else expected_angle_scale(
                             left, DEGREES_TO_RADIANS_BITS
                         )

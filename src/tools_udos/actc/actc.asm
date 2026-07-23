@@ -12826,6 +12826,22 @@ find_or_store_rt_f_ln_external:
     jsr copy_const_ptr_to_declared_module_name
     jmp find_or_store_external_from_declared
 
+find_or_store_rt_f_log2_external:
+    lda #<runtime_symbol_rt_f_log2
+    sta const_ptr
+    lda #>runtime_symbol_rt_f_log2
+    sta const_ptr+1
+    jsr copy_const_ptr_to_declared_module_name
+    jmp find_or_store_external_from_declared
+
+find_or_store_rt_f_log10_external:
+    lda #<runtime_symbol_rt_f_log10
+    sta const_ptr
+    lda #>runtime_symbol_rt_f_log10
+    sta const_ptr+1
+    jsr copy_const_ptr_to_declared_module_name
+    jmp find_or_store_external_from_declared
+
 find_or_store_rt_f_deg_to_rad_external:
     lda #<runtime_symbol_rt_f_deg_to_rad
     ldy #>runtime_symbol_rt_f_deg_to_rad
@@ -12940,6 +12956,12 @@ find_or_store_real_operator_external_from_a:
 :   cmp #'n'
     bne :+
     jmp find_or_store_rt_f_ln_external
+:   cmp #'b'
+    bne :+
+    jmp find_or_store_rt_f_log2_external
+:   cmp #'t'
+    bne :+
+    jmp find_or_store_rt_f_log10_external
 :   cmp #'d'
     bne :+
     jmp find_or_store_rt_f_deg_to_rad_external
@@ -16361,6 +16383,10 @@ runtime_symbol_rt_f_exp:
     .asciiz "RT_F_EXP"
 runtime_symbol_rt_f_ln:
     .asciiz "RT_F_LN"
+runtime_symbol_rt_f_log2:
+    .asciiz "RT_F_LOG2"
+runtime_symbol_rt_f_log10:
+    .asciiz "RT_F_LOG10"
 runtime_symbol_rt_f_deg_to_rad:
     .asciiz "RT_F_DEG_TO_RAD"
 runtime_symbol_rt_f_rad_to_deg:

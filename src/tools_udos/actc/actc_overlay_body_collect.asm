@@ -2883,6 +2883,10 @@ pattern_fexp:
     .asciiz "FEXP"
 pattern_fln:
     .asciiz "FLN"
+pattern_flog2:
+    .asciiz "FLOG2"
+pattern_flog10:
+    .asciiz "FLOG10"
 pattern_degtorad:
     .asciiz "DEGTORAD"
 pattern_radtodeg:
@@ -2900,6 +2904,8 @@ real_unary_pattern_table_local:
     .byte <pattern_ffrac, 'f'
     .byte <pattern_fexp, 'x'
     .byte <pattern_fln, 'n'
+    .byte <pattern_flog2, 'b'
+    .byte <pattern_flog10, 't'
     .byte <pattern_degtorad, 'd'
     .byte <pattern_radtodeg, 'e'
 real_unary_pattern_table_local_end:
@@ -2912,6 +2918,8 @@ real_unary_pattern_table_local_end:
 .assert >pattern_fabs = >pattern_ffrac, error, "unary patterns must share one page"
 .assert >pattern_fabs = >pattern_fexp, error, "unary patterns must share one page"
 .assert >pattern_fabs = >pattern_fln, error, "unary patterns must share one page"
+.assert >pattern_fabs = >pattern_flog2, error, "unary patterns must share one page"
+.assert >pattern_fabs = >pattern_flog10, error, "unary patterns must share one page"
 .assert >pattern_fabs = >pattern_degtorad, error, "unary patterns must share one page"
 .assert >pattern_fabs = >pattern_radtodeg, error, "unary patterns must share one page"
 real_binary_pattern_table_local:

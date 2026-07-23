@@ -262,6 +262,9 @@ Examples:
   multiplication, subtraction, and addition closure
 - `FLn(r)` imports `rt_f_ln` plus its subtraction, addition, division, and
   multiplication closure
+- `FLog2(r)` and `FLog10(r)` import `rt_f_log2` or `rt_f_log10`,
+  respectively; each wrapper reaches `rt_f_ln`, `rt_f_div`, and only that
+  arithmetic closure
 - `DegToRad(r)` imports `rt_f_deg_to_rad` plus its multiplication and
   special-value closure
 - `RadToDeg(r)` imports `rt_f_rad_to_deg` plus its multiplication and
@@ -304,8 +307,8 @@ constants, which ACTC folds without target storage or runtime imports, and
 documents the core source forms that ACTC already recognizes directly:
 `REAL(x)`, `INT(x)`, REAL arithmetic/comparison operators, `FAbs`, `FSqrt`,
 `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`,
-`FExp`, `FLn`, `FMin`, `FMax`, `FClamp`, `DegToRad`, `RadToDeg`, and `PrintR` /
-`PrintRE`.
+`FExp`, `FLn`, `FLog2`, `FLog10`, `FMin`, `FMax`, `FClamp`, `DegToRad`,
+`RadToDeg`, and `PrintR` / `PrintRE`.
 
 `SRC/MATH1_DEMO.ACT` validates the exported-library path by compiling a small
 REAL absolute-value program through ACTC, linking it with ALINK, and running

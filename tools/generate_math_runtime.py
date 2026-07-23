@@ -56,6 +56,7 @@ LN_ODD_DENOMINATOR_BITS = (
     0x41300000,
     0x41500000,
 )
+LN10_BITS = 0x40135D8E
 
 
 def far_branch(builder: ObjectBuilder, opcode: int, target: str, tag: str) -> None:
@@ -1980,6 +1981,66 @@ def ln_module() -> ObjectBuilder:
 
     b.export("rt_f_ln")
     return b
+
+
+def logarithm_base_module(module: str, denominator_bits: int) -> ObjectBuilder:
+    """Build an alias-safe FLn(value)/constant logarithm wrapper."""
+    b = ObjectBuilder(module)
+
+    def load_pointer(prefix: str, zero_page: int) -> None:
+        b.local_reference(0xAD, f"{prefix}p")
+        b.zero_page(0x85, zero_page)
+        b.local_reference(0xAD, f"{prefix}ph")
+        b.zero_page(0x85, zero_page + 1)
+
+    # FLn and division may reuse all pointer zero-page cells, so retain the
+    # caller's destination in module storage and stage the logarithm privately.
+    b.zero_page(0xA5, 0x06)
+    b.local_reference(0x8D, "dp")
+    b.zero_page(0xA5, 0x07)
+    b.local_reference(0x8D, "dph")
+    load_pointer("t", 0x06)
+    b.jsr("rt_f_ln")
+    load_pointer("t", 0x02)
+    load_pointer("k", 0x04)
+    b.local_reference(0xAD, "dp")
+    b.zero_page(0x85, 0x06)
+    b.local_reference(0xAD, "dph")
+    b.zero_page(0x85, 0x07)
+    b.jsr("rt_f_div")
+    b.emit(0x60)
+
+    b.label("tp")
+    temporary_pointer_offset = len(b.code)
+    b.emit(0x00)
+    b.label("tph")
+    b.emit(0x00)
+    b.local_relocations.append((temporary_pointer_offset, "t"))
+    b.label("kp")
+    constant_pointer_offset = len(b.code)
+    b.emit(0x00)
+    b.label("kph")
+    b.emit(0x00)
+    b.local_relocations.append((constant_pointer_offset, "k"))
+    b.label("dp")
+    b.emit(0x00)
+    b.label("dph")
+    b.emit(0x00)
+    b.label("t")
+    b.emit(0x00, 0x00, 0x00, 0x00)
+    b.label("k")
+    b.emit(*denominator_bits.to_bytes(4, "little"))
+
+    b.export(module)
+    return b
+
+
+def log2_module() -> ObjectBuilder:
+    return logarithm_base_module("rt_f_log2", EXP_LN2_BITS)
+
+
+def log10_module() -> ObjectBuilder:
+    return logarithm_base_module("rt_f_log10", LN10_BITS)
 
 
 def float_to_int_module() -> ObjectBuilder:
@@ -3982,6 +4043,8 @@ def main() -> int:
             hypot_module(),
             exp_module(),
             ln_module(),
+            log2_module(),
+            log10_module(),
             deg_to_rad_module(),
             rad_to_deg_module(),
             minmax_module("rt_f_min", maximum=False),

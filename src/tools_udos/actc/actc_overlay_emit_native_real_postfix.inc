@@ -6,7 +6,8 @@ NRP_ENABLE_EXTENDED_CONTROL = ACTC_EMIT_NATIVE_REAL_POSTFIX_EXTENDED_CONTROL_ONL
 NRP_ENABLE_MULTI_CONTROL = ACTC_EMIT_NATIVE_REAL_POSTFIX_MULTI_CONTROL_ONLY + NRP_ENABLE_EXTENDED_CONTROL
 NRP_ENABLE_CONTROL = ACTC_EMIT_NATIVE_REAL_POSTFIX_CONTROL_ONLY + NRP_ENABLE_MULTI_CONTROL
 NRP_ENABLE_LOOP_EXIT = ACTC_EMIT_NATIVE_REAL_POSTFIX_LOOP_EXIT_ONLY
-NRP_ENABLE_FOR = ACTC_EMIT_NATIVE_REAL_POSTFIX_FOR_ONLY
+NRP_ENABLE_FOR_DYNAMIC = ACTC_EMIT_NATIVE_REAL_POSTFIX_FOR_DYNAMIC_ONLY
+NRP_ENABLE_FOR = ACTC_EMIT_NATIVE_REAL_POSTFIX_FOR_ONLY + NRP_ENABLE_FOR_DYNAMIC
 NRP_ENABLE_GENERIC_LOOP = ACTC_EMIT_NATIVE_REAL_POSTFIX_LOOP_ONLY + NRP_ENABLE_LOOP_EXIT
 NRP_ENABLE_LOOP = NRP_ENABLE_GENERIC_LOOP + NRP_ENABLE_FOR
 NRP_ENABLE_CONDITION = NRP_ENABLE_CONTROL + NRP_ENABLE_LOOP
@@ -99,6 +100,9 @@ native_real_postfix_clear_multi_control_loop:
     sta nrp_loop_seen_any
 .if NRP_ENABLE_FOR
     sta nrp_for_seen_any
+.if NRP_ENABLE_FOR_DYNAMIC
+    sta nrp_for_dynamic_seen_any
+.endif
 .endif
 .if NRP_ENABLE_LOOP_EXIT
     sta nrp_loop_special_seen_any
@@ -358,7 +362,10 @@ native_real_postfix_analyze_done:
     jsr nrp_validate_call_graph
     jcc native_real_postfix_detect_no
 :
-.if NRP_ENABLE_FOR
+.if NRP_ENABLE_FOR_DYNAMIC
+    lda nrp_for_dynamic_seen_any
+    jeq native_real_postfix_detect_no
+.elseif NRP_ENABLE_FOR
     lda nrp_for_seen_any
     jeq native_real_postfix_detect_no
 .elseif NRP_ENABLE_EARLY_RETURN
@@ -615,6 +622,17 @@ nrp_parse_load:
     jcs nrp_parse_body_fail
     sta nrp_pending_value
     tax
+.if NRP_ENABLE_FOR_DYNAMIC
+    lda nrp_var_kind,x
+    cmp #NRP_VALUE_WORD
+    beq nrp_parse_load_push
+    txa
+    clc
+    adc #$01
+    sta nrp_pending_load
+    lda nrp_var_kind,x
+nrp_parse_load_push:
+.else
     clc
     adc #$01
     sta nrp_pending_load
@@ -622,6 +640,7 @@ nrp_parse_load:
     lda nrp_var_kind,x
 .else
     lda #NRP_VALUE_VAR
+.endif
 .endif
     jsr nrp_push_value
     jcc nrp_parse_body_fail
@@ -1052,6 +1071,16 @@ nrp_parse_for_initial_store:
     jne nrp_parse_body_fail
     jsr nrp_pop_value
     jcc nrp_parse_body_fail
+.if NRP_ENABLE_FOR_DYNAMIC
+    sta nrp_for_pending_initial_kind
+    cmp #NRP_VALUE_WORD
+    bne nrp_parse_for_initial_constant
+    stx nrp_for_pending_initial_index
+    lda #$01
+    sta nrp_for_dynamic_seen_any
+    jmp nrp_parse_for_initial_ready
+nrp_parse_for_initial_constant:
+.endif
     cmp #NRP_VALUE_INT
     jne nrp_parse_body_fail
     lda nrp_stack_depth
@@ -1060,6 +1089,11 @@ nrp_parse_for_initial_store:
     sta nrp_for_pending_initial_lo
     lda nrp_value_hi
     sta nrp_for_pending_initial_hi
+.if NRP_ENABLE_FOR_DYNAMIC
+nrp_parse_for_initial_ready:
+    lda nrp_stack_depth
+    jne nrp_parse_body_fail
+.endif
     lda #$01
     sta nrp_for_pending
     jsr nrp_emit_for_initial_store
@@ -1097,6 +1131,16 @@ nrp_parse_for_direction_ok:
     jeq nrp_parse_body_fail
     jsr nrp_pop_value
     jcc nrp_parse_body_fail
+.if NRP_ENABLE_FOR_DYNAMIC
+    sta nrp_for_pending_final_kind
+    cmp #NRP_VALUE_WORD
+    bne nrp_parse_for_final_constant
+    stx nrp_for_pending_final_index
+    lda #$01
+    sta nrp_for_dynamic_seen_any
+    jmp nrp_parse_for_final_ready
+nrp_parse_for_final_constant:
+.endif
     cmp #NRP_VALUE_INT
     jne nrp_parse_body_fail
     lda nrp_stack_depth
@@ -1105,6 +1149,11 @@ nrp_parse_for_direction_ok:
     sta nrp_for_pending_final_lo
     lda nrp_value_hi
     sta nrp_for_pending_final_hi
+.if NRP_ENABLE_FOR_DYNAMIC
+nrp_parse_for_final_ready:
+    lda nrp_stack_depth
+    jne nrp_parse_body_fail
+.endif
     lda nrp_for_pending_direction
     cmp #'+'
     beq nrp_parse_for_positive_step
@@ -1115,6 +1164,15 @@ nrp_parse_for_positive_step:
     lda nrp_for_pending_step_hi
     jmi nrp_parse_body_fail
 nrp_parse_for_allocate:
+.if NRP_ENABLE_FOR_DYNAMIC
+    lda nrp_for_pending_final_kind
+    cmp #NRP_VALUE_WORD
+    bne nrp_parse_for_allocate_loop
+    jsr nrp_allocate_temp
+    jcc nrp_parse_body_fail
+    stx nrp_for_pending_final_temp
+nrp_parse_for_allocate_loop:
+.endif
     lda nrp_loop_count
     cmp #NRP_LOOP_MAX
     jcs nrp_parse_body_fail
@@ -1142,12 +1200,24 @@ nrp_parse_for_allocate:
     sta nrp_for_final_lo,x
     lda nrp_for_pending_final_hi
     sta nrp_for_final_hi,x
+.if NRP_ENABLE_FOR_DYNAMIC
+    lda nrp_for_pending_final_kind
+    sta nrp_for_final_kind,x
+    lda nrp_for_pending_final_index
+    sta nrp_for_final_index,x
+    lda nrp_for_pending_final_temp
+    sta nrp_for_final_temp,x
+.endif
     lda nrp_for_pending_step_lo
     sta nrp_for_step_lo,x
     lda nrp_for_pending_step_hi
     sta nrp_for_step_hi,x
     lda nrp_for_pending_direction
     sta nrp_for_direction,x
+.if NRP_ENABLE_FOR_DYNAMIC
+    jsr nrp_emit_for_final_capture
+    ldx nrp_loop_index
+.endif
     lda nrp_mode
     bne nrp_parse_for_emit
     lda #$01
@@ -2016,6 +2086,11 @@ nrp_emit_else_jump_machine:
 .if NRP_ENABLE_LOOP
 .if NRP_ENABLE_FOR
 nrp_emit_for_initial_store:
+.if NRP_ENABLE_FOR_DYNAMIC
+    lda nrp_for_pending_initial_kind
+    cmp #NRP_VALUE_WORD
+    beq nrp_emit_for_initial_store_dynamic
+.endif
     lda #NRP_VALUE_VAR
     sta nrp_name_kind
     lda nrp_for_pending_counter
@@ -2030,6 +2105,50 @@ nrp_emit_for_initial_store:
     ldy #>nrp_for_store_template
     ldx #(nrp_for_store_template_end-nrp_for_store_template)
     jmp nrp_emit_for_const_bytes
+.if NRP_ENABLE_FOR_DYNAMIC
+nrp_emit_for_initial_store_dynamic:
+    lda #NRP_VALUE_VAR
+    sta nrp_name_kind
+    lda nrp_for_pending_initial_index
+    sta nrp_name_index
+    lda #$04
+    jsr nrp_emit_pointer
+    lda #NRP_VALUE_VAR
+    sta nrp_name_kind
+    lda nrp_for_pending_counter
+    sta nrp_name_index
+    lda #$06
+    jsr nrp_emit_pointer
+    lda #<nrp_for_word_copy_template
+    ldy #>nrp_for_word_copy_template
+    ldx #(nrp_for_word_copy_template_end-nrp_for_word_copy_template)
+    jmp nrp_emit_for_const_bytes
+
+nrp_emit_for_final_capture:
+    ldx nrp_loop_index
+    lda nrp_for_final_kind,x
+    cmp #NRP_VALUE_WORD
+    bne nrp_emit_for_final_capture_done
+    lda #NRP_VALUE_VAR
+    sta nrp_name_kind
+    lda nrp_for_final_index,x
+    sta nrp_name_index
+    lda #$04
+    jsr nrp_emit_pointer
+    ldx nrp_loop_index
+    lda #NRP_VALUE_TEMP
+    sta nrp_name_kind
+    lda nrp_for_final_temp,x
+    sta nrp_name_index
+    lda #$06
+    jsr nrp_emit_pointer
+    lda #<nrp_for_word_copy_template
+    ldy #>nrp_for_word_copy_template
+    ldx #(nrp_for_word_copy_template_end-nrp_for_word_copy_template)
+    jmp nrp_emit_for_const_bytes
+nrp_emit_for_final_capture_done:
+    rts
+.endif
 
 nrp_emit_for_condition:
     ldx nrp_loop_index
@@ -2043,10 +2162,35 @@ nrp_emit_for_condition:
     lda nrp_for_direction,x
     cmp #'-'
     beq nrp_emit_for_condition_descending
+.if NRP_ENABLE_FOR_DYNAMIC
+    lda nrp_for_final_kind,x
+    cmp #NRP_VALUE_WORD
+    beq nrp_emit_for_condition_ascending_dynamic
+    lda #$C9
+    sta nrp_for_ascending_template+4
+    sta nrp_for_ascending_template+13
+.endif
     lda nrp_for_final_hi,x
     sta nrp_for_ascending_template+5
     lda nrp_for_final_lo,x
     sta nrp_for_ascending_template+14
+.if NRP_ENABLE_FOR_DYNAMIC
+    jmp nrp_emit_for_condition_ascending_ready
+nrp_emit_for_condition_ascending_dynamic:
+    lda #NRP_VALUE_TEMP
+    sta nrp_name_kind
+    lda nrp_for_final_temp,x
+    sta nrp_name_index
+    lda #$04
+    jsr nrp_emit_pointer
+    lda #$D1
+    sta nrp_for_ascending_template+4
+    sta nrp_for_ascending_template+13
+    lda #$04
+    sta nrp_for_ascending_template+5
+    sta nrp_for_ascending_template+14
+nrp_emit_for_condition_ascending_ready:
+.endif
     lda nrp_mode
     cmp #NRP_MODE_RELOC
     bne nrp_emit_for_condition_ascending_bytes
@@ -2060,10 +2204,35 @@ nrp_emit_for_condition_ascending_bytes:
     ldx #(nrp_for_ascending_template_end-nrp_for_ascending_template)
     jmp nrp_emit_for_const_bytes
 nrp_emit_for_condition_descending:
+.if NRP_ENABLE_FOR_DYNAMIC
+    lda nrp_for_final_kind,x
+    cmp #NRP_VALUE_WORD
+    beq nrp_emit_for_condition_descending_dynamic
+    lda #$C9
+    sta nrp_for_descending_template+4
+    sta nrp_for_descending_template+13
+.endif
     lda nrp_for_final_hi,x
     sta nrp_for_descending_template+5
     lda nrp_for_final_lo,x
     sta nrp_for_descending_template+14
+.if NRP_ENABLE_FOR_DYNAMIC
+    jmp nrp_emit_for_condition_descending_ready
+nrp_emit_for_condition_descending_dynamic:
+    lda #NRP_VALUE_TEMP
+    sta nrp_name_kind
+    lda nrp_for_final_temp,x
+    sta nrp_name_index
+    lda #$04
+    jsr nrp_emit_pointer
+    lda #$D1
+    sta nrp_for_descending_template+4
+    sta nrp_for_descending_template+13
+    lda #$04
+    sta nrp_for_descending_template+5
+    sta nrp_for_descending_template+14
+nrp_emit_for_condition_descending_ready:
+.endif
     lda nrp_mode
     cmp #NRP_MODE_RELOC
     bne nrp_emit_for_condition_descending_bytes
@@ -3479,6 +3648,11 @@ nrp_for_increment_template:
     .byte $A0,$00,$B1,$06,$18,$69,$00,$91,$06,$C8,$B1,$06
     .byte $69,$00,$91,$06,$B0,$03,$4C,$00,$00,$4C,$00,$00
 nrp_for_increment_template_end:
+.if NRP_ENABLE_FOR_DYNAMIC
+nrp_for_word_copy_template:
+    .byte $A0,$01,$B1,$04,$91,$06,$88,$B1,$04,$91,$06
+nrp_for_word_copy_template_end:
+.endif
 .endif
 
 nrp_copy_template:
@@ -3610,6 +3784,17 @@ nrp_for_final_lo: .res NRP_LOOP_SLOT_MAX
 nrp_for_final_hi: .res NRP_LOOP_SLOT_MAX
 nrp_for_step_lo: .res NRP_LOOP_SLOT_MAX
 nrp_for_step_hi: .res NRP_LOOP_SLOT_MAX
+.if NRP_ENABLE_FOR_DYNAMIC
+nrp_for_dynamic_seen_any: .res 1
+nrp_for_pending_initial_kind: .res 1
+nrp_for_pending_initial_index: .res 1
+nrp_for_pending_final_kind: .res 1
+nrp_for_pending_final_index: .res 1
+nrp_for_pending_final_temp: .res 1
+nrp_for_final_kind: .res NRP_LOOP_SLOT_MAX
+nrp_for_final_index: .res NRP_LOOP_SLOT_MAX
+nrp_for_final_temp: .res NRP_LOOP_SLOT_MAX
+.endif
 .endif
 .if NRP_ENABLE_LOOP_EXIT
 nrp_loop_special_seen_any: .res 1

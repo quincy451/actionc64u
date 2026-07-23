@@ -1944,3 +1944,30 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   loop/conditional nesting, returns inside loops, controls beyond four or depth
   four, unrestricted call trees, recursive/reentrant frames, mixed types,
   arbitrary signatures, and recursion remain pending.
+
+## 2026-07-22 Named CARD Bounds In REAL Function FOR Loops
+
+- Added pass T, `ACTC_OVLT.BIN` (id 29), for named CARD initial/final bounds
+  in the bounded pass-S `FOR` form. Named initial values are copied into the
+  counter at entry; named final values are staged before the recorded back edge,
+  preserving once-only bound evaluation. Steps remain nonzero signed constants.
+- Added byte-identical `real_function_dynamic_for_postfix.act` fixtures. One
+  function nests `FOR J=I TO 3`; the other nests `FOR L=1 TO K`. Native
+  ACTC/ALINK and Idun's generated-6502 path both store 7.0 twice; native VICE
+  displays `77` and ALINK selects only the five reachable add/conversion/print
+  modules.
+- Fixed loop-label bookkeeping exposed by the final-bound case so second-slot
+  `__rb11`/`__rz11` exports accompany every emitted relocation.
+- Pass S remains byte-identical at SHA-256
+  `0291077c9a1895313eb5fe1ad5b9914b3b4c8ebe64cd9c75634863d96e639128`.
+  Pass T is 8,147 bytes with 45 bytes free under its dedicated 32-byte gate and
+  has SHA-256
+  `e07b16dab80f22685e86c0b50c1018862ed5721eca1c07d66151ead5727fe3d3`.
+- Current native inventories are 1,362 broad direct-PRG and 194 non-runtime
+  source-backed shapes; the native unittest inventory is 854, the overlay suite
+  is 244 tests, the source-cache suite is 198 tests, and the compiled-runtime
+  oracle remains 298.
+- General `FOR` bound expressions, runtime steps, nested counter-to-REAL body
+  composition, mixed loop/conditional nesting, returns inside loops, controls
+  beyond four or depth four, unrestricted call trees, recursive/reentrant
+  frames, mixed types, arbitrary signatures, and recursion remain pending.

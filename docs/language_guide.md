@@ -455,9 +455,14 @@ OD
 
 The initial and final values must be integer constants. The optional signed
 constant step defaults to `1` and must be nonzero. Comparison is unsigned and
-inclusive; overflow or underflow ends the loop instead of wrapping. Dynamic
-bounds and composing `REAL(I)` into the nested REAL body expression are not yet
-accepted by this bounded collector/emitter path.
+inclusive; overflow or underflow ends the loop instead of wrapping.
+
+Pass T extends the same bounded form so either initial or final value may be a
+named CARD. A named initial value is copied when the loop is entered; a named
+final value is staged once before the loop back edge, so later changes do not
+alter that invocation's bound. General bound expressions, nonconstant steps,
+and composing `REAL(I)` into the nested REAL body expression are not yet
+accepted by this collector/emitter path.
 
 Mixed loop/conditional nesting, returns from inside loops, more than four
 controls, deeper control nesting,

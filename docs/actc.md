@@ -111,8 +111,10 @@ Current contract:
   local CARD-counter `FOR` loops per function, with constant initial/final
   values and a nonzero constant signed step, subject to the shared 64-operation
   body/debug budget. It emits unsigned inclusive tests
-  plus overflow-safe termination to the same ordinary label form. Dynamic
-  bounds, counter-to-REAL composition in the body, mixed loop/conditional
+  plus overflow-safe termination to the same ordinary label form. Pass T
+  accepts named CARD initial/final bounds, copies a named initial value into the
+  counter and stages a named final value once before the loop back edge.
+  General bound expressions and runtime steps, counter-to-REAL composition in the body, mixed loop/conditional
   nesting, returns from inside loops, more than four controls, deeper nesting,
   and recursive/reentrant functions remain outside the bounded function path.
   Pass K additionally owns a bounded four-REAL root that initializes three

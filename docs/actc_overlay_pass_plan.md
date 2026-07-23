@@ -60,7 +60,7 @@ The overlay artifacts share one stable execution ABI:
   transform as base-36 pass `I`; `tools/build_actc_overlay_preprocess.sh` emits
   `build/udos_tools/ACTC_OVLI.BIN`.
 - The workspace exporter and UDOS release Makefile include base-36 passes
-  `ACTC_OVL0.BIN` through `ACTC_OVLS.BIN` next to `ACTC.PRG`, so pass files are
+  `ACTC_OVL0.BIN` through `ACTC_OVLT.BIN` next to `ACTC.PRG`, so pass files are
   present when the scheduler runs from an exported or release image.
 - `tests/test_actc_overlay.py` proves the `ACOV` header, ABI version, pass id,
   `$A000` execution base, encoded byte length, compatibility no-op return, and the
@@ -99,14 +99,15 @@ The overlay artifacts share one stable execution ABI:
   `ACTC_OVLP.BIN` for bounded conditional early returns with a terminal
   fallback, and `ACTC_OVLQ.BIN` for bounded REAL-function post-test and
   pre-test loops, `ACTC_OVLR.BIN` for plain loops plus nearest-loop `EXIT`, and
-  `ACTC_OVLS.BIN` for constant-bound CARD-counter REAL-function `FOR` loops.
+  `ACTC_OVLS.BIN` for constant-bound CARD-counter REAL-function `FOR` loops,
+  and `ACTC_OVLT.BIN` for named CARD initial/final bounds.
   Passes 8 and A through H retain their native integer, REAL,
   runtime, and composition roles.
   The same path stages `ACTC_OVL5.BIN` as the generic object-emission fallback
   and `ACTC_OVL7.BIN` for overlay-hosted body external preallocation. On
   success, later compiler phases consume the overlay-written REU metadata.
   Overlay staging uses the executable-relative tool ABI path prefix, so
-  `!ACTC_OVL1.BIN` through `!ACTC_OVLS.BIN` resolve beside the launched
+  `!ACTC_OVL1.BIN` through `!ACTC_OVLT.BIN` resolve beside the launched
   `ACTC.PRG`.
 - `tools/build_actc_udos.sh` always builds `ACTC_OVL0.BIN`, including compiler
   harness builds, because compile/link/debug chaining and compile-error editor
@@ -250,8 +251,20 @@ The overlay artifacts share one stable execution ABI:
   unsigned bounds and carry-based overflow/underflow exits
   prevent wraparound from restarting the loop. Its 7,828-byte image leaves 364
   bytes free under a dedicated 256-byte gate; passes Q and R remain
-  byte-identical. Dynamic bounds, nested counter-to-REAL body expressions,
-  mixed controls, and returns inside loops remain outside this pass.
+  byte-identical. Named CARD bounds are handled by pass T below; general bound
+  expressions, runtime steps, nested counter-to-REAL body expressions, mixed
+  controls, and returns inside loops remain outside this pass.
+- `tools/build_actc_overlay_emit_native_real_postfix_for_dynamic_object.sh`
+  builds `ACTC_OVLT.BIN`, pass id `29`. It claims the same bounded function
+  form only when at least one `FOR` initial or final bound is a named CARD. A
+  named initial value is copied into the counter at loop entry; a named final
+  value is copied into hidden four-byte storage before the recorded back edge,
+  preserving once-only bound evaluation. The byte-identical nested-loop
+  fixture exercises both forms and produces 7.0 twice. Its 8,147-byte image
+  leaves 45 bytes free under a dedicated 32-byte gate; pass S remains
+  byte-identical. General bound expressions, runtime steps, counter-to-REAL
+  body expressions, mixed controls, and returns inside loops remain outside
+  this pass.
 - `tools/build_actc_overlay_emit_native_object.sh` builds
   `build/udos_tools/ACTC_OVL8.BIN`, pass id `8`. In addition to straight-line
   word expressions and integer IF/DO control flow, it owns two word FOR loop
@@ -405,7 +418,8 @@ resident UDOS services execute.
    `ACTC_OVLP.BIN`; bounded REAL-function post-test and pre-test loops first use
    `ACTC_OVLQ.BIN`; plain REAL-function loops and nearest-loop `EXIT` first use
    `ACTC_OVLR.BIN`; constant-bound CARD-counter REAL-function `FOR` loops first
-   use `ACTC_OVLS.BIN`.
+   use `ACTC_OVLS.BIN`; named CARD initial/final bounds first use
+   `ACTC_OVLT.BIN`.
    Native passes return explicit not-applicable status before writing output so
    the resident driver can try the next emitter without rolling back a partial
    object.

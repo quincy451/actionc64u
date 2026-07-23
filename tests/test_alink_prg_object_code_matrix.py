@@ -1031,6 +1031,50 @@ class TestAlinkPrgObjectCodeMatrix(unittest.TestCase):
         self.assertIn("LIB/RT_F_SPECIAL.OBJ", case["expected_alink_loads"])
         self.assertTrue(case["expected_tail_from_compiled_object"])
 
+    def test_real_function_dynamic_for_stages_named_card_bounds(self) -> None:
+        sys.path.insert(0, str(self.workspace / "udos" / "tools"))
+        import run_action_alink_prg_probe as probe
+
+        shape = "actc_real_function_dynamic_for_postfix_linked"
+        case = probe.DIRECT_PRG_CASES[shape]
+        fragments = "".join(case["expected_object_fragments"])
+        fixture = (
+            self.workspace
+            / "actionc64u"
+            / "tests"
+            / "parity"
+            / "real_function_dynamic_for_postfix.act"
+        ).read_text(encoding="ascii")
+
+        self.assertEqual(case["source"].replace("\r", "\n"), fixture)
+        self.assertIn(f"\t{shape} \\\n", self.make_text)
+        for export in (
+            "x __rb00 242 1\n",
+            "x __rz00 431 1\n",
+            "x __rb01 299 1\n",
+            "x __rz01 399 1\n",
+            "x __rb10 508 1\n",
+            "x __rz10 724 1\n",
+            "x __rb11 584 1\n",
+            "x __rz11 692 1\n",
+        ):
+            self.assertIn(export, fragments)
+        for relocation in (
+            "r 270 x __rz00\n",
+            "r 327 x __rz01\n",
+            "r 620 x __rz11\n",
+            "r 687 x __rb11\n",
+            "r 690 x __rz11\n",
+            "r 722 x __rz10\n",
+        ):
+            self.assertIn(relocation, fragments)
+        self.assertEqual(case["screen_fragments"], ["7", "7"])
+        self.assertEqual(case["store_check_addr"], 0x12E1)
+        self.assertIn("LIB/RT_F_ADD.OBJ", case["expected_alink_loads"])
+        self.assertIn("LIB/RT_F_ADDSUB_CORE.OBJ", case["expected_alink_loads"])
+        self.assertIn("LIB/RT_F_SPECIAL.OBJ", case["expected_alink_loads"])
+        self.assertTrue(case["expected_tail_from_compiled_object"])
+
     def test_full_range_multiply_probe_forces_staged_root_object_path(self) -> None:
         sys.path.insert(0, str(self.workspace / "udos" / "tools"))
         import run_action_alink_prg_probe as probe

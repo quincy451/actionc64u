@@ -910,3 +910,13 @@ bounds, nested counter-to-REAL body expressions, mixed loop/conditional
 nesting, returns from inside loops, controls beyond four, unrestricted call
 trees, mixed types, arbitrary signatures, and recursive/reentrant frames remain
 pending.
+
+Base-36 pass T, `ACTC_OVLT.BIN`, separately claims that bounded `FOR` form when
+an initial or final bound is a named CARD. It copies a named initial value into
+the counter on entry and stages a named final value before the loop's recorded
+back edge, so each bound is evaluated once for that invocation. The shared
+fixture nests `FOR J=I TO 3` and `FOR L=1 TO K`; native VICE and Idun's
+generated-6502 path both produce 7.0 twice. The 8,147-byte image leaves 45
+bytes under a dedicated 32-byte reserve while pass S remains byte-identical.
+General bound expressions, runtime steps, nested counter-to-REAL body
+expressions, mixed controls, and returns inside loops remain pending.

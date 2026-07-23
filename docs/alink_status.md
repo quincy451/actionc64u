@@ -9,10 +9,10 @@ Current state:
   verified by `make -C ../udos vice-action-actc-alink-launch`.
 - Broad direct-PRG object/link coverage is verified by
   `make -C ../udos vice-action-alink-prg-matrix`.
-- The broad direct-PRG matrix currently enumerates 1361 probe shapes from
+- The broad direct-PRG matrix currently enumerates 1362 probe shapes from
   `udos/tools/run_action_alink_prg_probe.py`.
 - The source-backed sequential, nested, early-return, and loop REAL-function
-  control cases prove passes N through S's multiple internal code exports, shared and out-of-order
+  control cases prove passes N through T's multiple internal code exports, shared and out-of-order
   nested export offsets,
   named/import relocations, and reachable-only runtime closure without any
   ALINK source-shape handling.
@@ -85,6 +85,10 @@ Current state:
   `RT_I_TO_F.OBJ`, `RT_PRINT_F.OBJ`, and the two reachable add dependencies;
   the linked PRG prints `47` and stores binary32 4.0 and 7.0 without any
   linker awareness of the source loop.
+- `actc_real_function_dynamic_for_postfix_linked` proves named CARD initial and
+  final bounds are captured once per loop entry. Its two nested-loop functions
+  emit complete ordinary `__rbNN`/`__rzNN` closure, select the same five REAL
+  add/conversion/print objects, and both store and print binary32 7.0.
 - Direct object-code launch and rejection coverage is verified by
   `make -C ../udos vice-action-alink-prg-object-code-matrices`.
 - The linker-owned direct PRG include is `src/tools_udos/alink/direct_prg.inc`.

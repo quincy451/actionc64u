@@ -167,10 +167,12 @@ Current machine-code emission slices:
   accepts at most four nested or sequential local CARD-counter `FOR` loops per
   supported REAL function with constant initial/final values and a nonzero
   constant signed step. Its inclusive unsigned tests terminate on counter
-  overflow or underflow and use ordinary back-edge/post-loop relocations.
+  overflow or underflow and use ordinary back-edge/post-loop relocations. Pass T
+  also accepts named CARD initial/final bounds and stages each bound once per
+  loop entry.
   These passes use all six REAL relations through `RT_F_CMP.OBJ` and relocatable
   internal control-flow code labels. Strings, mixed declaration types,
-  arbitrary signatures, dynamic REAL-function `FOR` bounds, nested
+  arbitrary signatures, general REAL-function `FOR` bound expressions and runtime steps, nested
   counter-to-REAL body composition, mixed loop/conditional nesting,
   returns from inside loops, more than four controls, deeper control nesting,
   and recursive/reentrant calls are not part of these passes.

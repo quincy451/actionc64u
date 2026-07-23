@@ -170,7 +170,8 @@ Current state:
   1,041 bytes free. Plain-loop/nearest-EXIT pass R is 7,334 bytes with 858
   bytes free under its dedicated 768-byte gate. Constant-bound CARD-counter
   `FOR` pass S is 7,828 bytes with 364 bytes free under its dedicated 256-byte
-  gate. Native REAL emitter
+  gate. Named-bound `FOR` pass T is 8,147 bytes with 45 bytes free under its
+  dedicated 32-byte gate. Native REAL emitter
   pass A is 7,418 bytes with 774 bytes free under its 768-byte growth reserve.
   Passes H and J share pass 9's typed-parameter bind prologue, so runtime helper calls
   inside supported functions retain the word-return ABI. Pass F is 6,709 bytes
@@ -379,8 +380,10 @@ Current state:
   guarded exit, stores 4.0 and 3.0, and prints `43`. Pass S adds up to four
   nested or sequential local CARD-counter `FOR` loops with constant bounds and
   a nonzero constant signed step; its ascending/descending direct PRG stores
-  4.0 and 7.0 and prints `47`. Recursive/reentrant frames, dynamic `FOR`
-  bounds, counter-to-REAL composition inside the loop body, mixed
+  4.0 and 7.0 and prints `47`. Pass T accepts a named CARD initial or final
+  bound, captures it once per loop entry, and prints `77` in its nested-loop
+  direct PRG. Recursive/reentrant frames, general `FOR` bound expressions and
+  runtime steps, counter-to-REAL composition inside the loop body, mixed
   loop/conditional nesting, returns inside loops,
   controls beyond four, deeper nesting, unrestricted user-call argument trees
   and nested call expressions, mixed declarations, arbitrary signatures, and

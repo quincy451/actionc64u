@@ -172,6 +172,13 @@ class TestAlinkCapacity(unittest.TestCase):
         self.assertGreater(exp_relocs, 128)
         self.assertLessEqual(exp_relocs, reloc_max)
 
+        ln_object = (
+            self.root / "src" / "runtime" / "udos_modules" / "rt_f_ln.obj"
+        ).read_text(encoding="ascii")
+        ln_relocs = sum(line.startswith("r ") for line in ln_object.splitlines())
+        self.assertGreater(ln_relocs, 128)
+        self.assertLessEqual(ln_relocs, reloc_max)
+
     def segment_bounds(self, map_text: str, segment: str) -> tuple[int, int]:
         match = re.search(
             rf"^{segment}\s+([0-9A-Fa-f]{{6}})\s+([0-9A-Fa-f]{{6}})\s+",

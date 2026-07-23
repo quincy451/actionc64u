@@ -114,6 +114,12 @@ Current status:
   exponential. It is safe when source and destination alias and imports only
   division, floor, REAL-to-INT conversion, multiplication, subtraction, and
   addition dependencies.
+- `rt_f_ln.obj` reads a REAL32 value through `$02/$03`, writes through
+  `$06/$07`, and implements portable MATH1 exponent/significand range reduction
+  plus the six-term odd logarithm series. It is safe when source and destination
+  alias, imports only subtraction, addition, division, and multiplication, and
+  returns negative infinity for either zero sign and canonical NaN for negative
+  nonzero inputs.
 - `rt_f_deg_to_rad.obj` and `rt_f_rad_to_deg.obj` are separate 20-byte,
   alias-safe unary wrappers around `rt_f_mul.obj`. They embed binary32
   `pi/180` and `180/pi`, respectively, so ALINK includes only the conversion

@@ -12818,6 +12818,14 @@ find_or_store_rt_f_exp_external:
     jsr copy_const_ptr_to_declared_module_name
     jmp find_or_store_external_from_declared
 
+find_or_store_rt_f_ln_external:
+    lda #<runtime_symbol_rt_f_ln
+    sta const_ptr
+    lda #>runtime_symbol_rt_f_ln
+    sta const_ptr+1
+    jsr copy_const_ptr_to_declared_module_name
+    jmp find_or_store_external_from_declared
+
 find_or_store_rt_f_deg_to_rad_external:
     lda #<runtime_symbol_rt_f_deg_to_rad
     ldy #>runtime_symbol_rt_f_deg_to_rad
@@ -12929,6 +12937,9 @@ find_or_store_real_operator_external_from_a:
 :   cmp #'x'
     bne :+
     jmp find_or_store_rt_f_exp_external
+:   cmp #'n'
+    bne :+
+    jmp find_or_store_rt_f_ln_external
 :   cmp #'d'
     bne :+
     jmp find_or_store_rt_f_deg_to_rad_external
@@ -16348,6 +16359,8 @@ runtime_symbol_rt_f_hypot:
     .asciiz "RT_F_HYPOT"
 runtime_symbol_rt_f_exp:
     .asciiz "RT_F_EXP"
+runtime_symbol_rt_f_ln:
+    .asciiz "RT_F_LN"
 runtime_symbol_rt_f_deg_to_rad:
     .asciiz "RT_F_DEG_TO_RAD"
 runtime_symbol_rt_f_rad_to_deg:

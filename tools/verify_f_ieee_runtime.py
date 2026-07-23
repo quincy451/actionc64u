@@ -18,6 +18,9 @@ from generate_math_runtime import (
     EXP_LN2_BITS,
     EXP_LOWER_BITS,
     EXP_UPPER_BITS,
+    LN_INVERSE_SQRT2_BITS,
+    LN_ODD_DENOMINATOR_BITS,
+    LN_SQRT2_BITS,
     RADIANS_TO_DEGREES_BITS,
     abs_module,
     addsub_core_module,
@@ -33,6 +36,7 @@ from generate_math_runtime import (
     frac_module,
     hypot_module,
     link_runtime_builders,
+    ln_module,
     minmax_module,
     mod_module,
     multiply_module,
@@ -426,6 +430,38 @@ def expected_exp(value: int) -> int:
     return result
 
 
+def expected_ln(value: int) -> int:
+    if is_nan(value) or expected_compare(value, 0) < 0:
+        return CANONICAL_QNAN
+    if value & 0x7FFFFFFF == 0:
+        return 0xFF800000
+    if value == 0x7F800000:
+        return value
+
+    exponent = 0
+    reduced = value
+    while expected_compare(reduced, LN_SQRT2_BITS) > 0:
+        reduced = expected_division(reduced, 0x40000000)
+        exponent = expected_addsub(exponent, 0x3F800000, False)
+    while expected_compare(reduced, LN_INVERSE_SQRT2_BITS) < 0:
+        reduced = expected_addsub(reduced, reduced, False)
+        exponent = expected_addsub(exponent, 0x3F800000, True)
+
+    numerator = expected_addsub(reduced, 0x3F800000, True)
+    denominator = expected_addsub(reduced, 0x3F800000, False)
+    z = expected_division(numerator, denominator)
+    z2 = expected_multiply(z, z)
+    term = z
+    result = term
+    for divisor in LN_ODD_DENOMINATOR_BITS:
+        term = expected_multiply(term, z2)
+        contribution = expected_division(term, divisor)
+        result = expected_addsub(result, contribution, False)
+    doubled = expected_addsub(result, result, False)
+    exponent_term = expected_multiply(exponent, EXP_LN2_BITS)
+    return expected_addsub(doubled, exponent_term, False)
+
+
 def runtime_builders(operation: str):
     special = special_value_module()
     if operation == "add":
@@ -493,6 +529,16 @@ def runtime_builders(operation: str):
             floor_module(),
             trunc_module(),
             float_to_int_module(),
+            multiply_module(),
+            addsub_wrapper_module("rt_f_sub", True),
+            addsub_wrapper_module("rt_f_add", False),
+            addsub_core_module(),
+            special,
+        ]
+    if operation == "ln":
+        return [
+            ln_module(),
+            divide_module(),
             multiply_module(),
             addsub_wrapper_module("rt_f_sub", True),
             addsub_wrapper_module("rt_f_add", False),
@@ -641,10 +687,48 @@ def verification_exp_cases(
     return [(value, 0) for value in values]
 
 
+def verification_ln_cases(
+    random_count: int, seed: int
+) -> list[tuple[int, int]]:
+    values = [
+        0x00000000,
+        0x80000000,
+        0x00000001,
+        0x007FFFFF,
+        0x00800000,
+        LN_INVERSE_SQRT2_BITS - 1,
+        LN_INVERSE_SQRT2_BITS,
+        LN_INVERSE_SQRT2_BITS + 1,
+        0x3F800000,
+        LN_SQRT2_BITS - 1,
+        LN_SQRT2_BITS,
+        LN_SQRT2_BITS + 1,
+        0x40000000,
+        0x7F7FFFFF,
+        0x7F800000,
+        0xFF800000,
+        0xBF800000,
+        0xFF7FFFFF,
+        0x7F800001,
+        0x7FC00000,
+        0xFFC00001,
+    ]
+    values.extend(
+        int.from_bytes(struct.pack("<f", value), "little")
+        for value in (0.1, 0.5, 3.0, 10.0, 100.0)
+    )
+    randomizer = random.Random(seed ^ 0x1A)
+    while len(values) < 26 + random_count:
+        value = randomizer.getrandbits(31)
+        if (value >> 23) & 0xFF != 0xFF:
+            values.append(value)
+    return [(value, 0) for value in values]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/exp/angle/min/max/clamp code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/exp/ln/angle/min/max/clamp code against exact IEEE "
             "binary32"
         )
     )
@@ -666,6 +750,7 @@ def main() -> int:
     cases = verification_cases(args.random_cases, args.seed)
     clamp_cases = verification_clamp_cases(args.random_cases, args.seed)
     exp_cases = verification_exp_cases(args.random_cases, args.seed)
+    ln_cases = verification_ln_cases(args.random_cases, args.seed)
     with tempfile.TemporaryDirectory(prefix="action-f-ieee-") as temporary:
         work = Path(temporary)
         source_path = work / "verify.c"
@@ -702,6 +787,7 @@ def main() -> int:
             "mod",
             "hypot",
             "exp",
+            "ln",
             "deg_to_rad",
             "rad_to_deg",
             "min",
@@ -713,6 +799,8 @@ def main() -> int:
                 if operation == "clamp"
                 else exp_cases
                 if operation == "exp"
+                else ln_cases
+                if operation == "ln"
                 else cases
             )
             runtime_path = work / f"rt_f_{operation}.bin"
@@ -770,6 +858,8 @@ def main() -> int:
                     expected = expected_hypot(left, right)
                 elif operation == "exp":
                     expected = expected_exp(left)
+                elif operation == "ln":
+                    expected = expected_ln(left)
                 elif operation == "deg_to_rad":
                     expected = expected_angle_scale(
                         left, DEGREES_TO_RADIANS_BITS
@@ -804,6 +894,7 @@ def main() -> int:
                 "mod",
                 "hypot",
                 "exp",
+                "ln",
                 "deg_to_rad",
                 "rad_to_deg",
             ):
@@ -840,6 +931,8 @@ def main() -> int:
                         if operation == "mod"
                         else expected_exp(left)
                         if operation == "exp"
+                        else expected_ln(left)
+                        if operation == "ln"
                         else expected_angle_scale(
                             left, DEGREES_TO_RADIANS_BITS
                         )

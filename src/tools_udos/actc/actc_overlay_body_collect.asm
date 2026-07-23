@@ -1619,13 +1619,12 @@ emit_runtime_real_binary_value_local_or_fail:
     jmp emit_runtime_real_binary_value_local_or_fail_restore
 :
     sty symbol_end_y_local
+    lda #>pattern_fmin
+    sta pattern_ptr_local+1
     ldx #$00
 emit_runtime_real_binary_value_local_function_loop:
     lda real_binary_pattern_table_local,x
     sta pattern_ptr_local
-    inx
-    lda real_binary_pattern_table_local,x
-    sta pattern_ptr_local+1
     inx
     lda real_binary_pattern_table_local,x
     sta real_operator_local
@@ -2044,13 +2043,12 @@ emit_runtime_real_value_worker_local_or_fail:
     bcs emit_runtime_real_value_local_try_fabs
     jmp emit_runtime_real_explicit_value_after_open_local_or_fail
 emit_runtime_real_value_local_try_fabs:
+    lda #>pattern_fabs
+    sta pattern_ptr_local+1
     ldx #$00
 emit_runtime_real_value_local_unary_loop:
     lda real_unary_pattern_table_local,x
     sta pattern_ptr_local
-    inx
-    lda real_unary_pattern_table_local,x
-    sta pattern_ptr_local+1
     inx
     lda real_unary_pattern_table_local,x
     sta real_operator_local
@@ -2158,12 +2156,10 @@ condition_starts_with_local_real_value_or_fail_pattern_loop:
     lda real_value_pattern_table_local,x
     sta pattern_ptr_local
     inx
-    lda real_value_pattern_table_local,x
-    tay
-    lda pattern_ptr_local
-    inx
     inx
     stx real_lhs_index_local
+    lda pattern_ptr_local
+    ldy #>pattern_real_decl
     jsr symbol_buffer_matches_local_const
     bcc condition_starts_with_local_real_value_or_fail_ok_restore
     ldx real_lhs_index_local
@@ -2885,52 +2881,55 @@ pattern_fhypot:
     .asciiz "FHYPOT"
 pattern_fexp:
     .asciiz "FEXP"
+pattern_fln:
+    .asciiz "FLN"
 pattern_degtorad:
     .asciiz "DEGTORAD"
 pattern_radtodeg:
     .asciiz "RADTODEG"
 real_value_pattern_table_local:
-    .word pattern_real_decl
-    .byte $00
+    .byte <pattern_real_decl, $00
 real_unary_pattern_table_local:
-    .word pattern_fabs
-    .byte 'a'
-    .word pattern_fsqrt
-    .byte 'q'
-    .word pattern_fsign
-    .byte 'g'
-    .word pattern_ftrunc
-    .byte 'c'
-    .word pattern_ffloor
-    .byte 'o'
-    .word pattern_fceil
-    .byte 'l'
-    .word pattern_fround
-    .byte 'r'
-    .word pattern_ffrac
-    .byte 'f'
-    .word pattern_fexp
-    .byte 'x'
-    .word pattern_degtorad
-    .byte 'd'
-    .word pattern_radtodeg
-    .byte 'e'
+    .byte <pattern_fabs, 'a'
+    .byte <pattern_fsqrt, 'q'
+    .byte <pattern_fsign, 'g'
+    .byte <pattern_ftrunc, 'c'
+    .byte <pattern_ffloor, 'o'
+    .byte <pattern_fceil, 'l'
+    .byte <pattern_fround, 'r'
+    .byte <pattern_ffrac, 'f'
+    .byte <pattern_fexp, 'x'
+    .byte <pattern_fln, 'n'
+    .byte <pattern_degtorad, 'd'
+    .byte <pattern_radtodeg, 'e'
 real_unary_pattern_table_local_end:
+.assert >pattern_fabs = >pattern_fsqrt, error, "unary patterns must share one page"
+.assert >pattern_fabs = >pattern_fsign, error, "unary patterns must share one page"
+.assert >pattern_fabs = >pattern_ftrunc, error, "unary patterns must share one page"
+.assert >pattern_fabs = >pattern_ffloor, error, "unary patterns must share one page"
+.assert >pattern_fabs = >pattern_fceil, error, "unary patterns must share one page"
+.assert >pattern_fabs = >pattern_fround, error, "unary patterns must share one page"
+.assert >pattern_fabs = >pattern_ffrac, error, "unary patterns must share one page"
+.assert >pattern_fabs = >pattern_fexp, error, "unary patterns must share one page"
+.assert >pattern_fabs = >pattern_fln, error, "unary patterns must share one page"
+.assert >pattern_fabs = >pattern_degtorad, error, "unary patterns must share one page"
+.assert >pattern_fabs = >pattern_radtodeg, error, "unary patterns must share one page"
 real_binary_pattern_table_local:
-    .word pattern_fmin
-    .byte REAL_FUNCTION_FMIN
-    .word pattern_fmax
-    .byte REAL_FUNCTION_FMAX
-    .word pattern_fmod
-    .byte REAL_FUNCTION_FMOD
-    .word pattern_fhypot
-    .byte REAL_FUNCTION_FHYPOT
-    .word pattern_fclamp
-    .byte REAL_FUNCTION_FCLAMP
+    .byte <pattern_fmin, REAL_FUNCTION_FMIN
+    .byte <pattern_fmax, REAL_FUNCTION_FMAX
+    .byte <pattern_fmod, REAL_FUNCTION_FMOD
+    .byte <pattern_fhypot, REAL_FUNCTION_FHYPOT
+    .byte <pattern_fclamp, REAL_FUNCTION_FCLAMP
 real_binary_pattern_table_local_end:
 real_value_pattern_table_local_end:
 pattern_fclamp:
     .asciiz "FCLAMP"
+.assert >pattern_real_decl = >pattern_fabs, error, "real patterns must share one page"
+.assert >pattern_real_decl = >pattern_fmin, error, "real patterns must share one page"
+.assert >pattern_real_decl = >pattern_fmax, error, "real patterns must share one page"
+.assert >pattern_real_decl = >pattern_fmod, error, "real patterns must share one page"
+.assert >pattern_real_decl = >pattern_fhypot, error, "real patterns must share one page"
+.assert >pattern_real_decl = >pattern_fclamp, error, "real patterns must share one page"
 pattern_proc:
     .asciiz "PROC"
 pattern_func:

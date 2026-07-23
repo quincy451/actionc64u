@@ -37,6 +37,8 @@ NRP_HELPER_UNARY = 3
 NRP_HELPER_BINARY = 4
 NRP_HELPER_TERNARY = 5
 NRP_HELPER_COMPARE = 6
+NRP_FLOAT_HELPER_FIRST = 3
+NRP_FLOAT_HELPER_PREFIX_SIZE = 5
 
 NRP_STACK_MAX = 8
 NRP_TEMP_MAX = 16
@@ -56,9 +58,9 @@ NRP_CONTROL_MASK = 1
 NRP_CONTROL_SLOT_MAX = NRP_FUNCTION_MAX*NRP_CONTROL_MAX
 .endif
 .if NRP_ENABLE_CONDITION
-NRP_HELPER_BASE_COUNT = 22
+NRP_HELPER_BASE_COUNT = 23
 .else
-NRP_HELPER_BASE_COUNT = 21
+NRP_HELPER_BASE_COUNT = 22
 .endif
 .if NRP_ENABLE_LITERAL
 NRP_HELPER_COUNT = NRP_HELPER_BASE_COUNT+2
@@ -2065,6 +2067,15 @@ nrp_classify_external_compare:
     bne nrp_classify_external_compare
 nrp_classify_external_next:
     inx
+    cpx #NRP_FLOAT_HELPER_FIRST
+    bne :+
+    lda ACTC_OVERLAY_SCAN_ZP
+    clc
+    adc #NRP_FLOAT_HELPER_PREFIX_SIZE
+    sta ACTC_OVERLAY_SCAN_ZP
+    bcc :+
+    inc ACTC_OVERLAY_SCAN_ZP+1
+:
     cpx #NRP_HELPER_COUNT
     bcc nrp_classify_external_loop
 nrp_classify_external_no:
@@ -3764,29 +3775,30 @@ nrp_helper_i_to_f: .asciiz "rt_i_to_f"
 nrp_helper_s_to_f: .asciiz "rt_s_to_f"
 nrp_helper_print_f: .asciiz "rt_print_f"
 .if NRP_ENABLE_CONDITION
-nrp_helper_f_cmp: .asciiz "rt_f_cmp"
+nrp_helper_f_cmp: .asciiz "cmp"
 .endif
-nrp_helper_f_abs: .asciiz "rt_f_abs"
-nrp_helper_f_sqrt: .asciiz "rt_f_sqrt"
-nrp_helper_f_sign: .asciiz "rt_f_sign"
-nrp_helper_f_trunc: .asciiz "rt_f_trunc"
-nrp_helper_f_floor: .asciiz "rt_f_floor"
-nrp_helper_f_ceil: .asciiz "rt_f_ceil"
-nrp_helper_f_round: .asciiz "rt_f_round"
-nrp_helper_f_frac: .asciiz "rt_f_frac"
-nrp_helper_f_add: .asciiz "rt_f_add"
-nrp_helper_f_sub: .asciiz "rt_f_sub"
-nrp_helper_f_mul: .asciiz "rt_f_mul"
-nrp_helper_f_div: .asciiz "rt_f_div"
-nrp_helper_f_min: .asciiz "rt_f_min"
-nrp_helper_f_max: .asciiz "rt_f_max"
-nrp_helper_f_mod: .asciiz "rt_f_mod"
-nrp_helper_f_hypot: .asciiz "rt_f_hypot"
-nrp_helper_f_clamp: .asciiz "rt_f_clamp"
-nrp_helper_f_exp: .asciiz "rt_f_exp"
+nrp_helper_f_abs: .asciiz "abs"
+nrp_helper_f_sqrt: .asciiz "sqrt"
+nrp_helper_f_sign: .asciiz "sign"
+nrp_helper_f_trunc: .asciiz "trunc"
+nrp_helper_f_floor: .asciiz "floor"
+nrp_helper_f_ceil: .asciiz "ceil"
+nrp_helper_f_round: .asciiz "round"
+nrp_helper_f_frac: .asciiz "frac"
+nrp_helper_f_add: .asciiz "add"
+nrp_helper_f_sub: .asciiz "sub"
+nrp_helper_f_mul: .asciiz "mul"
+nrp_helper_f_div: .asciiz "div"
+nrp_helper_f_min: .asciiz "min"
+nrp_helper_f_max: .asciiz "max"
+nrp_helper_f_mod: .asciiz "mod"
+nrp_helper_f_hypot: .asciiz "hypot"
+nrp_helper_f_clamp: .asciiz "clamp"
+nrp_helper_f_exp: .asciiz "exp"
+nrp_helper_f_ln: .asciiz "ln"
 .if NRP_ENABLE_LITERAL
-nrp_helper_f_deg_to_rad: .asciiz "rt_f_deg_to_rad"
-nrp_helper_f_rad_to_deg: .asciiz "rt_f_rad_to_deg"
+nrp_helper_f_deg_to_rad: .asciiz "deg_to_rad"
+nrp_helper_f_rad_to_deg: .asciiz "rad_to_deg"
 .endif
 
 nrp_helper_name_lo:
@@ -3800,6 +3812,7 @@ nrp_helper_name_lo:
     .byte <nrp_helper_f_sub,<nrp_helper_f_mul,<nrp_helper_f_div
     .byte <nrp_helper_f_min,<nrp_helper_f_max,<nrp_helper_f_mod
     .byte <nrp_helper_f_hypot,<nrp_helper_f_clamp,<nrp_helper_f_exp
+    .byte <nrp_helper_f_ln
 .if NRP_ENABLE_LITERAL
     .byte <nrp_helper_f_deg_to_rad,<nrp_helper_f_rad_to_deg
 .endif
@@ -3814,6 +3827,7 @@ nrp_helper_name_hi:
     .byte >nrp_helper_f_sub,>nrp_helper_f_mul,>nrp_helper_f_div
     .byte >nrp_helper_f_min,>nrp_helper_f_max,>nrp_helper_f_mod
     .byte >nrp_helper_f_hypot,>nrp_helper_f_clamp,>nrp_helper_f_exp
+    .byte >nrp_helper_f_ln
 .if NRP_ENABLE_LITERAL
     .byte >nrp_helper_f_deg_to_rad,>nrp_helper_f_rad_to_deg
 .endif
@@ -3826,7 +3840,7 @@ nrp_helper_kind:
     .byte NRP_HELPER_UNARY,NRP_HELPER_UNARY,NRP_HELPER_UNARY,NRP_HELPER_UNARY
     .byte NRP_HELPER_BINARY,NRP_HELPER_BINARY,NRP_HELPER_BINARY,NRP_HELPER_BINARY
     .byte NRP_HELPER_BINARY,NRP_HELPER_BINARY,NRP_HELPER_BINARY,NRP_HELPER_BINARY
-    .byte NRP_HELPER_TERNARY,NRP_HELPER_UNARY
+    .byte NRP_HELPER_TERNARY,NRP_HELPER_UNARY,NRP_HELPER_UNARY
 .if NRP_ENABLE_LITERAL
     .byte NRP_HELPER_UNARY,NRP_HELPER_UNARY
 .endif

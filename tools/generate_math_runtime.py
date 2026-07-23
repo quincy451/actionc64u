@@ -46,6 +46,16 @@ EXP_COEFFICIENT_BITS = (
     0x39500D01,
     0x37D00D01,
 )
+LN_SQRT2_BITS = 0x3FB504F3
+LN_INVERSE_SQRT2_BITS = 0x3F3504F3
+LN_ODD_DENOMINATOR_BITS = (
+    0x40400000,
+    0x40A00000,
+    0x40E00000,
+    0x41100000,
+    0x41300000,
+    0x41500000,
+)
 
 
 def far_branch(builder: ObjectBuilder, opcode: int, target: str, tag: str) -> None:
@@ -1598,6 +1608,377 @@ def exp_module() -> ObjectBuilder:
         b.emit(*bits.to_bytes(4, "little"))
 
     b.export("rt_f_exp")
+    return b
+
+
+def ln_module() -> ObjectBuilder:
+    """Build the portable MATH1 binary32 natural logarithm."""
+    b = ObjectBuilder("rt_f_ln")
+
+    value_ptr = 0x0E
+    reduced_ptr = 0x10
+    exponent_ptr = 0x12
+    state_count = 0
+    state_count_hi = 1
+    state_series_index = 2
+    state_count_sign = 3
+    state_count_magnitude = 4
+    state_count_biased = 5
+
+    pointer_targets = (
+        "destination",
+        "value",
+        "reduced",
+        "numerator",
+        "sum",
+        "z",
+        "z2",
+        "term",
+        "result",
+        "work",
+        "exponent",
+        "product",
+        "denominator",
+        "two",
+        "one",
+        "ln2",
+        "nan",
+        "inf",
+        "negative_inf",
+    )
+    pointer_offsets = {
+        target: index * 2 for index, target in enumerate(pointer_targets)
+    }
+
+    def load_local_pointer(target: str, destination: int) -> None:
+        b.immediate(0xA2, pointer_offsets[target])
+        b.local_reference(0xBD, "pt")
+        b.zero_page(0x85, destination)
+        b.emit(0xE8)
+        b.local_reference(0xBD, "pt")
+        b.zero_page(0x85, destination + 1)
+
+    def load_indirect(pointer: int, index: int) -> None:
+        b.immediate(0xA0, index)
+        b.emit(0xB1, pointer)
+
+    def or_indirect(pointer: int, index: int) -> None:
+        b.immediate(0xA0, index)
+        b.emit(0x11, pointer)
+
+    def store_indirect(pointer: int, index: int) -> None:
+        b.immediate(0xA0, index)
+        b.emit(0x91, pointer)
+
+    def state_load(offset: int) -> None:
+        b.immediate(0xA2, offset)
+        b.local_reference(0xBD, "state")
+
+    def state_store(offset: int) -> None:
+        b.immediate(0xA2, offset)
+        b.local_reference(0x9D, "state")
+
+    def state_increment(offset: int) -> None:
+        b.immediate(0xA2, offset)
+        b.local_reference(0xFE, "state")
+
+    def state_decrement(offset: int) -> None:
+        b.immediate(0xA2, offset)
+        b.local_reference(0xDE, "state")
+
+    def call_binary(
+        symbol: str, left: str, right: str, destination: str
+    ) -> None:
+        load_local_pointer(left, 0x02)
+        load_local_pointer(right, 0x04)
+        load_local_pointer(destination, 0x06)
+        b.jsr(symbol)
+
+    def copy_local(source: str, destination: str) -> None:
+        load_local_pointer(source, 0x02)
+        load_local_pointer(destination, 0x06)
+        b.local_reference(0x20, "copy4")
+
+    # Preserve the destination and input before any dependency can claim
+    # zero-page scratch. The first pointer-table slot is destination storage.
+    b.immediate(0xA2, pointer_offsets["destination"])
+    b.zero_page(0xA5, 0x06)
+    b.local_reference(0x9D, "pt")
+    b.emit(0xE8)
+    b.zero_page(0xA5, 0x07)
+    b.local_reference(0x9D, "pt")
+    b.immediate(0xA0, 0x00)
+    b.label("save")
+    b.emit(0xB1, 0x02)
+    b.local_reference(0x99, "value")
+    b.emit(0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "save")
+    load_local_pointer("value", value_ptr)
+    load_local_pointer("reduced", reduced_ptr)
+
+    # Negative nonzero values, including negative infinity, are outside the
+    # domain. Both zero signs return negative infinity.
+    load_indirect(value_ptr, 3)
+    b.branch(0x30, "negative")
+
+    # Positive exponent-all-ones values are infinity or NaN.
+    b.immediate(0x29, 0x7F)
+    b.immediate(0xC9, 0x7F)
+    b.branch(0xD0, "finite_positive")
+    load_indirect(value_ptr, 2)
+    b.branch(0x10, "finite_positive")
+    b.immediate(0x29, 0x7F)
+    or_indirect(value_ptr, 1)
+    or_indirect(value_ptr, 0)
+    far_branch(b, 0xD0, "return_nan", "pnan")
+    b.jmp_local("return_inf")
+
+    b.label("negative")
+    load_indirect(value_ptr, 3)
+    b.immediate(0x29, 0x7F)
+    or_indirect(value_ptr, 2)
+    or_indirect(value_ptr, 1)
+    or_indirect(value_ptr, 0)
+    far_branch(b, 0xF0, "return_ninf", "nzero")
+    b.jmp_local("return_nan")
+
+    b.label("finite_positive")
+    load_indirect(value_ptr, 3)
+    or_indirect(value_ptr, 2)
+    or_indirect(value_ptr, 1)
+    or_indirect(value_ptr, 0)
+    far_branch(b, 0xF0, "return_ninf", "pzero")
+    b.jmp_local("calculate")
+
+    b.label("return_nan")
+    load_local_pointer("nan", 0x02)
+    b.jmp_local("copy_return")
+    b.label("return_inf")
+    load_local_pointer("inf", 0x02)
+    b.jmp_local("copy_return")
+    b.label("return_ninf")
+    load_local_pointer("negative_inf", 0x02)
+    b.label("copy_return")
+    load_local_pointer("destination", 0x06)
+    b.jmp_local("copy4")
+
+    b.label("copy4")
+    b.immediate(0xA0, 0x00)
+    b.label("copy_loop")
+    b.emit(0xB1, 0x02, 0x91, 0x06, 0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "copy_loop")
+    b.emit(0x60)
+
+    b.label("calculate")
+    # Extract the unbiased exponent and normalize the significand to [1, 2).
+    load_indirect(value_ptr, 2)
+    b.emit(0x0A)
+    b.emit(0xC8, 0xB1, value_ptr)
+    b.emit(0x2A)
+    far_branch(b, 0xF0, "subnormal", "sub")
+
+    b.emit(0x38)
+    b.immediate(0xE9, 0x7F)
+    state_store(state_count)
+    b.immediate(0xA9, 0x00)
+    b.immediate(0xE9, 0x00)
+    state_store(state_count_hi)
+    for index in range(2):
+        load_indirect(value_ptr, index)
+        store_indirect(reduced_ptr, index)
+    load_indirect(value_ptr, 2)
+    b.immediate(0x29, 0x7F)
+    b.immediate(0x09, 0x80)
+    store_indirect(reduced_ptr, 2)
+    b.immediate(0xA9, 0x3F)
+    store_indirect(reduced_ptr, 3)
+    b.jmp_local("normalized")
+
+    b.label("subnormal")
+    b.immediate(0xA9, 0x82)
+    state_store(state_count)
+    b.immediate(0xA9, 0xFF)
+    state_store(state_count_hi)
+    for index in range(2):
+        load_indirect(value_ptr, index)
+        store_indirect(reduced_ptr, index)
+    load_indirect(value_ptr, 2)
+    b.immediate(0x29, 0x7F)
+    store_indirect(reduced_ptr, 2)
+    b.label("norm_sub")
+    load_indirect(reduced_ptr, 2)
+    b.branch(0x30, "subnormal_ready")
+    load_indirect(reduced_ptr, 0)
+    b.emit(0x0A, 0x91, reduced_ptr)
+    b.emit(0xC8, 0xB1, reduced_ptr, 0x2A, 0x91, reduced_ptr)
+    b.emit(0xC8, 0xB1, reduced_ptr, 0x2A, 0x91, reduced_ptr)
+    state_decrement(state_count)
+    b.immediate(0xA9, 0x00)
+    b.branch(0xF0, "norm_sub")
+    b.label("subnormal_ready")
+    b.immediate(0xA9, 0x3F)
+    store_indirect(reduced_ptr, 3)
+
+    # The portable loops choose reduced in [1/sqrt(2), sqrt(2)]. A normalized
+    # significand above sqrt(2) is divided by two exactly and increments the
+    # integer exponent.
+    b.label("normalized")
+    sqrt2 = LN_SQRT2_BITS.to_bytes(4, "little")
+    for index in range(3, -1, -1):
+        load_indirect(reduced_ptr, index)
+        b.immediate(0xC9, sqrt2[index])
+        b.branch(0x90, "reduced_ready")
+        b.branch(0xD0, "reduce_once")
+    state_load(state_count_hi)
+    b.branch(0x30, "reduce_once")
+    b.jmp_local("reduced_ready")
+    b.label("reduce_once")
+    load_indirect(reduced_ptr, 2)
+    b.immediate(0x29, 0x7F)
+    store_indirect(reduced_ptr, 2)
+    state_increment(state_count)
+    b.branch(0xD0, "reduced_ready")
+    state_increment(state_count_hi)
+
+    b.label("reduced_ready")
+    call_binary("rt_f_sub", "reduced", "one", "numerator")
+    call_binary("rt_f_add", "reduced", "one", "sum")
+    call_binary("rt_f_div", "numerator", "sum", "z")
+    call_binary("rt_f_mul", "z", "z", "z2")
+    copy_local("z", "term")
+    copy_local("z", "result")
+
+    b.immediate(0xA9, 0x00)
+    state_store(state_series_index)
+    load_local_pointer("denominator", exponent_ptr)
+    for index, value in enumerate((0x00, 0x00, 0x40, 0x40)):
+        b.immediate(0xA9, value)
+        store_indirect(exponent_ptr, index)
+    b.label("series_loop")
+    call_binary("rt_f_mul", "term", "z2", "work")
+    copy_local("work", "term")
+    call_binary("rt_f_div", "term", "denominator", "work")
+    call_binary("rt_f_add", "result", "work", "numerator")
+    copy_local("numerator", "result")
+    state_increment(state_series_index)
+    state_load(state_series_index)
+    b.immediate(0xC9, len(LN_ODD_DENOMINATOR_BITS))
+    b.branch(0xF0, "series_done")
+    call_binary("rt_f_add", "denominator", "two", "numerator")
+    copy_local("numerator", "denominator")
+    b.jmp_local("series_loop")
+
+    b.label("series_done")
+    call_binary("rt_f_add", "result", "result", "work")
+    b.local_reference(0x20, "count_to_float")
+    call_binary("rt_f_mul", "exponent", "ln2", "product")
+    call_binary("rt_f_add", "work", "product", "destination")
+    b.emit(0x60)
+
+    # Convert the bounded -149..128 exponent to an exact binary32 value.
+    b.label("count_to_float")
+    load_local_pointer("exponent", exponent_ptr)
+    state_load(state_count)
+    b.immediate(0xA2, state_count_hi)
+    b.local_reference(0x1D, "state")
+    b.branch(0xD0, "count_nonzero")
+    b.immediate(0xA9, 0x00)
+    b.immediate(0xA0, 0x00)
+    b.label("zero_exponent")
+    b.emit(0x91, exponent_ptr, 0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "zero_exponent")
+    b.emit(0x60)
+
+    b.label("count_nonzero")
+    state_load(state_count_hi)
+    b.branch(0x10, "count_positive")
+    b.immediate(0xA9, 0x80)
+    state_store(state_count_sign)
+    state_load(state_count)
+    b.immediate(0x49, 0xFF)
+    b.emit(0x18)
+    b.immediate(0x69, 0x01)
+    b.jmp_local("cnt_mag_ready")
+    b.label("count_positive")
+    b.immediate(0xA9, 0x00)
+    state_store(state_count_sign)
+    state_load(state_count)
+    b.label("cnt_mag_ready")
+    state_store(state_count_magnitude)
+    b.immediate(0xA9, 0x86)
+    state_store(state_count_biased)
+    b.label("count_normalize")
+    state_load(state_count_magnitude)
+    b.branch(0x30, "cnt_norm")
+    b.emit(0x0A)
+    state_store(state_count_magnitude)
+    state_decrement(state_count_biased)
+    b.immediate(0xA9, 0x00)
+    b.branch(0xF0, "count_normalize")
+
+    b.label("cnt_norm")
+    b.immediate(0xA9, 0x00)
+    b.immediate(0xA0, 0x00)
+    b.emit(0x91, exponent_ptr, 0xC8, 0x91, exponent_ptr)
+    state_load(state_count_magnitude)
+    b.immediate(0x29, 0x7F)
+    store_indirect(exponent_ptr, 2)
+    state_load(state_count_biased)
+    b.emit(0x4A)
+    store_indirect(exponent_ptr, 3)
+    b.branch(0x90, "cnt_low_clear")
+    load_indirect(exponent_ptr, 2)
+    b.immediate(0x09, 0x80)
+    store_indirect(exponent_ptr, 2)
+    b.label("cnt_low_clear")
+    load_indirect(exponent_ptr, 3)
+    b.immediate(0xA2, state_count_sign)
+    b.local_reference(0x1D, "state")
+    b.emit(0x91, exponent_ptr)
+    b.emit(0x60)
+
+    b.label("pt")
+    b.emit(0x00, 0x00)
+    for target in pointer_targets[1:]:
+        offset = len(b.code)
+        b.emit(0x00, 0x00)
+        b.local_relocations.append((offset, target))
+
+    for label in (
+        "value",
+        "reduced",
+        "numerator",
+        "sum",
+        "z",
+        "z2",
+        "term",
+        "result",
+        "work",
+        "exponent",
+        "product",
+        "denominator",
+    ):
+        b.label(label)
+        b.emit(0x00, 0x00, 0x00, 0x00)
+
+    b.label("state")
+    b.emit(0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+
+    for label, bits in (
+        ("two", 0x40000000),
+        ("one", 0x3F800000),
+        ("ln2", EXP_LN2_BITS),
+        ("nan", 0x7FC00000),
+        ("inf", 0x7F800000),
+        ("negative_inf", 0xFF800000),
+    ):
+        b.label(label)
+        b.emit(*bits.to_bytes(4, "little"))
+
+    b.export("rt_f_ln")
     return b
 
 
@@ -3600,6 +3981,7 @@ def main() -> int:
             mod_module(),
             hypot_module(),
             exp_module(),
+            ln_module(),
             deg_to_rad_module(),
             rad_to_deg_module(),
             minmax_module("rt_f_min", maximum=False),

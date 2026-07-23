@@ -7,8 +7,8 @@ Target: C64 6502 generated program; no UDOS calls or resident service required.
 Numeric base: IEEE-754 binary32 REAL, round-to-nearest/ties-to-even core runtime.
 
 Native UDOS status: all 8 public constants are available through the usable
-INCLUDE "MATH1" header, and eighteen low-level calls are available: FAbs, FSqrt,
-FSign, FTrunc, FFloor, FCeil, FRound, FFrac, FMod, FHypot, FExp, FMin, FMax, FClamp,
+INCLUDE "MATH1" header, and nineteen low-level calls are available: FAbs, FSqrt,
+FSign, FTrunc, FFloor, FCeil, FRound, FFrac, FMod, FHypot, FExp, FLn, FMin, FMax, FClamp,
 DegToRad, RadToDeg, PrintR, and PrintRE. FSign is a dependency-free
 selected OBJ helper with canonical-NaN and signed-zero behavior. FMin/FMax use
 independently selected OBJ helpers with the complete portable NaN and
@@ -27,6 +27,8 @@ the destination. FHypot uses a scaled maximum/minimum calculation, is safe
 when either operand aliases the destination, and selects its seven direct
 dependencies only when referenced. FExp uses the portable degree-8 range-
 reduced algorithm and selects its arithmetic closure only when referenced.
+FLn uses portable exponent/significand range reduction plus a six-term odd
+series and selects only subtraction, addition, division, and multiplication.
 FClamp
 selects its comparison/minimum/maximum closure only when referenced, returns
 canonical NaN for NaN input or inverted bounds, and
@@ -42,12 +44,13 @@ Idun/Alpine fork implements the complete source library: 8 public constants,
 43 public routines, and 1 private helper, producing 51 public help features.
 Native delivery still requires wider general REAL function parameters, locals,
 expressions, calls, and returns before portable bodies can provide the remaining
-25 public routines. See docs/idun_feature_parity.md.
+24 public routines. See docs/idun_feature_parity.md.
 
 The constants and routines below are public after INCLUDE "MATH1".  The
-transcendental routines are portable Action implementations over the binary32
-add/subtract/multiply/divide, conversion, absolute-value, and square-root
-runtime.  They do not use the BASIC ROM floating-point package.
+transcendental routines use portable Action implementations or independently
+selected target modules over the binary32 add/subtract/multiply/divide,
+conversion, absolute-value, and square-root runtime. They do not use the BASIC
+ROM floating-point package.
 
 Constants
 ---------
@@ -160,7 +163,7 @@ Porting checklist for the native C64U tree
 
 1. Port lib/math1.act as source, retaining the public signatures above.
 2. Supply the same link-selected binary32 primitives for PrintR, PrintRE,
-   FAbs, FSqrt, FSign, FTrunc, FFloor, FCeil, FRound, FFrac, FMod, FHypot, FExp, FMin, FMax, FClamp, add, subtract, multiply, divide, compare, INT
+   FAbs, FSqrt, FSign, FTrunc, FFloor, FCeil, FRound, FFrac, FMod, FHypot, FExp, FLn, FMin, FMax, FClamp, add, subtract, multiply, divide, compare, INT
    conversion, and REAL conversion.
 3. Keep _MathWrapPi private; help/catalog builders intentionally ignore names
    beginning with an underscore.

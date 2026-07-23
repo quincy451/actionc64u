@@ -93,6 +93,7 @@ The linker-level REAL runtime surface uses stable helper symbols:
 - `rt_f_mod`
 - `rt_f_hypot`
 - `rt_f_exp`
+- `rt_f_ln`
 - `rt_f_deg_to_rad`
 - `rt_f_rad_to_deg`
 - `rt_f_min`
@@ -187,6 +188,10 @@ The first implemented target-side helper ABI is intentionally narrow:
   source/destination aliasing, and imports only the division, floor,
   REAL-to-INT, multiplication, subtraction, and addition closure used by the
   portable range-reduced degree-8 algorithm
+- `rt_f_ln` reads through `$02/$03`, writes through `$06/$07`, supports
+  source/destination aliasing, and imports only subtraction, addition,
+  division, and multiplication for positive-value range reduction and the
+  portable six-term odd logarithm series
 - `rt_f_deg_to_rad` and `rt_f_rad_to_deg` read through `$02/$03`, write through
   `$06/$07`, and import `rt_f_mul`. Each 20-byte wrapper points `$04/$05` at
   its embedded positive scale factor before multiplication; the underlying
@@ -255,6 +260,8 @@ Examples:
   minimum/maximum, division, multiplication, addition, and square-root closure
 - `FExp(r)` imports `rt_f_exp` plus its division, floor, conversion,
   multiplication, subtraction, and addition closure
+- `FLn(r)` imports `rt_f_ln` plus its subtraction, addition, division, and
+  multiplication closure
 - `DegToRad(r)` imports `rt_f_deg_to_rad` plus its multiplication and
   special-value closure
 - `RadToDeg(r)` imports `rt_f_rad_to_deg` plus its multiplication and
@@ -297,7 +304,7 @@ constants, which ACTC folds without target storage or runtime imports, and
 documents the core source forms that ACTC already recognizes directly:
 `REAL(x)`, `INT(x)`, REAL arithmetic/comparison operators, `FAbs`, `FSqrt`,
 `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`,
-`FExp`, `FMin`, `FMax`, `FClamp`, `DegToRad`, `RadToDeg`, and `PrintR` /
+`FExp`, `FLn`, `FMin`, `FMax`, `FClamp`, `DegToRad`, `RadToDeg`, and `PrintR` /
 `PrintRE`.
 
 `SRC/MATH1_DEMO.ACT` validates the exported-library path by compiling a small
@@ -312,7 +319,7 @@ implemented.
 The core REAL32 runtime helpers now implement default IEEE-754 binary32 value
 semantics for addition, subtraction, multiplication, division, remainder,
 square root, comparison, sign, truncation/floor/ceiling/rounding, minimum/maximum/clamp
-selection, exponential approximation, and signed decimal printing across
+selection, exponential/natural-logarithm approximation, and signed decimal printing across
 finite values, subnormals, signed zeroes, infinities, and NaNs. REAL-to-INT
 remains the language conversion
 defined above: out-of-range or non-finite input returns zero. The helpers

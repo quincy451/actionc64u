@@ -2075,3 +2075,36 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
 - Native MATH1 now exposes eighteen link-selected calls and lacks 25 public
   routines. General REAL bodies/calls, recursive or reentrant frames, and the
   remaining transcendental modules remain dependency-ordered work.
+
+## 2026-07-23 Link-Selected MATH1 Natural Logarithm
+
+- Added the 1,382-byte `RT_F_LN.OBJ` dependency root. It normalizes every
+  positive normal or subnormal binary32 value, range-reduces around square root
+  of two, evaluates the portable six-term odd series, and imports only
+  subtraction, addition, division, and multiplication.
+- Preserved complete domain behavior: either zero sign returns negative
+  infinity, negative nonzero inputs return canonical quiet NaN, positive
+  infinity is preserved, and source/destination aliasing is supported.
+- Packed mutable state and accessed four-byte cells indirectly so the generated
+  object uses 33 exports and 180 relocations, within production ALINK's
+  36-export and 255-relocation limits. No linker-side math recognizer or runtime
+  launcher was added.
+- Native ACTC recognizes `FLn(REAL)` in bounded assignments, prints,
+  conditions, and REAL-function trees. The focused ACTC/ALINK/VICE launch
+  prints `0.693147...` for `FLn(2)` and proves unrelated MATH1 objects remain
+  unloaded.
+- Synchronized the generator, object, and shared manifest into Idun. Linux ACTC
+  selects the same object instead of compiling the portable FLn body, and the
+  existing generated-PRG MATH1 execution fixture remains the cross-product
+  behavior check.
+- Current inventories are 1,368 broad direct-PRG shapes, 196 non-runtime
+  source-backed object-emission shapes, and 302 compiled-runtime relocation
+  oracles. The native suite contains 865 tests, including 251 overlay and 199
+  source-cache tests.
+- Compact body-pattern records and shared REAL-helper suffixes keep the added
+  intrinsic within every overlay reserve. Pass 6 is 8,077 bytes with 115 bytes
+  free; pass 7 is 6,801 bytes with 1,391 bytes free; passes L through U are
+  respectively 6,067, 6,936, 7,058, 7,061, 7,085, 7,089, 7,272, 7,766, 8,085,
+  and 7,415 bytes.
+- Native MATH1 now exposes nineteen link-selected calls and lacks 24 public
+  routines. `FLog2` and `FLog10` are the next dependency-ordered wrappers.

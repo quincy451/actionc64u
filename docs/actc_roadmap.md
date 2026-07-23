@@ -11,7 +11,7 @@ Near-term work:
 - continue moving supported body lowering into ACTC-emitted native machine and
   relocation records instead of adding shape-specific linker compilers
 - generalize the proven pass-K function and bounded
-  `FSign`/`FTrunc`/`FFloor`/`FCeil`/`FRound`/`FFrac`/`FMod`/`FHypot`/`FExp`/`FMin`/`FMax`/`FClamp` paths into reusable REAL expression,
+  `FSign`/`FTrunc`/`FFloor`/`FCeil`/`FRound`/`FFrac`/`FMod`/`FHypot`/`FExp`/`FLn`/`FMin`/`FMax`/`FClamp` paths into reusable REAL expression,
   control-flow, call, and return lowering for dependency-sized MATH1 modules
 - avoid adding launch-time runtime responsibilities to ACTC
 - keep focused UDOS VICE gates green after each compiler widening step

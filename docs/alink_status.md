@@ -9,8 +9,12 @@ Current state:
   verified by `make -C ../udos vice-action-actc-alink-launch`.
 - Broad direct-PRG object/link coverage is verified by
   `make -C ../udos vice-action-alink-prg-matrix`.
-- The broad direct-PRG matrix currently enumerates 1367 probe shapes from
+- The broad direct-PRG matrix currently enumerates 1368 probe shapes from
   `udos/tools/run_action_alink_prg_probe.py`.
+- The link-selected FLn case proves production ALINK accepts the generated
+  1,382-byte `RT_F_LN.OBJ` with 33 exports and 180 ordinary relocations, closes
+  only its add/subtract/multiply/divide dependencies, and launches the final
+  direct PRG in VICE without a linker-side math recognizer.
 - The source-backed sequential, nested, early-return, loop, and folded-REAL
   function cases prove passes N through U's multiple internal code exports, shared and out-of-order
   nested export offsets,

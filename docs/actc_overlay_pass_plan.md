@@ -117,8 +117,8 @@ The overlay artifacts share one stable execution ABI:
   `build/udos_tools/ACTC_OVL6.BIN`, pass id `6`, which is the current
   proc-body lowering overlay. `tools/build_actc_overlay_body_preallocate.sh`
   builds `build/udos_tools/ACTC_OVL7.BIN`, pass id `7`, which owns the
-  overlay-hosted preallocation scanner. Its current 6,678-byte image leaves
-  1,514 bytes free in the 8 KiB window. Both are packaged beside `ACTC.PRG` and
+  overlay-hosted preallocation scanner. Its current 6,801-byte image leaves
+  1,391 bytes free in the 8 KiB window. Both are packaged beside `ACTC.PRG` and
   enabled in the default production build.
 - `tools/build_actc_overlay_emit_native_local_object.sh` builds
   `build/udos_tools/ACTC_OVL9.BIN`, pass id `9`. It owns native local-procedure
@@ -192,7 +192,7 @@ The overlay artifacts share one stable execution ABI:
   pass remains explicitly nonrecursive and has no control flow. Its private
   four-byte temporaries and every export/relocation offset are 16-bit; an
   overlapping `__idata` aggregate anchors only source variables in DBG1. The
-  6,124-byte image leaves 2,068 bytes free in the 8 KiB execution window.
+  6,067-byte image leaves 2,125 bytes free in the 8 KiB execution window.
 - `tools/build_actc_overlay_emit_native_real_postfix_control_object.sh` builds
   `ACTC_OVLM.BIN`, pass id `22`, from the shared pass-L emitter with control
   lowering enabled. It only claims programs containing function control and
@@ -200,38 +200,39 @@ The overlay artifacts share one stable execution ABI:
   return. Comparisons call `rt_f_cmp`; long conditional branches relocate to
   ordinary internal `__rfN` false and `__reN` end code exports, avoiding an
   8-bit branch-span dependency. Sequential or nested controls, loops, early
-  returns, and recursive/reentrant functions remain unsupported. Its 6,998-byte
-  image leaves 1,194 bytes free under a dedicated 1 KiB capacity gate, while
+  returns, and recursive/reentrant functions remain unsupported. Its 6,936-byte
+  image leaves 1,256 bytes free under a dedicated 1 KiB capacity gate, while
   pass L retains its 2 KiB reserve.
 - `tools/build_actc_overlay_emit_native_real_postfix_multi_control_object.sh`
   builds `ACTC_OVLN.BIN`, pass id `23`, from a distinct configuration of the
   shared emitter. It claims only a supported program in which at least one REAL
   function contains a second conditional, and permits at most two controls per
   function either sequentially or nested to depth two. Independent `__rfNN`
-  and `__reNN` exports keep each long branch fully relocatable. The 7,120-byte
-  image leaves 1,072 bytes free under a dedicated 1 KiB gate; passes L and M
-  remain byte-identical to their prior builds.
+  and `__reNN` exports keep each long branch fully relocatable. The 7,058-byte
+  image leaves 1,134 bytes free under a dedicated 1 KiB gate; passes L and M
+  retain their respective capacity gates.
 - `tools/build_actc_overlay_emit_native_real_postfix_extended_control_object.sh`
   builds `ACTC_OVLO.BIN`, pass id `24`, from the same emitter with four
   power-of-two control slots per REAL function. It claims only when a supported
   function contains a third conditional, permits at most four controls and
   nesting depth four, and emits independent `__rfNN`/`__reNN` targets for every
-  occupied slot. Its 7,123-byte image leaves 1,069 bytes free under the 1 KiB
-  gate; passes L, M, and N remain byte-identical.
+  occupied slot. Its 7,061-byte image leaves 1,131 bytes free under the 1 KiB
+  gate; passes L, M, and N retain their respective capacity gates.
 - `tools/build_actc_overlay_emit_native_real_postfix_early_return_object.sh`
   builds `ACTC_OVLP.BIN`, pass id `25`, from the four-control emitter with
   conditional early-return parsing enabled. It claims only when a supported
   REAL function returns from inside an open `IF`/`ELSE`, requires a terminal
   fallback return, and preserves ordinary `__rfNN`/`__reNN` relocation. Its
-  7,147-byte image leaves 1,045 bytes free under the 1 KiB gate; passes L
-  through O remain byte-identical.
+  7,085-byte image leaves 1,107 bytes free under the 1 KiB gate; passes L
+  through O retain their respective capacity gates.
 - `tools/build_actc_overlay_emit_native_real_postfix_loop_object.sh` builds
   `ACTC_OVLQ.BIN`, pass id `26`, from the shared postfix emitter with loop and
   condition parsing enabled. It accepts up to four `DO ... UNTIL ... OD` or
   `WHILE ... DO ... OD` loops per supported REAL function and emits ordinary
-  relocatable `__rbNN` back-edge plus `__rzNN` while-exit labels. Its 7,151-byte
-  image leaves 1,041 bytes free under the 1 KiB gate; passes L through P remain
-  byte-identical. Plain `DO`, loop `EXIT`, mixed loop/conditional nesting, and
+  relocatable `__rbNN` back-edge plus `__rzNN` while-exit labels. Its 7,089-byte
+  image leaves 1,103 bytes free under the 1 KiB gate; passes L through P retain
+  their respective capacity gates. Plain `DO`, loop `EXIT`, mixed
+  loop/conditional nesting, and
   returns from inside a loop remain outside this bounded pass.
 - `tools/build_actc_overlay_emit_native_real_postfix_loop_exit_object.sh`
   builds `ACTC_OVLR.BIN`, pass id `27`, from the same emitter with plain-loop
@@ -239,8 +240,8 @@ The overlay artifacts share one stable execution ABI:
   supported REAL function, adds plain `DO ... OD`, decodes `EXIT`'s collector
   selector, and relocates each unconditional exit to the active loop's
   independent `__rzNN` target while preserving `__rbNN` back edges. Its
-  7,334-byte image leaves 858 bytes free under a dedicated 768-byte gate;
-  passes L through Q remain byte-identical. REAL-function `FOR`, mixed
+  7,272-byte image leaves 920 bytes free under a dedicated 768-byte gate;
+  passes L through Q retain their respective capacity gates. REAL-function `FOR`, mixed
   loop/conditional nesting, and returns from inside a loop remain outside this
   bounded pass.
 - `tools/build_actc_overlay_emit_native_real_postfix_for_object.sh` builds
@@ -250,9 +251,9 @@ The overlay artifacts share one stable execution ABI:
   shared 64-operation body/debug budget. Initial and final values are
   constants; the optional signed constant step must be nonzero. Inclusive
   unsigned bounds and carry-based overflow/underflow exits
-  prevent wraparound from restarting the loop. Its 7,828-byte image leaves 364
-  bytes free under a dedicated 256-byte gate; passes Q and R remain
-  byte-identical. Named CARD bounds are handled by pass T below; general bound
+  prevent wraparound from restarting the loop. Its 7,766-byte image leaves 426
+  bytes free under a dedicated 256-byte gate; passes Q and R retain their
+  respective capacity gates. Named CARD bounds are handled by pass T below; general bound
   expressions, runtime steps, nested counter-to-REAL body expressions, mixed
   controls, and returns inside loops remain outside this pass.
 - `tools/build_actc_overlay_emit_native_real_postfix_for_dynamic_object.sh`
@@ -261,9 +262,9 @@ The overlay artifacts share one stable execution ABI:
   named initial value is copied into the counter at loop entry; a named final
   value is copied into hidden four-byte storage before the recorded back edge,
   preserving once-only bound evaluation. The byte-identical nested-loop
-  fixture exercises both forms and produces 7.0 twice. Its 8,147-byte image
-  leaves 45 bytes free under a dedicated 32-byte gate; pass S remains
-  byte-identical. General bound expressions, runtime steps, counter-to-REAL
+  fixture exercises both forms and produces 7.0 twice. Its 8,085-byte image
+  leaves 107 bytes free under a dedicated 32-byte gate; pass S retains its
+  capacity gate. General bound expressions, runtime steps, counter-to-REAL
   body expressions, mixed controls, and returns inside loops remain outside
   this pass.
 - `tools/build_actc_overlay_emit_native_real_postfix_literal_object.sh` builds
@@ -276,9 +277,9 @@ The overlay artifacts share one stable execution ABI:
   The shared clamp fixture uses four grouped REAL locals and three early-return
   controls; native and Idun generated-6502 execution both produce `-1`, `0`,
   and `1`. The shared angle fixture still emits binary32 pi (`DB 0F 49 40`)
-  plus ordinary `RT_F_DIV`/`RT_F_MUL` imports. The 7,487-byte image leaves 705
-  bytes free under a dedicated 640-byte gate; passes L through T remain
-  byte-identical. Initialized grouped locals, unrestricted nested expressions,
+  plus ordinary `RT_F_DIV`/`RT_F_MUL` imports. The 7,415-byte image leaves 777
+  bytes free under a dedicated 640-byte gate; passes L through T retain their
+  respective capacity gates. Initialized grouped locals, unrestricted nested expressions,
   arbitrary signatures, and recursive/reentrant frames remain outside this
   pass.
 - `tools/build_actc_overlay_emit_native_object.sh` builds

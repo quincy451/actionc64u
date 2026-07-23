@@ -143,11 +143,11 @@ class TestRepoLayout(unittest.TestCase):
         self.assertIn("The constant foundation is complete", parity)
         self.assertIn("round-to-nearest, ties-to-even", parity)
         self.assertIn("Dedicated pass K", parity)
-        self.assertIn("inventories are 1,370 broad direct-PRG", flat_parity)
+        self.assertIn("inventories are 1,371 broad direct-PRG", flat_parity)
         self.assertIn("196 non-runtime source-backed object-emission shapes", flat_parity)
-        self.assertIn("304 compiled-runtime", flat_parity)
-        self.assertIn("twenty-one link-selected callable builtins", parity)
-        self.assertIn("remaining 22 MATH1 routines", parity)
+        self.assertIn("305 compiled-runtime", flat_parity)
+        self.assertIn("twenty-two link-selected callable builtins", parity)
+        self.assertIn("remaining 21 MATH1 routines", parity)
         self.assertIn("RT_F_FLOOR.OBJ", parity)
         self.assertIn("RT_F_ROUND.OBJ", parity)
         self.assertIn("RT_F_FRAC.OBJ", parity)
@@ -183,16 +183,16 @@ class TestRepoLayout(unittest.TestCase):
         self.assertIn("real_function_for_postfix.act", parity)
         self.assertIn("real_function_dynamic_for_postfix.act", parity)
         self.assertIn("real_function_literal_clamp_comma_locals_postfix.act", parity)
-        self.assertIn("Pass L is 6,084 bytes with 2,108 bytes free", flat_parity)
-        self.assertIn("pass M is 6,953 bytes with 1,239 bytes free", flat_parity)
-        self.assertIn("pass N is 7,075 bytes with 1,117 bytes free", flat_parity)
-        self.assertIn("pass O is 7,078 bytes with 1,114 bytes free", flat_parity)
-        self.assertIn("pass-P image is 7,102 bytes with 1,090 bytes free", flat_parity)
-        self.assertIn("pass-Q image is 7,106 bytes with 1,086 bytes free", flat_parity)
-        self.assertIn("Pass R is 7,289 bytes with 903 bytes free", flat_parity)
-        self.assertIn("Pass S is 7,783 bytes with 409 bytes free", flat_parity)
-        self.assertIn("Pass T is 8,102 bytes with 90 bytes free", flat_parity)
-        self.assertIn("Pass U is 7,432 bytes with 760 bytes free", flat_parity)
+        self.assertIn("Pass L is 6,091 bytes with 2,101 bytes free", flat_parity)
+        self.assertIn("pass M is 6,960 bytes with 1,232 bytes free", flat_parity)
+        self.assertIn("pass N is 7,082 bytes with 1,110 bytes free", flat_parity)
+        self.assertIn("pass O is 7,085 bytes with 1,107 bytes free", flat_parity)
+        self.assertIn("pass-P image is 7,109 bytes with 1,083 bytes free", flat_parity)
+        self.assertIn("pass-Q image is 7,113 bytes with 1,079 bytes free", flat_parity)
+        self.assertIn("Pass R is 7,296 bytes with 896 bytes free", flat_parity)
+        self.assertIn("Pass S is 7,790 bytes with 402 bytes free", flat_parity)
+        self.assertIn("Pass T is 8,109 bytes with 83 bytes free", flat_parity)
+        self.assertIn("Pass U is 7,439 bytes with 753 bytes free", flat_parity)
         self.assertIn("complete ACTC compiler, passes 0 through U", parity)
         self.assertIn("The portable products are therefore not yet at full feature parity", parity)
         self.assertNotIn("binary32 folding remains", parity)
@@ -318,6 +318,7 @@ class TestRepoLayout(unittest.TestCase):
             "rt_f_frac",
             "rt_f_mod",
             "rt_f_hypot",
+            "rt_f_pow",
             "rt_f_exp",
             "rt_f_ln",
             "rt_f_log2",

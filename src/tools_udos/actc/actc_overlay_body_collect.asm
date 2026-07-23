@@ -13,6 +13,7 @@ REAL_FUNCTION_FMIN = REAL_FUNCTION_FLAG + '<'
 REAL_FUNCTION_FMAX = REAL_FUNCTION_FLAG + '>'
 REAL_FUNCTION_FMOD = REAL_FUNCTION_FLAG + 'm'
 REAL_FUNCTION_FHYPOT = REAL_FUNCTION_FLAG + 'h'
+REAL_FUNCTION_FPOW = REAL_FUNCTION_FLAG + 'w'
 REAL_FUNCTION_FCLAMP = REAL_FUNCTION_FLAG + 'k'
 
 .export actc_overlay_header
@@ -1653,19 +1654,13 @@ emit_runtime_real_binary_value_local_consume_open:
     lda real_operator_local
     pha
     jsr emit_runtime_real_value_nested_local_or_fail
-    bcc :+
-    jmp emit_runtime_real_binary_value_local_function_fail_pop
-:
+    bcs emit_runtime_real_binary_value_local_function_fail_pop
     lda #','
     jsr consume_scan_char_local
-    bcc :+
-    jmp emit_runtime_real_binary_value_local_function_fail_pop
-:
+    bcs emit_runtime_real_binary_value_local_function_fail_pop
     jsr call_skip_inline_spaces_context
     jsr emit_runtime_real_value_nested_local_or_fail
-    bcc :+
-    jmp emit_runtime_real_binary_value_local_function_fail_pop
-:
+    bcs emit_runtime_real_binary_value_local_function_fail_pop
     pla
     sta real_operator_local
     pha
@@ -1673,9 +1668,7 @@ emit_runtime_real_binary_value_local_consume_open:
     bne emit_runtime_real_binary_value_local_function_close
     lda #','
     jsr consume_scan_char_local
-    bcc :+
-    jmp emit_runtime_real_binary_value_local_function_fail_pop
-:
+    bcs emit_runtime_real_binary_value_local_function_fail_pop
     jsr call_skip_inline_spaces_context
     jsr emit_runtime_real_value_nested_local_or_fail
     bcs emit_runtime_real_binary_value_local_function_fail_pop
@@ -2879,6 +2872,8 @@ pattern_fmod:
     .asciiz "FMOD"
 pattern_fhypot:
     .asciiz "FHYPOT"
+pattern_fpow:
+    .asciiz "FPOW"
 pattern_fexp:
     .asciiz "FEXP"
 pattern_fln:
@@ -2927,6 +2922,7 @@ real_binary_pattern_table_local:
     .byte <pattern_fmax, REAL_FUNCTION_FMAX
     .byte <pattern_fmod, REAL_FUNCTION_FMOD
     .byte <pattern_fhypot, REAL_FUNCTION_FHYPOT
+    .byte <pattern_fpow, REAL_FUNCTION_FPOW
     .byte <pattern_fclamp, REAL_FUNCTION_FCLAMP
 real_binary_pattern_table_local_end:
 real_value_pattern_table_local_end:
@@ -2937,6 +2933,7 @@ pattern_fclamp:
 .assert >pattern_real_decl = >pattern_fmax, error, "real patterns must share one page"
 .assert >pattern_real_decl = >pattern_fmod, error, "real patterns must share one page"
 .assert >pattern_real_decl = >pattern_fhypot, error, "real patterns must share one page"
+.assert >pattern_real_decl = >pattern_fpow, error, "real patterns must share one page"
 .assert >pattern_real_decl = >pattern_fclamp, error, "real patterns must share one page"
 pattern_proc:
     .asciiz "PROC"

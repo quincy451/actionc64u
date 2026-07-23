@@ -16,7 +16,8 @@ The exponent bias is `127`.
 Supported forms include decimal literals, exponent notation, arithmetic
 operators, comparisons, `REAL(x)`, `INT(r)`, and the bounded named-value
 `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`,
-`FExp`, `FMin`, `FMax`, `FClamp`, `DegToRad`, and `RadToDeg` calls.
+`FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FMin`, `FMax`, `FClamp`,
+`DegToRad`, and `RadToDeg` calls.
 
 Rules:
 
@@ -45,6 +46,10 @@ Rules:
 - `FHypot(left,right)` uses a scaled maximum/minimum calculation to avoid
   avoidable intermediate overflow and underflow; two zero inputs return
   positive zero, and infinity takes precedence when paired with NaN
+- `FPow(base,exponent)` returns `1.0` for a zero exponent, returns infinity for
+  zero raised to a negative exponent, and evaluates positive bases through
+  `FExp(exponent*FLn(base))`; negative bases require an exactly integral
+  exponent and otherwise return canonical quiet NaN
 - `FExp(value)` uses binary32 `ln(2)` range reduction and a degree-8 polynomial;
   NaN returns canonical quiet NaN, positive overflow returns infinity, and
   negative underflow returns positive zero
@@ -92,6 +97,7 @@ The linker-level REAL runtime surface uses stable helper symbols:
 - `rt_f_frac`
 - `rt_f_mod`
 - `rt_f_hypot`
+- `rt_f_pow`
 - `rt_f_exp`
 - `rt_f_ln`
 - `rt_f_deg_to_rad`
@@ -184,6 +190,10 @@ The first implemented target-side helper ABI is intentionally narrow:
   through `$06/$07`, supports destination aliasing either operand, and imports
   the absolute-value, minimum/maximum, division, multiplication, addition, and
   square-root closure for a scaled hypotenuse
+- `rt_f_pow` reads base and exponent pointers through `$02/$03` and `$04/$05`,
+  writes through `$06/$07`, supports destination aliasing either operand, and
+  imports the truncation, logarithm, exponential, modulus, subtraction, and
+  multiplication closure used by the portable MATH1 algorithm
 - `rt_f_exp` reads through `$02/$03`, writes through `$06/$07`, supports
   source/destination aliasing, and imports only the division, floor,
   REAL-to-INT, multiplication, subtraction, and addition closure used by the
@@ -258,6 +268,8 @@ Examples:
   multiplication, subtraction, and special-value closure
 - `FHypot(a,b)` imports `rt_f_hypot` plus its absolute-value,
   minimum/maximum, division, multiplication, addition, and square-root closure
+- `FPow(a,b)` imports `rt_f_pow` plus its truncation, logarithm, exponential,
+  modulus, subtraction, multiplication, and transitive arithmetic closure
 - `FExp(r)` imports `rt_f_exp` plus its division, floor, conversion,
   multiplication, subtraction, and addition closure
 - `FLn(r)` imports `rt_f_ln` plus its subtraction, addition, division, and
@@ -307,7 +319,7 @@ constants, which ACTC folds without target storage or runtime imports, and
 documents the core source forms that ACTC already recognizes directly:
 `REAL(x)`, `INT(x)`, REAL arithmetic/comparison operators, `FAbs`, `FSqrt`,
 `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`,
-`FExp`, `FLn`, `FLog2`, `FLog10`, `FMin`, `FMax`, `FClamp`, `DegToRad`,
+`FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FMin`, `FMax`, `FClamp`, `DegToRad`,
 `RadToDeg`, and `PrintR` / `PrintRE`.
 
 `SRC/MATH1_DEMO.ACT` validates the exported-library path by compiling a small

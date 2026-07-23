@@ -2123,7 +2123,7 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
 - Synchronized both objects, their generator, and the shared manifest into
   Idun. Linux ACTC selects the same wrappers instead of compiling the portable
   source bodies, and its generated 17-result MATH1 PRG exercises FLog2.
-- Current inventories are 1,370 broad direct-PRG shapes, 196 non-runtime
+- At completion of that slice the inventories were 1,370 broad direct-PRG shapes, 196 non-runtime
   source-backed object-emission shapes, and 304 compiled-runtime relocation
   oracles. The native suite contains 866 tests, including 252 overlay and 199
   source-cache tests.
@@ -2135,3 +2135,35 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   routines. `FPow` is the next dependency-ordered routine, but pass 6 has only
   two bytes above its enforced 96-byte reserve and must be compacted before
   another builtin name is added.
+
+## 2026-07-23 Link-Selected MATH1 Power
+
+- Compacted four pass-6 branch-over-jump sequences into direct carry branches,
+  saving 12 bytes before adding the next builtin selector.
+- Added the independent 548-byte `RT_F_POW.OBJ` dependency root. It preserves
+  destination, base, and exponent before helper calls and imports only
+  truncation, natural logarithm, multiplication, exponential, modulus, and
+  subtraction; their ordinary transitive dependencies remain ALINK-selected.
+- Preserved the portable MATH1 domain policy: a zero exponent returns one, zero
+  with a negative exponent returns infinity, positive bases use
+  `FExp(exponent*FLn(base))`, and negative bases require an exactly integral
+  exponent. Either input may alias the destination.
+- Native ACTC recognizes `FPow(A,B)` in bounded assignment, print, condition,
+  and REAL-function expression positions. The focused ACTC/ALINK/VICE direct
+  PRG prints `1024` for `FPow(2,10)` and prunes unrelated MATH1 roots.
+- The combined closure requires 344,920,930 host-emulated ALINK instructions;
+  the deterministic harness ceiling is now 400 million. This changes no target
+  behavior or linker format.
+- Synchronized the generator, object, and shared manifest into Idun. Linux ACTC
+  now emits `RT_F_POW` rather than compiling the former source body, and its
+  generated 17-result MATH1 PRG exercises the same object.
+- Current inventories are 1,371 broad direct-PRG shapes, 196 non-runtime
+  source-backed object-emission shapes, and 305 compiled-runtime relocation
+  oracles. The native suite remains 866 tests, including 252 overlay and 199
+  source-cache tests.
+- Every overlay remains above its reserve. Pass 6 is 8,089 bytes with 103 bytes
+  free; pass 7 is 6,870 bytes with 1,322 bytes free; passes L through U are
+  respectively 6,091, 6,960, 7,082, 7,085, 7,109, 7,113, 7,296, 7,790, 8,109,
+  and 7,439 bytes.
+- Native MATH1 now exposes twenty-two link-selected calls and lacks 21 public
+  routines. Shared trigonometric range reduction is the next dependency group.

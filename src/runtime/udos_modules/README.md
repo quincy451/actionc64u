@@ -109,6 +109,11 @@ Current status:
   value, minimum, maximum, division, multiplication, addition, and square root.
   The destination may alias either input. Two zero inputs produce positive
   zero, and infinity takes precedence when paired with NaN.
+- `rt_f_pow.obj` reads base and exponent pointers through `$02/$03` and
+  `$04/$05`, writes through `$06/$07`, and implements the portable MATH1 power
+  policy through truncation, natural logarithm, exponential, modulus, and
+  arithmetic dependencies. The destination may alias either input. Negative
+  bases require an exactly integral exponent; nonintegral cases produce NaN.
 - `rt_f_exp.obj` reads a REAL32 value through `$02/$03`, writes through
   `$06/$07`, and implements the portable MATH1 range-reduced degree-8
   exponential. It is safe when source and destination alias and imports only

@@ -8596,6 +8596,19 @@ class TestActcOverlay(unittest.TestCase):
                 ("rt_f_hypot", "rt_f_cmp"),
             ),
             (
+                "pow-print-position",
+                "MODULE MAIN\rREAL A\rREAL B\rPROC MAIN()\r"
+                "A=REAL(2)\rB=REAL(10)\rPrintRE(FPow(A,B))\rRETURN\r",
+                ("rt_f_pow", "rt_print_f"),
+            ),
+            (
+                "pow-condition-position",
+                "MODULE MAIN\rREAL A\rREAL B\rREAL C\rPROC MAIN()\r"
+                "A=REAL(2)\rB=REAL(10)\rC=REAL(1025)\r"
+                "IF FPow(A,B)<C THEN\rPrintE(\"OK\")\rFI\rRETURN\r",
+                ("rt_f_pow", "rt_f_cmp"),
+            ),
+            (
                 "exp-print-position",
                 "MODULE MAIN\rREAL A\rPROC MAIN()\r"
                 "A=REAL(1)\rPrintRE(FExp(A))\rRETURN\r",
@@ -8667,6 +8680,7 @@ class TestActcOverlay(unittest.TestCase):
                     "rt_f_frac",
                     "rt_f_mod",
                     "rt_f_hypot",
+                    "rt_f_pow",
                     "rt_f_exp",
                     "rt_f_ln",
                     "rt_f_log2",
@@ -8683,6 +8697,7 @@ class TestActcOverlay(unittest.TestCase):
             ("FMax", "rt_f_max"),
             ("FMod", "rt_f_mod"),
             ("FHypot", "rt_f_hypot"),
+            ("FPow", "rt_f_pow"),
         ):
             with self.subTest(function_name=function_name):
                 obj = self.compile_overlay_object(
@@ -8701,7 +8716,13 @@ class TestActcOverlay(unittest.TestCase):
 
                 self.assertEqual(self.last_emit_overlay_pass, [10])
                 self.assertIn(f"u {runtime_module}\n", obj)
-                for other_module in ("rt_f_min", "rt_f_max", "rt_f_mod", "rt_f_hypot"):
+                for other_module in (
+                    "rt_f_min",
+                    "rt_f_max",
+                    "rt_f_mod",
+                    "rt_f_hypot",
+                    "rt_f_pow",
+                ):
                     if other_module != runtime_module:
                         self.assertNotIn(f"u {other_module}\n", obj)
                 self.assertNotIn(f"u {function_name.lower()}\n", obj)

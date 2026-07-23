@@ -7,8 +7,8 @@ Target: C64 6502 generated program; no UDOS calls or resident service required.
 Numeric base: IEEE-754 binary32 REAL, round-to-nearest/ties-to-even core runtime.
 
 Native UDOS status: all 8 public constants are available through the usable
-INCLUDE "MATH1" header, and twenty-one low-level calls are available: FAbs, FSqrt,
-FSign, FTrunc, FFloor, FCeil, FRound, FFrac, FMod, FHypot, FExp, FLn, FLog2, FLog10, FMin, FMax, FClamp,
+INCLUDE "MATH1" header, and twenty-two low-level calls are available: FAbs, FSqrt,
+FSign, FTrunc, FFloor, FCeil, FRound, FFrac, FMod, FHypot, FPow, FExp, FLn, FLog2, FLog10, FMin, FMax, FClamp,
 DegToRad, RadToDeg, PrintR, and PrintRE. FSign is a dependency-free
 selected OBJ helper with canonical-NaN and signed-zero behavior. FMin/FMax use
 independently selected OBJ helpers with the complete portable NaN and
@@ -27,6 +27,9 @@ the destination. FHypot uses a scaled maximum/minimum calculation, is safe
 when either operand aliases the destination, and selects its seven direct
 dependencies only when referenced. FExp uses the portable degree-8 range-
 reduced algorithm and selects its arithmetic closure only when referenced.
+FPow preserves both operands, uses the portable logarithm/exponential algorithm,
+and selects its truncation, logarithm, exponential, modulus, subtraction,
+multiplication, and transitive arithmetic closure only when referenced.
 FLn uses portable exponent/significand range reduction plus a six-term odd
 series and selects only subtraction, addition, division, and multiplication.
 FLog2 and FLog10 are independent alias-safe wrappers that evaluate FLn into
@@ -166,14 +169,14 @@ Porting checklist for the native C64U tree
 
 1. Port lib/math1.act as source, retaining the public signatures above.
 2. Supply the same link-selected binary32 primitives for PrintR, PrintRE,
-   FAbs, FSqrt, FSign, FTrunc, FFloor, FCeil, FRound, FFrac, FMod, FHypot, FExp, FLn, FLog2, FLog10, FMin, FMax, FClamp, add, subtract, multiply, divide, compare, INT
+   FAbs, FSqrt, FSign, FTrunc, FFloor, FCeil, FRound, FFrac, FMod, FHypot, FPow, FExp, FLn, FLog2, FLog10, FMin, FMax, FClamp, add, subtract, multiply, divide, compare, INT
    conversion, and REAL conversion.
 3. Keep _MathWrapPi private; help/catalog builders intentionally ignore names
    beginning with an underscore.
 4. Add the constants and all public signatures to ACTEDIT/ACTHELP library help.
 5. Run known-value target tests for positive and negative FATan, all FATan2
    quadrants, FSin/FCos/FTan, logs, powers, and hyperbolic functions.  The Idun
-   fork's VICE regression executes sixteen representative results on a 6502.
+   fork's VICE regression executes seventeen representative results on a 6502.
 
 Small example
 -------------

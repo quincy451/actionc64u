@@ -43,6 +43,7 @@ from generate_math_runtime import (
     minmax_module,
     mod_module,
     multiply_module,
+    pow_module,
     rad_to_deg_module,
     round_module,
     sign_module,
@@ -469,6 +470,29 @@ def expected_logarithm(value: int, denominator: int) -> int:
     return expected_division(expected_ln(value), denominator)
 
 
+def expected_pow(base: int, exponent: int) -> int:
+    if is_nan(base) or is_nan(exponent):
+        return CANONICAL_QNAN
+    if exponent & 0x7FFFFFFF == 0:
+        return 0x3F800000
+    if base & 0x7FFFFFFF == 0:
+        return 0x7F800000 if exponent >> 31 else base
+    if expected_compare(base, 0) > 0:
+        logarithm = expected_ln(base)
+        return expected_exp(expected_multiply(exponent, logarithm))
+
+    whole = expected_trunc(exponent)
+    if expected_compare(whole, exponent) != 0:
+        return CANONICAL_QNAN
+    magnitude = expected_exp(
+        expected_multiply(exponent, expected_ln(base & 0x7FFFFFFF))
+    )
+    parity = expected_mod(whole & 0x7FFFFFFF, 0x40000000)
+    if expected_compare(parity, 0x3F800000) == 0:
+        return expected_addsub(0, magnitude, True)
+    return magnitude
+
+
 def runtime_builders(operation: str):
     special = special_value_module()
     if operation == "add":
@@ -556,6 +580,22 @@ def runtime_builders(operation: str):
         return [
             log2_module() if operation == "log2" else log10_module(),
             ln_module(),
+            divide_module(),
+            multiply_module(),
+            addsub_wrapper_module("rt_f_sub", True),
+            addsub_wrapper_module("rt_f_add", False),
+            addsub_core_module(),
+            special,
+        ]
+    if operation == "pow":
+        return [
+            pow_module(),
+            ln_module(),
+            exp_module(),
+            mod_module(),
+            floor_module(),
+            trunc_module(),
+            float_to_int_module(),
             divide_module(),
             multiply_module(),
             addsub_wrapper_module("rt_f_sub", True),
@@ -743,10 +783,62 @@ def verification_ln_cases(
     return [(value, 0) for value in values]
 
 
+def verification_pow_cases(
+    random_count: int, seed: int
+) -> list[tuple[int, int]]:
+    values = [
+        0x00000000,
+        0x80000000,
+        0x3F800000,
+        0xBF800000,
+        0x40000000,
+        0xC0000000,
+        0x7F7FFFFF,
+        0xFF7FFFFF,
+        0x7F800000,
+        0xFF800000,
+        0x7F800001,
+        0x7FC00000,
+        0xFFC00001,
+    ]
+    exponents = values + [
+        int.from_bytes(struct.pack("<f", value), "little")
+        for value in (
+            -31.0,
+            -4.0,
+            -3.0,
+            -2.5,
+            -2.0,
+            -1.0,
+            0.5,
+            2.0,
+            3.0,
+            4.0,
+            31.0,
+        )
+    ]
+    cases = [(base, exponent) for base in values for exponent in exponents]
+    randomizer = random.Random(seed ^ 0xF00)
+    for index in range(random_count):
+        if index & 1:
+            base_value = randomizer.uniform(-32.0, 32.0)
+            exponent_value = randomizer.randint(-32, 32)
+        else:
+            base_value = randomizer.uniform(0.0001, 32.0)
+            exponent_value = randomizer.uniform(-32.0, 32.0)
+        cases.append(
+            (
+                int.from_bytes(struct.pack("<f", base_value), "little"),
+                int.from_bytes(struct.pack("<f", exponent_value), "little"),
+            )
+        )
+    return cases
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/exp/ln/log2/log10/angle/min/max/clamp code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/exp/ln/log2/log10/pow/angle/min/max/clamp code against exact IEEE "
             "binary32"
         )
     )
@@ -769,6 +861,7 @@ def main() -> int:
     clamp_cases = verification_clamp_cases(args.random_cases, args.seed)
     exp_cases = verification_exp_cases(args.random_cases, args.seed)
     ln_cases = verification_ln_cases(args.random_cases, args.seed)
+    pow_cases = verification_pow_cases(args.random_cases, args.seed)
     with tempfile.TemporaryDirectory(prefix="action-f-ieee-") as temporary:
         work = Path(temporary)
         source_path = work / "verify.c"
@@ -808,6 +901,7 @@ def main() -> int:
             "ln",
             "log2",
             "log10",
+            "pow",
             "deg_to_rad",
             "rad_to_deg",
             "min",
@@ -821,6 +915,8 @@ def main() -> int:
                 if operation == "exp"
                 else ln_cases
                 if operation in ("ln", "log2", "log10")
+                else pow_cases
+                if operation == "pow"
                 else cases
             )
             runtime_path = work / f"rt_f_{operation}.bin"
@@ -884,6 +980,8 @@ def main() -> int:
                     expected = expected_logarithm(left, EXP_LN2_BITS)
                 elif operation == "log10":
                     expected = expected_logarithm(left, LN10_BITS)
+                elif operation == "pow":
+                    expected = expected_pow(left, right)
                 elif operation == "deg_to_rad":
                     expected = expected_angle_scale(
                         left, DEGREES_TO_RADIANS_BITS
@@ -921,6 +1019,7 @@ def main() -> int:
                 "ln",
                 "log2",
                 "log10",
+                "pow",
                 "deg_to_rad",
                 "rad_to_deg",
             ):
@@ -963,6 +1062,8 @@ def main() -> int:
                         if operation == "log2"
                         else expected_logarithm(left, LN10_BITS)
                         if operation == "log10"
+                        else expected_pow(left, right)
+                        if operation == "pow"
                         else expected_angle_scale(
                             left, DEGREES_TO_RADIANS_BITS
                         )
@@ -981,7 +1082,7 @@ def main() -> int:
                 print(
                     f"rt_f_{operation} {len(alias_results)} in-place alias cases passed"
                 )
-                if operation in ("mod", "hypot"):
+                if operation in ("mod", "hypot", "pow"):
                     alias_right_completed = subprocess.run(
                         [str(harness_path), str(runtime_path), "alias-right"],
                         input="".join(
@@ -1002,6 +1103,8 @@ def main() -> int:
                         expected = (
                             expected_mod(left, right)
                             if operation == "mod"
+                            else expected_pow(left, right)
+                            if operation == "pow"
                             else expected_hypot(left, right)
                         )
                         if actual != expected:

@@ -46,6 +46,7 @@ class TestMathRuntime(unittest.TestCase):
             "frac",
             "mod",
             "hypot",
+            "pow",
             "exp",
             "ln",
             "log2",

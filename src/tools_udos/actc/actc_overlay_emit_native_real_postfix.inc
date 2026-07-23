@@ -58,9 +58,9 @@ NRP_CONTROL_MASK = 1
 NRP_CONTROL_SLOT_MAX = NRP_FUNCTION_MAX*NRP_CONTROL_MAX
 .endif
 .if NRP_ENABLE_CONDITION
-NRP_HELPER_BASE_COUNT = 25
+NRP_HELPER_BASE_COUNT = 26
 .else
-NRP_HELPER_BASE_COUNT = 24
+NRP_HELPER_BASE_COUNT = 25
 .endif
 .if NRP_ENABLE_LITERAL
 NRP_HELPER_COUNT = NRP_HELPER_BASE_COUNT+2
@@ -3793,6 +3793,7 @@ nrp_helper_f_min: .asciiz "min"
 nrp_helper_f_max: .asciiz "max"
 nrp_helper_f_mod: .asciiz "mod"
 nrp_helper_f_hypot: .asciiz "hypot"
+nrp_helper_f_pow: .asciiz "pow"
 nrp_helper_f_clamp: .asciiz "clamp"
 nrp_helper_f_exp: .asciiz "exp"
 nrp_helper_f_ln: .asciiz "ln"
@@ -3813,7 +3814,8 @@ nrp_helper_name_lo:
     .byte <nrp_helper_f_round,<nrp_helper_f_frac,<nrp_helper_f_add
     .byte <nrp_helper_f_sub,<nrp_helper_f_mul,<nrp_helper_f_div
     .byte <nrp_helper_f_min,<nrp_helper_f_max,<nrp_helper_f_mod
-    .byte <nrp_helper_f_hypot,<nrp_helper_f_clamp,<nrp_helper_f_exp
+    .byte <nrp_helper_f_hypot,<nrp_helper_f_pow,<nrp_helper_f_clamp
+    .byte <nrp_helper_f_exp
     .byte <nrp_helper_f_ln,<nrp_helper_f_log2,<nrp_helper_f_log10
 .if NRP_ENABLE_LITERAL
     .byte <nrp_helper_f_deg_to_rad,<nrp_helper_f_rad_to_deg
@@ -3828,7 +3830,8 @@ nrp_helper_name_hi:
     .byte >nrp_helper_f_round,>nrp_helper_f_frac,>nrp_helper_f_add
     .byte >nrp_helper_f_sub,>nrp_helper_f_mul,>nrp_helper_f_div
     .byte >nrp_helper_f_min,>nrp_helper_f_max,>nrp_helper_f_mod
-    .byte >nrp_helper_f_hypot,>nrp_helper_f_clamp,>nrp_helper_f_exp
+    .byte >nrp_helper_f_hypot,>nrp_helper_f_pow,>nrp_helper_f_clamp
+    .byte >nrp_helper_f_exp
     .byte >nrp_helper_f_ln,>nrp_helper_f_log2,>nrp_helper_f_log10
 .if NRP_ENABLE_LITERAL
     .byte >nrp_helper_f_deg_to_rad,>nrp_helper_f_rad_to_deg
@@ -3842,8 +3845,8 @@ nrp_helper_kind:
     .byte NRP_HELPER_UNARY,NRP_HELPER_UNARY,NRP_HELPER_UNARY,NRP_HELPER_UNARY
     .byte NRP_HELPER_BINARY,NRP_HELPER_BINARY,NRP_HELPER_BINARY,NRP_HELPER_BINARY
     .byte NRP_HELPER_BINARY,NRP_HELPER_BINARY,NRP_HELPER_BINARY,NRP_HELPER_BINARY
-    .byte NRP_HELPER_TERNARY,NRP_HELPER_UNARY,NRP_HELPER_UNARY,NRP_HELPER_UNARY
-    .byte NRP_HELPER_UNARY
+    .byte NRP_HELPER_BINARY,NRP_HELPER_TERNARY,NRP_HELPER_UNARY,NRP_HELPER_UNARY
+    .byte NRP_HELPER_UNARY,NRP_HELPER_UNARY
 .if NRP_ENABLE_LITERAL
     .byte NRP_HELPER_UNARY,NRP_HELPER_UNARY
 .endif

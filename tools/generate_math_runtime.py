@@ -2043,6 +2043,255 @@ def log10_module() -> ObjectBuilder:
     return logarithm_base_module("rt_f_log10", LN10_BITS)
 
 
+def pow_module() -> ObjectBuilder:
+    """Build the portable MATH1 base/exponent operation."""
+    b = ObjectBuilder("rt_f_pow")
+
+    pointer_targets = (
+        "destination",
+        "base",
+        "exponent",
+        "whole",
+        "abs_base",
+        "logarithm",
+        "product",
+        "magnitude",
+        "abs_whole",
+        "parity",
+        "zero",
+        "one",
+        "two",
+        "inf",
+        "nan",
+    )
+    pointer_offsets = {
+        target: index * 2 for index, target in enumerate(pointer_targets)
+    }
+
+    def load_local_pointer(target: str, destination: int) -> None:
+        b.immediate(0xA0, pointer_offsets[target])
+        b.immediate(0xA2, destination)
+        b.local_reference(0x20, "setp")
+
+    def return_local(target: str) -> None:
+        b.immediate(0xA0, pointer_offsets[target])
+        b.jmp_local("copy")
+
+    # Every dependency owns overlapping zero-page scratch. Preserve the caller
+    # destination and both operands before the first helper call.
+    b.zero_page(0xA5, 0x06)
+    b.local_reference(0x8D, "pt")
+    b.zero_page(0xA5, 0x07)
+    b.local_reference(0x8D, "pth")
+    b.immediate(0xA0, 0x00)
+    b.label("save")
+    b.emit(0xB1, 0x02)
+    b.local_reference(0x99, "base")
+    b.emit(0xB1, 0x04)
+    b.local_reference(0x99, "exponent")
+    b.emit(0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "save")
+
+    load_local_pointer("base", 0x02)
+    b.local_reference(0x20, "isnan")
+    far_branch(b, 0xB0, "ret_nan", "pow_base_nan")
+    load_local_pointer("exponent", 0x02)
+    b.local_reference(0x20, "isnan")
+    far_branch(b, 0xB0, "ret_nan", "pow_exponent_nan")
+
+    # MATH1 checks the exponent before the base, so every non-NaN base raised
+    # to either zero sign returns exactly one.
+    b.local_reference(0x20, "iszero")
+    far_branch(b, 0xB0, "ret_one", "pow_zero_exponent")
+    load_local_pointer("base", 0x02)
+    b.local_reference(0x20, "iszero")
+    b.branch(0x90, "base_nonzero")
+    load_local_pointer("exponent", 0x02)
+    b.immediate(0xA0, 0x03)
+    b.emit(0xB1, 0x02)
+    far_branch(b, 0x30, "ret_inf", "pow_negative_zero_exponent")
+    b.jmp_local("ret_base")
+
+    b.label("base_nonzero")
+    b.immediate(0xA0, 0x03)
+    b.emit(0xB1, 0x02)
+    b.branch(0x30, "negative_base")
+    b.immediate(0xA9, 0x00)
+    b.local_reference(0x8D, "negate")
+    b.jmp_local("calculate")
+
+    # A negative base is valid only for an exactly integral exponent.
+    b.label("negative_base")
+    load_local_pointer("exponent", 0x02)
+    load_local_pointer("whole", 0x06)
+    b.jsr("rt_f_trunc")
+    load_local_pointer("whole", 0x02)
+    load_local_pointer("exponent", 0x04)
+    b.local_reference(0x20, "equal4")
+    far_branch(b, 0xB0, "ret_nan", "pow_fractional_exponent")
+    b.immediate(0xA9, 0x01)
+    b.local_reference(0x8D, "negate")
+
+    b.label("calculate")
+    load_local_pointer("base", 0x02)
+    load_local_pointer("abs_base", 0x06)
+    b.local_reference(0x20, "copy_abs")
+    load_local_pointer("abs_base", 0x02)
+    load_local_pointer("logarithm", 0x06)
+    b.jsr("rt_f_ln")
+    load_local_pointer("exponent", 0x02)
+    load_local_pointer("logarithm", 0x04)
+    load_local_pointer("product", 0x06)
+    b.jsr("rt_f_mul")
+    load_local_pointer("product", 0x02)
+    load_local_pointer("magnitude", 0x06)
+    b.jsr("rt_f_exp")
+
+    b.local_reference(0xAD, "negate")
+    b.branch(0xF0, "ret_magnitude")
+    load_local_pointer("whole", 0x02)
+    load_local_pointer("abs_whole", 0x06)
+    b.local_reference(0x20, "copy_abs")
+    load_local_pointer("abs_whole", 0x02)
+    load_local_pointer("two", 0x04)
+    load_local_pointer("parity", 0x06)
+    b.jsr("rt_f_mod")
+    load_local_pointer("parity", 0x02)
+    load_local_pointer("one", 0x04)
+    b.local_reference(0x20, "equal4")
+    b.branch(0xB0, "ret_magnitude")
+
+    # Source MATH1 negates an odd result with 0.0-magnitude. Retain that
+    # operation rather than toggling the sign so zero and NaN behavior matches.
+    load_local_pointer("zero", 0x02)
+    load_local_pointer("magnitude", 0x04)
+    load_local_pointer("destination", 0x06)
+    b.jsr("rt_f_sub")
+    b.emit(0x60)
+
+    b.label("ret_magnitude")
+    return_local("magnitude")
+    b.label("ret_nan")
+    return_local("nan")
+    b.label("ret_one")
+    return_local("one")
+    b.label("ret_inf")
+    return_local("inf")
+    b.label("ret_base")
+    return_local("base")
+
+    # Y selects a pointer-table entry and X selects the public zero-page
+    # pointer slot ($02, $04, or $06).
+    b.label("setp")
+    b.local_reference(0xB9, "pt")
+    b.emit(0x95, 0x00, 0xC8)
+    b.local_reference(0xB9, "pt")
+    b.emit(0x95, 0x01, 0x60)
+
+    # Copy the pointer selected by Y to the caller's saved destination.
+    b.label("copy")
+    b.immediate(0xA2, 0x02)
+    b.local_reference(0x20, "setp")
+    b.immediate(0xA0, pointer_offsets["destination"])
+    b.immediate(0xA2, 0x06)
+    b.local_reference(0x20, "setp")
+    b.immediate(0xA0, 0x00)
+    b.label("copy_loop")
+    b.emit(0xB1, 0x02, 0x91, 0x06, 0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "copy_loop")
+    b.emit(0x60)
+
+    # Return carry set for NaN and clear for every other binary32 class.
+    b.label("isnan")
+    b.immediate(0xA0, 0x03)
+    b.emit(0xB1, 0x02)
+    b.immediate(0x29, 0x7F)
+    b.immediate(0xC9, 0x7F)
+    b.branch(0xD0, "class_no")
+    b.emit(0x88, 0xB1, 0x02)
+    b.branch(0x10, "class_no")
+    b.immediate(0x29, 0x7F)
+    b.emit(0x88, 0x11, 0x02, 0x88, 0x11, 0x02)
+    b.branch(0xF0, "class_no")
+    b.emit(0x38, 0x60)
+
+    # Return carry set for either zero sign and clear otherwise.
+    b.label("iszero")
+    b.immediate(0xA0, 0x03)
+    b.emit(0xB1, 0x02)
+    b.immediate(0x29, 0x7F)
+    b.emit(0x88, 0x11, 0x02, 0x88, 0x11, 0x02, 0x88, 0x11, 0x02)
+    b.branch(0xD0, "class_no")
+    b.emit(0x38, 0x60)
+    b.label("class_no")
+    b.emit(0x18, 0x60)
+
+    # Return carry clear only when both four-byte values are bit-identical.
+    b.label("equal4")
+    b.immediate(0xA0, 0x03)
+    b.label("equal_loop")
+    b.emit(0xB1, 0x02, 0xD1, 0x04)
+    b.branch(0xD0, "not_equal")
+    b.emit(0x88)
+    b.branch(0x10, "equal_loop")
+    b.emit(0x18, 0x60)
+    b.label("not_equal")
+    b.emit(0x38, 0x60)
+
+    # Copy a value while clearing only its sign bit.
+    b.label("copy_abs")
+    b.immediate(0xA0, 0x00)
+    b.label("abs_loop")
+    b.emit(0xB1, 0x02)
+    b.immediate(0xC0, 0x03)
+    b.branch(0xD0, "abs_store")
+    b.immediate(0x29, 0x7F)
+    b.label("abs_store")
+    b.emit(0x91, 0x06, 0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "abs_loop")
+    b.emit(0x60)
+
+    b.label("pt")
+    b.emit(0x00)
+    b.label("pth")
+    b.emit(0x00)
+    for target in pointer_targets[1:]:
+        offset = len(b.code)
+        b.emit(0x00, 0x00)
+        b.local_relocations.append((offset, target))
+
+    for label in (
+        "base",
+        "exponent",
+        "whole",
+        "abs_base",
+        "logarithm",
+        "product",
+        "magnitude",
+        "abs_whole",
+        "parity",
+    ):
+        b.label(label)
+        b.emit(0x00, 0x00, 0x00, 0x00)
+    b.label("negate")
+    b.emit(0x00)
+    for label, bits in (
+        ("zero", 0x00000000),
+        ("one", 0x3F800000),
+        ("two", 0x40000000),
+        ("inf", 0x7F800000),
+        ("nan", 0x7FC00000),
+    ):
+        b.label(label)
+        b.emit(*bits.to_bytes(4, "little"))
+
+    b.export("rt_f_pow")
+    return b
+
+
 def float_to_int_module() -> ObjectBuilder:
     """Build finite binary32 to signed 16-bit truncation toward zero."""
     b = ObjectBuilder("rt_f_to_i")
@@ -4045,6 +4294,7 @@ def main() -> int:
             ln_module(),
             log2_module(),
             log10_module(),
+            pow_module(),
             deg_to_rad_module(),
             rad_to_deg_module(),
             minmax_module("rt_f_min", maximum=False),

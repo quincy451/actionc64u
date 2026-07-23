@@ -58,6 +58,7 @@ from generate_math_runtime import (
     sin_module,
     special_value_module,
     square_root_module,
+    tan_module,
     trunc_module,
     wrap_pi_module,
 )
@@ -571,6 +572,10 @@ def expected_cos(value: int) -> int:
     return result ^ 0x80000000 if negate else result
 
 
+def expected_tan(value: int) -> int:
+    return expected_division(expected_sin(value), expected_cos(value))
+
+
 def runtime_builders(operation: str):
     special = special_value_module()
     if operation == "add":
@@ -681,12 +686,14 @@ def runtime_builders(operation: str):
             addsub_core_module(),
             special,
         ]
-    if operation in ("wrap_pi", "sin", "cos"):
+    if operation in ("wrap_pi", "sin", "cos", "tan"):
         builders = []
         if operation == "sin":
             builders.append(sin_module())
         elif operation == "cos":
             builders.append(cos_module())
+        elif operation == "tan":
+            builders.extend([tan_module(), sin_module(), cos_module()])
         builders.extend(
             [
                 wrap_pi_module(),
@@ -991,7 +998,7 @@ def verification_trig_cases(
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/exp/ln/log2/log10/pow/wrap/sin/cos/angle/min/max/clamp code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/exp/ln/log2/log10/pow/wrap/sin/cos/tan/angle/min/max/clamp code against exact IEEE "
             "binary32"
         )
     )
@@ -1059,6 +1066,7 @@ def main() -> int:
             "wrap_pi",
             "sin",
             "cos",
+            "tan",
             "deg_to_rad",
             "rad_to_deg",
             "min",
@@ -1075,7 +1083,7 @@ def main() -> int:
                 else pow_cases
                 if operation == "pow"
                 else trig_cases
-                if operation in ("wrap_pi", "sin", "cos")
+                if operation in ("wrap_pi", "sin", "cos", "tan")
                 else cases
             )
             runtime_path = work / f"rt_f_{operation}.bin"
@@ -1147,6 +1155,8 @@ def main() -> int:
                     expected = expected_sin(left)
                 elif operation == "cos":
                     expected = expected_cos(left)
+                elif operation == "tan":
+                    expected = expected_tan(left)
                 elif operation == "deg_to_rad":
                     expected = expected_angle_scale(
                         left, DEGREES_TO_RADIANS_BITS
@@ -1188,6 +1198,7 @@ def main() -> int:
                 "wrap_pi",
                 "sin",
                 "cos",
+                "tan",
                 "deg_to_rad",
                 "rad_to_deg",
             ):
@@ -1238,6 +1249,8 @@ def main() -> int:
                         if operation == "sin"
                         else expected_cos(left)
                         if operation == "cos"
+                        else expected_tan(left)
+                        if operation == "tan"
                         else expected_angle_scale(
                             left, DEGREES_TO_RADIANS_BITS
                         )

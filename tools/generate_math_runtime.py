@@ -2774,6 +2774,68 @@ def cos_module() -> ObjectBuilder:
     return b
 
 
+def tan_module() -> ObjectBuilder:
+    """Build tangent from the shared sine, cosine, and division helpers."""
+    b = ObjectBuilder("rt_f_tan")
+
+    pointer_targets = ("destination", "source", "sine", "cosine")
+    pointer_offsets = {
+        target: index * 2 for index, target in enumerate(pointer_targets)
+    }
+
+    def load_local_pointer(target: str, destination: int) -> None:
+        b.immediate(0xA0, pointer_offsets[target])
+        b.immediate(0xA2, destination)
+        b.local_reference(0x20, "setp")
+
+    # Preserve caller pointers and source bytes before dependency calls.
+    b.zero_page(0xA5, 0x06)
+    b.local_reference(0x8D, "pt")
+    b.zero_page(0xA5, 0x07)
+    b.local_reference(0x8D, "pth")
+    b.immediate(0xA0, 0x00)
+    b.label("save")
+    b.emit(0xB1, 0x02)
+    b.local_reference(0x99, "source")
+    b.emit(0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "save")
+
+    load_local_pointer("source", 0x02)
+    load_local_pointer("sine", 0x06)
+    b.jsr("rt_f_sin")
+    load_local_pointer("source", 0x02)
+    load_local_pointer("cosine", 0x06)
+    b.jsr("rt_f_cos")
+    load_local_pointer("sine", 0x02)
+    load_local_pointer("cosine", 0x04)
+    load_local_pointer("destination", 0x06)
+    b.jsr("rt_f_div")
+    b.emit(0x60)
+
+    b.label("setp")
+    b.local_reference(0xB9, "pt")
+    b.emit(0x95, 0x00, 0xC8)
+    b.local_reference(0xB9, "pt")
+    b.emit(0x95, 0x01, 0x60)
+
+    b.label("pt")
+    b.emit(0x00)
+    b.label("pth")
+    b.emit(0x00)
+    for target in pointer_targets[1:]:
+        offset = len(b.code)
+        b.emit(0x00, 0x00)
+        b.local_relocations.append((offset, target))
+
+    for label in ("source", "sine", "cosine"):
+        b.label(label)
+        b.emit(0x00, 0x00, 0x00, 0x00)
+
+    b.export("rt_f_tan")
+    return b
+
+
 def float_to_int_module() -> ObjectBuilder:
     """Build finite binary32 to signed 16-bit truncation toward zero."""
     b = ObjectBuilder("rt_f_to_i")
@@ -4780,6 +4842,7 @@ def main() -> int:
             wrap_pi_module(),
             sin_module(),
             cos_module(),
+            tan_module(),
             deg_to_rad_module(),
             rad_to_deg_module(),
             minmax_module("rt_f_min", maximum=False),

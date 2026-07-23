@@ -154,24 +154,24 @@ Current state:
   ASMBLOCK insertion, local-label and variable relocations, dynamic arithmetic,
   link-selected helpers, and
   DO/WHILE EXIT lowering. It leaves 593 bytes free under its dedicated
-  128-byte minimum reserve. `ACTC_OVL6.BIN` is 8,085 bytes with 107 bytes free
-  under a 96-byte gate. `ACTC_OVL7.BIN` is 6,932 bytes with 1,260 bytes free in
+  128-byte minimum reserve. `ACTC_OVL6.BIN` is 8,092 bytes with 100 bytes free
+  under a 96-byte gate. `ACTC_OVL7.BIN` is 6,965 bytes with 1,227 bytes free in
   its 8 KiB window, and raw-block-capable `ACTC_OVL4.BIN` is 5,603 bytes.
   Function-aware pass G is 6,645 bytes with 1,547 bytes free under a 512-byte
   gate. Universal mixed pass H is 8,064 bytes with exactly 128 bytes free under a
   128-byte gate. Fixed-address and register-machine pass J is 7,901 bytes with
   291 bytes free under a 256-byte gate. REAL function/ternary pass K is 5,877
   bytes with 2,315 bytes free in its 8 KiB window. Nested REAL postfix pass L
-  is 6,105 bytes with 2,087 bytes free. Function-control pass M is 6,974 bytes
-  with 1,218 bytes free under its dedicated 1 KiB gate. Two-control pass N is
-  7,096 bytes with 1,096 bytes free under the same gate. Four-control pass O is
-  7,099 bytes with 1,093 bytes free. Conditional-early-return pass P is 7,123
-  bytes with 1,069 bytes free. REAL-function loop pass Q is 7,127 bytes with
-  1,065 bytes free. Plain-loop/nearest-EXIT pass R is 7,310 bytes with 882
+  is 6,112 bytes with 2,080 bytes free. Function-control pass M is 6,981 bytes
+  with 1,211 bytes free under its dedicated 1 KiB gate. Two-control pass N is
+  7,103 bytes with 1,089 bytes free under the same gate. Four-control pass O is
+  7,106 bytes with 1,086 bytes free. Conditional-early-return pass P is 7,130
+  bytes with 1,062 bytes free. REAL-function loop pass Q is 7,134 bytes with
+  1,058 bytes free. Plain-loop/nearest-EXIT pass R is 7,317 bytes with 875
   bytes free under its dedicated 768-byte gate. Constant-bound CARD-counter
-  `FOR` pass S is 7,804 bytes with 388 bytes free under its dedicated 256-byte
-  gate. Named-bound `FOR` pass T is 8,123 bytes with 69 bytes free under its
-  dedicated 32-byte gate. Literal/control pass U is 7,453 bytes with 739 bytes
+  `FOR` pass S is 7,811 bytes with 381 bytes free under its dedicated 256-byte
+  gate. Named-bound `FOR` pass T is 8,130 bytes with 62 bytes free under its
+  dedicated 32-byte gate. Literal/control pass U is 7,460 bytes with 732 bytes
   free under its dedicated 640-byte gate. Native REAL emitter
   pass A is 7,418 bytes with 774 bytes free under its 768-byte growth reserve.
   Passes H and J share pass 9's typed-parameter bind prologue, so runtime helper calls
@@ -274,7 +274,7 @@ Current state:
   transitive closure, prunes staged sibling helpers, and writes binary32 5.0 in
   VICE. Arbitrary trees, nested calls, locals, and multiple statements remain
   outside this bounded emitter.
-- The bounded REAL value parser also recognizes `FSign(A)`, `FTrunc(A)`, `FFloor(A)`, `FCeil(A)`, `FRound(A)`, `FFrac(A)`, `FMod(A,B)`, `FHypot(A,B)`, `FPow(A,B)`, `FExp(A)`, `FLn(A)`, `FLog2(A)`, `FLog10(A)`, `FSin(A)`, `FCos(A)`,
+- The bounded REAL value parser also recognizes `FSign(A)`, `FTrunc(A)`, `FFloor(A)`, `FCeil(A)`, `FRound(A)`, `FFrac(A)`, `FMod(A,B)`, `FHypot(A,B)`, `FPow(A,B)`, `FExp(A)`, `FLn(A)`, `FLog2(A)`, `FLog10(A)`, `FSin(A)`, `FCos(A)`, `FTan(A)`,
   `FMin(A,B)`, and `FMax(A,B)` for named REAL operands in assignment, print, and condition
   positions. ACTC emits ordinary imports for the selected helper. The
   dependency-free 123-byte sign helper canonicalizes NaN, preserves signed
@@ -368,7 +368,7 @@ Current state:
   expression trees, both root-to-function selectors, function-local storage,
   backward and forward acyclic function edges, a nested local-call operand,
   nested user-call arguments with independent result spills, and reachable-only
-  runtime objects. Pass L is 6,105 bytes with 2,087 bytes free.
+  runtime objects. Pass L is 6,112 bytes with 2,080 bytes free.
   Pass M extends the same ABI with one nonnested `IF`/`ELSE` per REAL function,
   six REAL relations through `rt_f_cmp`, relocatable internal false/end labels,
   supported expressions in both arms, and one terminal return. Its direct PRG

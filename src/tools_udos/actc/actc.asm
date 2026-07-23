@@ -12834,6 +12834,14 @@ find_or_store_rt_f_cos_external:
     jsr copy_const_ptr_to_declared_module_name
     jmp find_or_store_external_from_declared
 
+find_or_store_rt_f_tan_external:
+    lda #<runtime_symbol_rt_f_tan
+    sta const_ptr
+    lda #>runtime_symbol_rt_f_tan
+    sta const_ptr+1
+    jsr copy_const_ptr_to_declared_module_name
+    jmp find_or_store_external_from_declared
+
 find_or_store_rt_f_exp_external:
     lda #<runtime_symbol_rt_f_exp
     sta const_ptr
@@ -12983,6 +12991,9 @@ find_or_store_real_operator_external_from_a:
 :   cmp #'v'
     bne :+
     jmp find_or_store_rt_f_cos_external
+:   cmp #'y'
+    bne :+
+    jmp find_or_store_rt_f_tan_external
 :   cmp #'x'
     bne :+
     jmp find_or_store_rt_f_exp_external
@@ -16418,6 +16429,8 @@ runtime_symbol_rt_f_sin:
     .asciiz "RT_F_SIN"
 runtime_symbol_rt_f_cos:
     .asciiz "RT_F_COS"
+runtime_symbol_rt_f_tan:
+    .asciiz "RT_F_TAN"
 runtime_symbol_rt_f_exp:
     .asciiz "RT_F_EXP"
 runtime_symbol_rt_f_ln:

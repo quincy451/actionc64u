@@ -126,6 +126,9 @@ Current status:
   and evaluates the portable degree-10 even polynomial with binary32 rounding
   after every multiply and add. NaN and infinite inputs produce canonical
   quiet NaN.
+- `rt_f_tan.obj` is a 113-byte alias-safe unary dependency root. It snapshots
+  the source and destination, evaluates `rt_f_sin.obj` and `rt_f_cos.obj` into
+  private storage, and divides those results through `rt_f_div.obj`.
 - `rt_f_exp.obj` reads a REAL32 value through `$02/$03`, writes through
   `$06/$07`, and implements the portable MATH1 range-reduced degree-8
   exponential. It is safe when source and destination alias and imports only

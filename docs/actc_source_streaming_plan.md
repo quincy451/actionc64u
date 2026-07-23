@@ -839,27 +839,27 @@ Self and mutual cycles are rejected before generic emission. Nested expression,
 local-storage, two-callee, backward/forward call-chain, nested
 local-call-expression, and nested user-call-argument PRGs pass ACTC, ALINK, DBG
 validation, and VICE execution while loading only reachable runtime modules.
-Its 6,105-byte image leaves 2,087 bytes in `$A000-$BFFF`.
+Its 6,112-byte image leaves 2,080 bytes in `$A000-$BFFF`.
 
 Base-36 pass M, `ACTC_OVLM.BIN`, is the control-capable build of that shared
 emitter. It claims only a supported REAL function containing one nonnested
 `IF`/`ELSE`, maps all six relations through `rt_f_cmp`, and emits absolute long
 branches to internal `__rfN` and `__reN` OBJ1 code exports. Both arms may contain
 the supported REAL expression operations and converge on one terminal return.
-Its 6,974-byte image leaves 1,218 bytes under a 1 KiB reserve without consuming
+Its 6,981-byte image leaves 1,211 bytes under a 1 KiB reserve without consuming
 pass L's 2 KiB margin.
 
 Base-36 pass N, `ACTC_OVLN.BIN`, separately claims the same bounded function
 form when at least one function contains a second conditional. It supports at
 most two conditionals per function, either sequentially or nested to depth two,
-with a distinct false/end export pair per control. Its 7,096-byte image leaves
+with a distinct false/end export pair per control. Its 7,103-byte image leaves
 1,096 bytes under the same 1 KiB reserve while passes L and M retain their
 respective capacity gates.
 
 Base-36 pass O, `ACTC_OVLO.BIN`, separately claims the third conditional and
 supports at most four controls per function, either sequentially or nested to
 depth four. Its four-slot label indexing remains ordinary OBJ1 metadata. The
-7,099-byte image leaves 1,093 bytes under the 1 KiB reserve while passes L, M,
+7,106-byte image leaves 1,086 bytes under the 1 KiB reserve while passes L, M,
 and N retain their respective capacity gates. Recursive/reentrant local frames, loops, early
 returns, more than four controls, deeper control nesting, unrestricted
 user-call argument trees and nested call expressions, mixed types, arbitrary
@@ -871,7 +871,7 @@ Base-36 pass P, `ACTC_OVLP.BIN`, claims a supported REAL function only when a
 return ends the live path immediately, while compilation continues through the
 remaining body operations to close internal labels and verify a required
 terminal fallback return. One-control and depth-four fixtures exercise early
-true, early else, and fallback paths. The 7,123-byte image leaves 1,069 bytes
+true, early else, and fallback paths. The 7,130-byte image leaves 1,062 bytes
 under the 1 KiB reserve while passes L through O retain their respective capacity gates. Loops,
 controls beyond four, deeper nesting, unrestricted call trees, mixed types,
 arbitrary signatures, and recursive/reentrant frames remain pending.
@@ -881,7 +881,7 @@ containing `DO ... UNTIL ... OD` or `WHILE ... DO ... OD`. It tracks at most
 four loops per function, emits relocatable `__rbNN` back-edge labels and
 `__rzNN` while-exit labels, and reuses the same REAL relation lowering through
 `RT_F_CMP.OBJ`. The shared fixture executes both loop forms and produces 4.0
-and 3.0 in native VICE and the Idun generated-6502 path. The 7,127-byte image
+and 3.0 in native VICE and the Idun generated-6502 path. The 7,134-byte image
 leaves 1,065 bytes under the 1 KiB reserve while passes L through P retain
 their respective capacity gates. Plain `DO`, `EXIT`, mixed loop/conditional nesting, returns
 from inside loops, controls beyond four, unrestricted call trees, mixed types,
@@ -893,7 +893,7 @@ four-loop bound, decodes the collector's nearest-loop selector, emits `EXIT`
 as an ordinary relocation to that loop's `__rzNN` post-loop target, and emits
 plain-loop back edges to `__rbNN`. The byte-identical shared fixture runs one
 plain and one guarded exit and produces 4.0 and 3.0 in native VICE and Idun's
-generated-6502 path. The 7,310-byte image leaves 882 bytes under a dedicated
+generated-6502 path. The 7,317-byte image leaves 875 bytes under a dedicated
 768-byte reserve while passes L through Q retain their respective capacity gates. REAL-function
 `FOR` remains outside pass R.
 
@@ -904,7 +904,7 @@ step. The emitter uses inclusive unsigned comparisons and carry-based
 overflow/underflow exits, then emits ordinary `__rbNN` and `__rzNN` exports and
 relocations. The byte-identical shared fixture runs one ascending default-step
 loop and one descending `STEP -2` loop, producing 4.0 and 7.0 in native VICE
-and the Idun generated-6502 path. The 7,804-byte image leaves 388 bytes under a
+and the Idun generated-6502 path. The 7,811-byte image leaves 381 bytes under a
 dedicated 256-byte reserve while passes Q and R retain their respective capacity gates. Dynamic
 bounds, nested counter-to-REAL body expressions, mixed loop/conditional
 nesting, returns from inside loops, controls beyond four, unrestricted call
@@ -916,7 +916,7 @@ an initial or final bound is a named CARD. It copies a named initial value into
 the counter on entry and stages a named final value before the loop's recorded
 back edge, so each bound is evaluated once for that invocation. The shared
 fixture nests `FOR J=I TO 3` and `FOR L=1 TO K`; native VICE and Idun's
-generated-6502 path both produce 7.0 twice. The 8,123-byte image leaves 69
+generated-6502 path both produce 7.0 twice. The 8,130-byte image leaves 62
 bytes under a dedicated 32-byte reserve while pass S retains its capacity gate.
 General bound expressions, runtime steps, nested counter-to-REAL body
 expressions, mixed controls, and returns inside loops remain pending.
@@ -933,7 +933,7 @@ body scan recognizes the grouped declaration as nonexecutable. The shared
 clamp fixture combines four grouped REAL locals, multiplication, three
 relations, and three early returns; native VICE and Idun generated-6502
 execution both produce `-1`, `0`, and `1`. The angle fixture continues to
-materialize pi as `DB 0F 49 40`. The 7,453-byte image leaves 739 bytes free
+materialize pi as `DB 0F 49 40`. The 7,460-byte image leaves 732 bytes free
 under a dedicated 640-byte gate, and passes L through T retain their
 respective capacity gates.
 Initialized grouped locals, unrestricted signatures/calls, and general nested

@@ -9,7 +9,7 @@ Current state:
   verified by `make -C ../udos vice-action-actc-alink-launch`.
 - Broad direct-PRG object/link coverage is verified by
   `make -C ../udos vice-action-alink-prg-matrix`.
-- The broad direct-PRG matrix currently enumerates 1373 probe shapes from
+- The broad direct-PRG matrix currently enumerates 1374 probe shapes from
   `udos/tools/run_action_alink_prg_probe.py`.
 - The link-selected FLn case proves production ALINK accepts the generated
   1,382-byte `RT_F_LN.OBJ` with 33 exports and 180 ordinary relocations, closes
@@ -29,6 +29,9 @@ Current state:
 - The independently selected FCos root shares that private range reducer but
   imports no FSin root. Its focused direct PRG prints `-0.416146...` for
   `FCos(2)` while unrelated MATH1 roots remain absent.
+- The independently selected FTan root imports only FSin, FCos, and division.
+  Its focused direct PRG prints `-2.185040...` for `FTan(2)`, deduplicates the
+  shared wrap-to-pi and arithmetic closure, and prunes unrelated MATH1 roots.
 - The source-backed sequential, nested, early-return, loop, and folded-REAL
   function cases prove passes N through U's multiple internal code exports, shared and out-of-order
   nested export offsets,

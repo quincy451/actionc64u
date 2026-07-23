@@ -2229,3 +2229,28 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   and 7,453 bytes.
 - Native MATH1 now exposes twenty-four link-selected calls and lacks 19 public
   routines. FTan is the next dependency-ordered public routine.
+
+## 2026-07-23 Shared MATH1 Tangent
+
+- Added the independent 113-byte `RT_F_TAN.OBJ` dependency root. It snapshots
+  aliased input/output storage, evaluates `RT_F_SIN` and `RT_F_COS` into
+  private cells, and writes their `RT_F_DIV` quotient to the caller.
+- Native ACTC recognizes `FTan(A)` in bounded assignment, print, condition, and
+  postfix REAL-function trees. Idun ACTC uses the same intrinsic and no longer
+  compiles the portable `FSin(radians)/FCos(radians)` source wrapper.
+- ALINK remains source-agnostic: the focused direct PRG prints `-2.185040...`
+  for `FTan(2)`, loads both trig roots and division, deduplicates their shared
+  range-reduction/arithmetic closure, and prunes unrelated MATH1 roots.
+- The exact 6502 verifier covers edge/random inputs and in-place aliasing
+  against binary32 `expected_division(expected_sin(x), expected_cos(x))`.
+  Idun's generated MATH1 PRG executes `FTan(pi/4)` through the same target
+  object.
+- Current inventories are 1,374 broad direct-PRG shapes, 196 non-runtime
+  source-backed object-emission shapes, and 308 compiled-runtime relocation
+  oracle cases.
+- Every overlay remains above its reserve. Pass 6 is 8,092 bytes with 100 bytes
+  free; pass 7 is 6,965 bytes with 1,227 bytes free; passes L through U are
+  respectively 6,112, 6,981, 7,103, 7,106, 7,130, 7,134, 7,317, 7,811, 8,130,
+  and 7,460 bytes.
+- Native MATH1 now exposes twenty-five link-selected calls and lacks 18 public
+  routines. FATan is the next dependency-ordered public routine.

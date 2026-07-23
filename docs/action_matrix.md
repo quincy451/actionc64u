@@ -8,7 +8,7 @@
 | ALINK linker | Emits direct `BIN/<MODULE>.PRG` | `make -C ../udos vice-action-alink` |
 | Compile/link/launch | Direct PRG launch under UDOS | `make -C ../udos vice-action-actc-alink-launch` |
 | ACTC object emission | 196 source-backed direct-launch shapes | `make -C ../udos vice-action-actc-alink-launch-object-emission-matrix` |
-| ALINK matrix | 1373 direct-PRG object/link shapes | `make -C ../udos vice-action-alink-prg-matrix` |
+| ALINK matrix | 1374 direct-PRG object/link shapes | `make -C ../udos vice-action-alink-prg-matrix` |
 | Runtime helpers | Link-selected modules owned by final PRG, including ACTC-emitted native dynamic integer code | `make -C ../udos vice-action-actc-alink-launch-runtime-matrices` and shape-specific probes |
 | Release export | Ships UDOS-native tools and PRG-oriented samples | `python3 -m unittest udos.tests.test_release_fs` |
 | Optional Idun/Linux host tools | Linux project/compiler/linker/editor/debug-sidecar commands, including REAL arrays/pointers and typed user functions, that emit direct C64 artifacts | `python3 -m unittest -v tests.test_linux_workspace_tools` |

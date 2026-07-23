@@ -49,6 +49,7 @@ class TestMathRuntime(unittest.TestCase):
             "pow",
             "wrap_pi",
             "sin",
+            "cos",
             "exp",
             "ln",
             "log2",

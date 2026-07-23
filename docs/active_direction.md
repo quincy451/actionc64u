@@ -130,7 +130,7 @@ recursive/reentrant frames are added. General bound expressions, runtime
 steps, counter-to-REAL composition inside the loop body, mixed
 loop/conditional nesting, returns from inside loops, controls beyond four, and
 deeper nesting remain control-flow work.
-Bounded named-REAL `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FMin`, `FMax`, and `FClamp` calls now have
+Bounded named-REAL `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FCos`, `FMin`, `FMax`, and `FClamp` calls now have
 complete portable call semantics through independently link-selected helpers.
 The pass-K clamp root captures initializer, argument, destination, and print
 storage rather than assuming declaration order, but it remains a fixed
@@ -165,7 +165,7 @@ Treat `vice-action-actc-alink-launch-object-emission-matrix` as the all
 source-backed ACTC object-emission launch matrix; it currently enumerates 196
 non-runtime, non-object-code source shapes.
 Treat `vice-action-alink-prg-matrix` as the broad direct-PRG object/link matrix;
-it currently enumerates 1372 shape probes.
+it currently enumerates 1373 shape probes.
 Treat `vice-action-alink-prg-object-code-matrices` as the focused direct
 object-code graph, behavior, and rejection gate.
 Treat `vice-action-actc-alink-launch-runtime-matrices` as the focused

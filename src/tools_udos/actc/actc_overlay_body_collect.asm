@@ -1347,19 +1347,13 @@ emit_real_explicit_value_local_or_fail:
     jsr call_skip_inline_spaces_context
     lda #')'
     jsr match_scan_char_local
-    bcc :+
-    jmp emit_real_explicit_value_local_or_fail_wide
-:
+    bcs emit_real_explicit_value_local_or_fail_wide
     lda #')'
     jsr consume_scan_char_local
-    bcc :+
-    jmp emit_real_explicit_value_local_or_fail_wide
-:
+    bcs emit_real_explicit_value_local_or_fail_wide
     jsr call_skip_inline_spaces_context
     jsr call_require_line_end_context
-    bcc :+
-    jmp emit_real_explicit_value_local_or_fail_wide
-:
+    bcs emit_real_explicit_value_local_or_fail_wide
     lda #ACTC_OVERLAY_CTX_EXPR_VALUE_PTR_LO
     jsr load_context_ptr_to_work_zp
     ldy #$01
@@ -1486,19 +1480,13 @@ emit_real_explicit_value_local_or_fail_signed_prep:
 :
     lda #'-'
     jsr consume_scan_char_local
-    bcc :+
-    jmp emit_real_explicit_value_local_or_fail_fail
-:
+    bcs emit_real_explicit_value_local_or_fail_fail
     jsr parse_optional_grouped_positive_word_sum_local_or_fail
-    bcc :+
-    jmp emit_real_explicit_value_local_or_fail_fail
-:
+    bcs emit_real_explicit_value_local_or_fail_fail
     jsr call_skip_inline_spaces_context
     lda #')'
     jsr match_scan_char_local
-    bcc :+
-    jmp emit_real_explicit_value_local_or_fail_fail
-:
+    bcs emit_real_explicit_value_local_or_fail_fail
     lda #')'
     jsr consume_scan_char_local
     bcs emit_real_explicit_value_local_or_fail_fail
@@ -2876,6 +2864,8 @@ pattern_fpow:
     .asciiz "FPOW"
 pattern_fsin:
     .asciiz "FSIN"
+pattern_fcos:
+    .asciiz "FCOS"
 pattern_fexp:
     .asciiz "FEXP"
 pattern_fln:
@@ -2900,6 +2890,7 @@ real_unary_pattern_table_local:
     .byte <pattern_fround, 'r'
     .byte <pattern_ffrac, 'f'
     .byte <pattern_fsin, 's'
+    .byte <pattern_fcos, 'v'
     .byte <pattern_fexp, 'x'
     .byte <pattern_fln, 'n'
     .byte <pattern_flog2, 'b'
@@ -2915,6 +2906,7 @@ real_unary_pattern_table_local_end:
 .assert >pattern_fabs = >pattern_fround, error, "unary patterns must share one page"
 .assert >pattern_fabs = >pattern_ffrac, error, "unary patterns must share one page"
 .assert >pattern_fabs = >pattern_fsin, error, "unary patterns must share one page"
+.assert >pattern_fabs = >pattern_fcos, error, "unary patterns must share one page"
 .assert >pattern_fabs = >pattern_fexp, error, "unary patterns must share one page"
 .assert >pattern_fabs = >pattern_fln, error, "unary patterns must share one page"
 .assert >pattern_fabs = >pattern_flog2, error, "unary patterns must share one page"

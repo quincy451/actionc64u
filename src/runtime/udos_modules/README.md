@@ -121,6 +121,11 @@ Current status:
   `rt_f_wrap_pi.obj`, folds the reduced angle to `[-pi/2,pi/2]`, and evaluates
   the portable degree-11 odd polynomial with binary32 rounding after every
   multiply and add. NaN and infinite inputs produce canonical quiet NaN.
+- `rt_f_cos.obj` is a 609-byte unary dependency root. It imports
+  `rt_f_wrap_pi.obj`, folds the reduced angle to the central half-pi interval,
+  and evaluates the portable degree-10 even polynomial with binary32 rounding
+  after every multiply and add. NaN and infinite inputs produce canonical
+  quiet NaN.
 - `rt_f_exp.obj` reads a REAL32 value through `$02/$03`, writes through
   `$06/$07`, and implements the portable MATH1 range-reduced degree-8
   exponential. It is safe when source and destination alias and imports only

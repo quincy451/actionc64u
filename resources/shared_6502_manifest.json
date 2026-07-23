@@ -42,6 +42,7 @@
     "src/runtime/modules/rt_f_ceil.obj": "02edcd630d4444e66d6f734dc6b39d540f2323da138c5199871143383901d8dd",
     "src/runtime/modules/rt_f_clamp.obj": "8bc492eb7d57519f85b0a24321fd1ca768802c7437c8305fef693e5adc147d1f",
     "src/runtime/modules/rt_f_cmp.obj": "ebaa475488ce202303665d411ffa9f7cfec9aabf3f3e28bb4b576329c5e0cfa2",
+    "src/runtime/modules/rt_f_cos.obj": "d4f15159ffa239d7e4786e7416b3937181bf4d6a4dab9694517371b9a31d1bf2",
     "src/runtime/modules/rt_f_deg_to_rad.obj": "39f503356083ab5cf9352d74da448185278bee2fa7dd13475f7b7fba7bc1d701",
     "src/runtime/modules/rt_f_div.obj": "275324ef70f4af97a7b14a7ba5dba36daf1ecfcf0297a21f0cae9323b277ff34",
     "src/runtime/modules/rt_f_exp.obj": "81c28ea5d391a42dd5848c59bc657a9eaaa3616e7b192fec93693f4dd8ace483",
@@ -151,7 +152,7 @@
     "src/runtime/modules/rt_sprite_yexp.obj": "9b53bd53a49e5ae69790728f1500738c6dd2c5659b02d9922eca94ef200f6824",
     "tools/generate_exact_print_runtime.py": "1f58d909496e2b82a4c85accb7f6bd41dd84c23a481cc6b1217e1995dfddeef2",
     "tools/generate_input_runtime.py": "ac43be898e1c975fce7de5e4084c52a84a535bf530f38c956c0978d3986e1c34",
-    "tools/generate_math_runtime.py": "fc7588d7ffaea60015bc72ba70e284dc20b82d03e22b77483c8570eed1288b98",
+    "tools/generate_math_runtime.py": "e2bf64eddbfdc0c6c1916fb41310e2177aecbd1b8ead7e1c55ffa61b159f132a",
     "tools/generate_reu_runtime.py": "0f63e4cdfc71934dbdd6eeb408b691c4d88f161856e9473cc2595412cda7c695",
     "tools/shared_6502_sync.py": "096671a9c12ce6211873a65c6f451e6e6baea09531aaccc65d9608f30e68c04f"
   },

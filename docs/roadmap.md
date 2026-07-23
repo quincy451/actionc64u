@@ -2198,3 +2198,34 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
 - Native MATH1 now exposes twenty-three link-selected calls and lacks 20 public
   routines. FCos is the next dependency-ordered public routine, but pass 6
   requires compaction before another builtin name can be admitted.
+
+## 2026-07-23 Link-Selected MATH1 Cosine
+
+- Compacted six pass-6 branch-over-jump sequences into direct carry branches,
+  recovering 18 bytes before adding the next builtin selector.
+- Added the independent 609-byte `RT_F_COS.OBJ` dependency root. It preserves
+  source and destination pointers, imports the private wrap-to-pi helper plus
+  comparison, subtraction, multiplication, and addition, and does not import
+  the FSin root.
+- FCos folds the reduced angle to the central half-pi interval and evaluates
+  the portable degree-10 even polynomial with binary32 rounding after every
+  operation. NaN and either infinity produce canonical quiet NaN, and
+  source/destination aliasing is supported.
+- Native ACTC recognizes `FCos(A)` in bounded assignment, print, condition, and
+  REAL-function expression positions. The focused ACTC/ALINK/VICE direct PRG
+  prints `-0.416146...` for `FCos(2)` and proves unrelated MATH1 roots remain
+  absent.
+- The generator, object, and shared manifest are synchronized to Idun. Linux
+  ACTC emits `RT_F_COS` instead of the portable source body, and the Idun
+  generated MATH1 PRG executes both FSin and FCos through shared objects.
+- Current inventories are 1,373 broad direct-PRG shapes, 196 non-runtime
+  source-backed object-emission shapes, and 307 compiled-runtime relocation
+  oracles. The native suite remains 866 tests, including 252 overlay and 199
+  source-cache tests; Idun retains 154 host, 139 sanitizer, and 21 direct-PRG
+  tests.
+- Every overlay remains above its reserve. Pass 6 is 8,085 bytes with 107 bytes
+  free; pass 7 is 6,932 bytes with 1,260 bytes free; passes L through U are
+  respectively 6,105, 6,974, 7,096, 7,099, 7,123, 7,127, 7,310, 7,804, 8,123,
+  and 7,453 bytes.
+- Native MATH1 now exposes twenty-four link-selected calls and lacks 19 public
+  routines. FTan is the next dependency-ordered public routine.

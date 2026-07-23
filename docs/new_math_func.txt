@@ -7,8 +7,8 @@ Target: C64 6502 generated program; no UDOS calls or resident service required.
 Numeric base: IEEE-754 binary32 REAL, round-to-nearest/ties-to-even core runtime.
 
 Native UDOS status: all 8 public constants are available through the usable
-INCLUDE "MATH1" header, and twenty-three low-level calls are available: FAbs, FSqrt,
-FSign, FTrunc, FFloor, FCeil, FRound, FFrac, FMod, FHypot, FPow, FExp, FLn, FLog2, FLog10, FSin, FMin, FMax, FClamp,
+INCLUDE "MATH1" header, and twenty-four low-level calls are available: FAbs, FSqrt,
+FSign, FTrunc, FFloor, FCeil, FRound, FFrac, FMod, FHypot, FPow, FExp, FLn, FLog2, FLog10, FSin, FCos, FMin, FMax, FClamp,
 DegToRad, RadToDeg, PrintR, and PrintRE. FSign is a dependency-free
 selected OBJ helper with canonical-NaN and signed-zero behavior. FMin/FMax use
 independently selected OBJ helpers with the complete portable NaN and
@@ -38,6 +38,9 @@ FLn and division when referenced.
 FSin uses a private wrap-to-pi dependency, folds to the primary half-pi
 interval, and evaluates the portable degree-11 odd polynomial. Both modules
 are alias-safe and selected only when FSin is reachable.
+FCos shares the wrap-to-pi dependency, folds to the central half-pi interval,
+and evaluates a degree-10 even polynomial. It is alias-safe and selected only
+when FCos is reachable.
 FClamp
 selects its comparison/minimum/maximum closure only when referenced, returns
 canonical NaN for NaN input or inverted bounds, and
@@ -53,7 +56,7 @@ Idun/Alpine fork implements the complete source library: 8 public constants,
 43 public routines, and 1 private helper, producing 51 public help features.
 Native delivery still requires wider general REAL function parameters, locals,
 expressions, calls, and returns before portable bodies can provide the remaining
-20 public routines. See docs/idun_feature_parity.md.
+19 public routines. See docs/idun_feature_parity.md.
 
 The constants and routines below are public after INCLUDE "MATH1".  The
 transcendental routines use portable Action implementations or independently
@@ -172,7 +175,7 @@ Porting checklist for the native C64U tree
 
 1. Port lib/math1.act as source, retaining the public signatures above.
 2. Supply the same link-selected binary32 primitives for PrintR, PrintRE,
-   FAbs, FSqrt, FSign, FTrunc, FFloor, FCeil, FRound, FFrac, FMod, FHypot, FPow, FExp, FLn, FLog2, FLog10, FSin, FMin, FMax, FClamp, add, subtract, multiply, divide, compare, INT
+   FAbs, FSqrt, FSign, FTrunc, FFloor, FCeil, FRound, FFrac, FMod, FHypot, FPow, FExp, FLn, FLog2, FLog10, FSin, FCos, FMin, FMax, FClamp, add, subtract, multiply, divide, compare, INT
    conversion, and REAL conversion.
 3. Keep _MathWrapPi private; help/catalog builders intentionally ignore names
    beginning with an underscore.

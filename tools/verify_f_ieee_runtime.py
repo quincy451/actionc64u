@@ -13,6 +13,7 @@ from fractions import Fraction
 from pathlib import Path
 
 from generate_math_runtime import (
+    COS_COEFFICIENT_BITS,
     DEGREES_TO_RADIANS_BITS,
     EXP_COEFFICIENT_BITS,
     EXP_LN2_BITS,
@@ -34,6 +35,7 @@ from generate_math_runtime import (
     addsub_wrapper_module,
     ceil_module,
     compare_module,
+    cos_module,
     deg_to_rad_module,
     clamp_module,
     divide_module,
@@ -539,6 +541,36 @@ def expected_sin(value: int) -> int:
     return expected_multiply(folded, polynomial)
 
 
+def expected_cos(value: int) -> int:
+    angle = expected_wrap_pi(value)
+    if is_nan(angle):
+        return CANONICAL_QNAN
+    negate = False
+    if expected_compare(angle, MATH_HALF_PI_BITS) > 0:
+        folded = expected_addsub(MATH_PI_BITS, angle, True)
+        negate = True
+    elif expected_compare(angle, MATH_NEG_HALF_PI_BITS) < 0:
+        folded = expected_addsub(MATH_NEG_PI_BITS, angle, True)
+        negate = True
+    else:
+        folded = angle
+
+    square = expected_multiply(folded, folded)
+    accumulator = COS_COEFFICIENT_BITS[-1]
+    for coefficient in reversed(COS_COEFFICIENT_BITS[:-1]):
+        accumulator = expected_addsub(
+            coefficient,
+            expected_multiply(square, accumulator),
+            False,
+        )
+    result = expected_addsub(
+        0x3F800000,
+        expected_multiply(square, accumulator),
+        False,
+    )
+    return result ^ 0x80000000 if negate else result
+
+
 def runtime_builders(operation: str):
     special = special_value_module()
     if operation == "add":
@@ -649,10 +681,12 @@ def runtime_builders(operation: str):
             addsub_core_module(),
             special,
         ]
-    if operation in ("wrap_pi", "sin"):
+    if operation in ("wrap_pi", "sin", "cos"):
         builders = []
         if operation == "sin":
             builders.append(sin_module())
+        elif operation == "cos":
+            builders.append(cos_module())
         builders.extend(
             [
                 wrap_pi_module(),
@@ -957,7 +991,7 @@ def verification_trig_cases(
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/exp/ln/log2/log10/pow/wrap/sin/angle/min/max/clamp code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/exp/ln/log2/log10/pow/wrap/sin/cos/angle/min/max/clamp code against exact IEEE "
             "binary32"
         )
     )
@@ -1024,6 +1058,7 @@ def main() -> int:
             "pow",
             "wrap_pi",
             "sin",
+            "cos",
             "deg_to_rad",
             "rad_to_deg",
             "min",
@@ -1040,7 +1075,7 @@ def main() -> int:
                 else pow_cases
                 if operation == "pow"
                 else trig_cases
-                if operation in ("wrap_pi", "sin")
+                if operation in ("wrap_pi", "sin", "cos")
                 else cases
             )
             runtime_path = work / f"rt_f_{operation}.bin"
@@ -1110,6 +1145,8 @@ def main() -> int:
                     expected = expected_wrap_pi(left)
                 elif operation == "sin":
                     expected = expected_sin(left)
+                elif operation == "cos":
+                    expected = expected_cos(left)
                 elif operation == "deg_to_rad":
                     expected = expected_angle_scale(
                         left, DEGREES_TO_RADIANS_BITS
@@ -1150,6 +1187,7 @@ def main() -> int:
                 "pow",
                 "wrap_pi",
                 "sin",
+                "cos",
                 "deg_to_rad",
                 "rad_to_deg",
             ):
@@ -1198,6 +1236,8 @@ def main() -> int:
                         if operation == "wrap_pi"
                         else expected_sin(left)
                         if operation == "sin"
+                        else expected_cos(left)
+                        if operation == "cos"
                         else expected_angle_scale(
                             left, DEGREES_TO_RADIANS_BITS
                         )

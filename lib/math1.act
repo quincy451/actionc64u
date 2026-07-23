@@ -6,7 +6,7 @@
 ;
 ; Current callable coverage is the core REAL32 proof surface: REAL(x), INT(x),
 ; REAL arithmetic/comparison operators, FAbs, FSqrt, FSign, FTrunc, FFloor, FCeil, FRound, FFrac,
-; FMod, FHypot, FPow, FSin, FExp, FLn, FLog2, FLog10, FMin, FMax, FClamp, DegToRad,
+; FMod, FHypot, FPow, FSin, FCos, FExp, FLn, FLog2, FLog10, FMin, FMax, FClamp, DegToRad,
 ; RadToDeg, and PrintR/PrintRE.
 ; Each callable imports an independent dependency-sized OBJ module.
 
@@ -34,6 +34,7 @@ REAL CONST MATH_SQRT2=1.41421356237309504880
 ; REAL FUNC FHypot(REAL x,y)
 ; REAL FUNC FPow(REAL base,exponent)
 ; REAL FUNC FSin(REAL radians)
+; REAL FUNC FCos(REAL radians)
 ; REAL FUNC FExp(REAL value)
 ; REAL FUNC FLn(REAL value)
 ; REAL FUNC FLog2(REAL value)

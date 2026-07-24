@@ -62,6 +62,7 @@ MATH_TWO_PI_BITS = 0x40C90FDB
 MATH_HALF_PI_BITS = 0x3FC90FDB
 MATH_NEG_PI_BITS = 0xC0490FDB
 MATH_NEG_HALF_PI_BITS = 0xBFC90FDB
+MATH_THREE_QUARTER_PI_BITS = 0x4016CBE4
 ATAN_REDUCTION_BITS = 0x3ED413CD
 ATAN_ODD_DENOMINATOR_BITS = (
     0x40400000,
@@ -3072,6 +3073,238 @@ def atan_module() -> ObjectBuilder:
     return b
 
 
+def atan2_module() -> ObjectBuilder:
+    """Build an alias-safe IEEE binary32 quadrant-selecting arctangent."""
+    b = ObjectBuilder("rt_f_atan2")
+
+    pointer_targets = (
+        "destination",
+        "y_value",
+        "x_value",
+        "ratio",
+        "angle",
+        "result",
+        "pi",
+        "half_pi",
+        "quarter_pi",
+        "three_q_pi",
+        "nan",
+    )
+    pointer_offsets = {
+        target: index * 2 for index, target in enumerate(pointer_targets)
+    }
+
+    def load_local_pointer(target: str, destination: int) -> None:
+        b.immediate(0xA0, pointer_offsets[target])
+        b.immediate(0xA2, destination)
+        b.local_reference(0x20, "setp")
+
+    def call_binary(
+        helper: str, left: str, right: str, destination: str
+    ) -> None:
+        load_local_pointer(left, 0x02)
+        load_local_pointer(right, 0x04)
+        load_local_pointer(destination, 0x06)
+        b.jsr(helper)
+
+    # Save the public destination and both operands before dependencies reuse
+    # zero page. The public ABI is y at $02, x at $04, destination at $06.
+    b.zero_page(0xA5, 0x06)
+    b.local_reference(0x8D, "pt")
+    b.zero_page(0xA5, 0x07)
+    b.local_reference(0x8D, "pth")
+    load_local_pointer("y_value", 0x06)
+    b.local_reference(0x20, "copy4")
+    b.zero_page(0xA5, 0x04)
+    b.zero_page(0x85, 0x02)
+    b.zero_page(0xA5, 0x05)
+    b.zero_page(0x85, 0x03)
+    load_local_pointer("x_value", 0x06)
+    b.local_reference(0x20, "copy4")
+
+    # classify returns A=finite/zero/infinity/NaN as 0/1/2/3 and the raw sign
+    # bit in X. Canonicalize either NaN before considering quadrant rules.
+    load_local_pointer("y_value", 0x02)
+    b.local_reference(0x20, "classify")
+    b.local_reference(0x8E, "y_sign")
+    b.local_reference(0x8D, "y_class")
+    b.immediate(0xC9, 0x03)
+    far_branch(b, 0xF0, "ret_nan", "yn")
+    load_local_pointer("x_value", 0x02)
+    b.local_reference(0x20, "classify")
+    b.local_reference(0x8E, "x_sign")
+    b.local_reference(0x8D, "x_class")
+    b.immediate(0xC9, 0x03)
+    far_branch(b, 0xF0, "ret_nan", "xn")
+
+    # Both infinities have an indeterminate quotient, so select pi/4 or 3pi/4
+    # directly and apply y's sign.
+    b.local_reference(0xAD, "y_class")
+    b.immediate(0xC9, 0x02)
+    b.branch(0xD0, "not_bi")
+    b.local_reference(0xAD, "x_class")
+    b.immediate(0xC9, 0x02)
+    b.branch(0xD0, "not_bi")
+    b.local_reference(0xAD, "x_sign")
+    b.branch(0xD0, "bi_neg_x")
+    b.immediate(0xA0, pointer_offsets["quarter_pi"])
+    b.jmp_local("signed_const")
+    b.label("bi_neg_x")
+    b.immediate(0xA0, pointer_offsets["three_q_pi"])
+    b.jmp_local("signed_const")
+
+    # IEEE signed-zero quadrants cannot be recovered from an ordinary numeric
+    # comparison. Negative x zero selects signed pi; positive x zero with y
+    # zero preserves y, and nonzero y selects signed pi/2.
+    b.label("not_bi")
+    b.local_reference(0xAD, "x_class")
+    b.immediate(0xC9, 0x01)
+    b.branch(0xD0, "x_nz")
+    b.local_reference(0xAD, "y_class")
+    b.immediate(0xC9, 0x01)
+    b.branch(0xD0, "ret_half")
+    b.local_reference(0xAD, "x_sign")
+    far_branch(b, 0xF0, "ret_y", "zp")
+    b.immediate(0xA0, pointer_offsets["pi"])
+    b.jmp_local("signed_const")
+
+    b.label("ret_half")
+    b.immediate(0xA0, pointer_offsets["half_pi"])
+    b.jmp_local("signed_const")
+
+    b.label("x_nz")
+    b.local_reference(0xAD, "y_class")
+    b.immediate(0xC9, 0x01)
+    b.branch(0xD0, "ordinary")
+    b.local_reference(0xAD, "x_sign")
+    far_branch(b, 0xF0, "ret_y", "zy")
+    b.immediate(0xA0, pointer_offsets["pi"])
+    b.jmp_local("signed_const")
+
+    # The ordinary finite/infinite path follows the portable source operation
+    # order, with binary32 rounding after division, FATan, and pi adjustment.
+    b.label("ordinary")
+    call_binary("rt_f_div", "y_value", "x_value", "ratio")
+    load_local_pointer("ratio", 0x02)
+    load_local_pointer("angle", 0x06)
+    b.jsr("rt_f_atan")
+    b.local_reference(0xAD, "x_sign")
+    b.branch(0xF0, "ret_angle")
+    b.local_reference(0xAD, "y_sign")
+    b.branch(0xD0, "neg_y_adj")
+    call_binary("rt_f_add", "angle", "pi", "result")
+    b.immediate(0xA0, pointer_offsets["result"])
+    b.jmp_local("copy_return")
+    b.label("neg_y_adj")
+    call_binary("rt_f_sub", "angle", "pi", "result")
+    b.immediate(0xA0, pointer_offsets["result"])
+    b.jmp_local("copy_return")
+
+    b.label("ret_y")
+    b.immediate(0xA0, pointer_offsets["y_value"])
+    b.jmp_local("copy_return")
+    b.label("ret_angle")
+    b.immediate(0xA0, pointer_offsets["angle"])
+    b.jmp_local("copy_return")
+    b.label("ret_nan")
+    b.immediate(0xA0, pointer_offsets["nan"])
+    b.jmp_local("copy_return")
+
+    # Copy a positive constant to writable storage before applying y's sign.
+    b.label("signed_const")
+    b.immediate(0xA2, 0x02)
+    b.local_reference(0x20, "setp")
+    load_local_pointer("result", 0x06)
+    b.local_reference(0x20, "copy4")
+    load_local_pointer("result", 0x02)
+    b.immediate(0xA0, 0x03)
+    b.emit(0xB1, 0x02)
+    b.local_reference(0x4D, "y_sign")
+    b.emit(0x91, 0x02)
+    b.immediate(0xA0, pointer_offsets["result"])
+
+    b.label("copy_return")
+    b.immediate(0xA2, 0x02)
+    b.local_reference(0x20, "setp")
+    load_local_pointer("destination", 0x06)
+    b.jmp_local("copy4")
+
+    b.label("copy4")
+    b.immediate(0xA0, 0x00)
+    b.label("copy_loop")
+    b.emit(0xB1, 0x02, 0x91, 0x06, 0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "copy_loop")
+    b.emit(0x60)
+
+    b.label("setp")
+    b.local_reference(0xB9, "pt")
+    b.emit(0x95, 0x00, 0xC8)
+    b.local_reference(0xB9, "pt")
+    b.emit(0x95, 0x01, 0x60)
+
+    b.label("classify")
+    b.immediate(0xA0, 0x03)
+    b.emit(0xB1, 0x02)
+    b.immediate(0x29, 0x80)
+    b.emit(0xAA)
+    b.emit(0xB1, 0x02)
+    b.immediate(0x29, 0x7F)
+    b.immediate(0xC9, 0x7F)
+    b.branch(0xD0, "class_fin")
+    b.emit(0x88, 0xB1, 0x02)
+    b.branch(0x10, "class_fin")
+    b.immediate(0x29, 0x7F)
+    b.emit(0x88, 0x11, 0x02, 0x88, 0x11, 0x02)
+    b.branch(0xF0, "class_inf")
+    b.immediate(0xA9, 0x03)
+    b.emit(0x60)
+    b.label("class_inf")
+    b.immediate(0xA9, 0x02)
+    b.emit(0x60)
+    b.label("class_fin")
+    b.immediate(0xA0, 0x00)
+    b.emit(0xB1, 0x02, 0xC8, 0x11, 0x02, 0xC8, 0x11, 0x02)
+    b.local_reference(0x8D, "class_work")
+    b.emit(0xC8, 0xB1, 0x02)
+    b.immediate(0x29, 0x7F)
+    b.local_reference(0x0D, "class_work")
+    b.branch(0xF0, "class_zero")
+    b.immediate(0xA9, 0x00)
+    b.emit(0x60)
+    b.label("class_zero")
+    b.immediate(0xA9, 0x01)
+    b.emit(0x60)
+
+    b.label("pt")
+    b.emit(0x00)
+    b.label("pth")
+    b.emit(0x00)
+    for target in pointer_targets[1:]:
+        offset = len(b.code)
+        b.emit(0x00, 0x00)
+        b.local_relocations.append((offset, target))
+
+    for label in ("y_value", "x_value", "ratio", "angle", "result"):
+        b.label(label)
+        b.emit(0x00, 0x00, 0x00, 0x00)
+    for label, bits in (
+        ("pi", MATH_PI_BITS),
+        ("half_pi", MATH_HALF_PI_BITS),
+        ("quarter_pi", 0x3F490FDB),
+        ("three_q_pi", MATH_THREE_QUARTER_PI_BITS),
+        ("nan", 0x7FC00000),
+    ):
+        b.label(label)
+        b.emit(*bits.to_bytes(4, "little"))
+    for label in ("y_sign", "x_sign", "y_class", "x_class", "class_work"):
+        b.label(label)
+        b.emit(0x00)
+
+    b.export("rt_f_atan2")
+    return b
+
+
 def float_to_int_module() -> ObjectBuilder:
     """Build finite binary32 to signed 16-bit truncation toward zero."""
     b = ObjectBuilder("rt_f_to_i")
@@ -5080,6 +5313,7 @@ def main() -> int:
             cos_module(),
             tan_module(),
             atan_module(),
+            atan2_module(),
             deg_to_rad_module(),
             rad_to_deg_module(),
             minmax_module("rt_f_min", maximum=False),

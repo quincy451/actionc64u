@@ -133,6 +133,11 @@ Current status:
   preserves signed zero, maps infinities to signed binary32 pi/2, canonicalizes
   NaN, and evaluates the portable range-reduced odd series. It imports only
   `rt_f_div.obj`, `rt_f_sub.obj`, `rt_f_add.obj`, and `rt_f_mul.obj`.
+- `rt_f_atan2.obj` is a 493-byte alias-safe binary dependency root. It reads
+  `y` and `x` through `$02/$03` and `$04/$05`, writes through `$06/$07`,
+  implements signed-zero, infinity, NaN, and all four quadrant rules, and
+  imports only `rt_f_div.obj`, `rt_f_atan.obj`, `rt_f_add.obj`, and
+  `rt_f_sub.obj`.
 - `rt_f_exp.obj` reads a REAL32 value through `$02/$03`, writes through
   `$06/$07`, and implements the portable MATH1 range-reduced degree-8
   exponential. It is safe when source and destination alias and imports only

@@ -411,6 +411,11 @@ native_real_binary_external_zero_supported:
     lda #<native_real_binary_external_hypot
     ldy #>native_real_binary_external_hypot
     jsr native_real_function_external_x_matches
+    bcs native_real_binary_external_zero_supported_yes
+    ldx #$00
+    lda #<native_real_binary_external_atan2
+    ldy #>native_real_binary_external_atan2
+    jsr native_real_function_external_x_matches
     rts
 native_real_binary_external_zero_supported_yes:
     sec
@@ -1591,6 +1596,8 @@ native_real_binary_external_mod:
     .asciiz "rt_f_mod"
 native_real_binary_external_hypot:
     .asciiz "rt_f_hypot"
+native_real_binary_external_atan2:
+    .asciiz "rt_f_atan2"
 
 native_real_function_main_body_marker:
     .asciiz "b u0u1M"

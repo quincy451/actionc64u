@@ -9,7 +9,7 @@ Current state:
   verified by `make -C ../udos vice-action-actc-alink-launch`.
 - Broad direct-PRG object/link coverage is verified by
   `make -C ../udos vice-action-alink-prg-matrix`.
-- The broad direct-PRG matrix currently enumerates 1375 probe shapes from
+- The broad direct-PRG matrix currently enumerates 1376 probe shapes from
   `udos/tools/run_action_alink_prg_probe.py`.
 - The link-selected FLn case proves production ALINK accepts the generated
   1,382-byte `RT_F_LN.OBJ` with 33 exports and 180 ordinary relocations, closes
@@ -35,6 +35,10 @@ Current state:
 - The independently selected FATan root imports only division, subtraction,
   addition, and multiplication. Its focused direct PRG prints `1.107148...`
   for `FATan(2)` while unrelated trigonometric roots remain absent.
+- The independently selected FATan2 root imports FATan plus division, addition,
+  and subtraction. Its focused direct PRG prints `0.785398...` for
+  `FATan2(1,1)`, closes the complete transitive arithmetic graph, and prunes
+  unrelated trigonometric roots.
 - The source-backed sequential, nested, early-return, loop, and folded-REAL
   function cases prove passes N through U's multiple internal code exports, shared and out-of-order
   nested export offsets,

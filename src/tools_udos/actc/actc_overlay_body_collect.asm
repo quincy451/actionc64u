@@ -14,6 +14,7 @@ REAL_FUNCTION_FMAX = REAL_FUNCTION_FLAG + '>'
 REAL_FUNCTION_FMOD = REAL_FUNCTION_FLAG + 'm'
 REAL_FUNCTION_FHYPOT = REAL_FUNCTION_FLAG + 'h'
 REAL_FUNCTION_FPOW = REAL_FUNCTION_FLAG + 'w'
+REAL_FUNCTION_FATAN2 = REAL_FUNCTION_FLAG + 'z'
 REAL_FUNCTION_FCLAMP = REAL_FUNCTION_FLAG + 'k'
 
 .export actc_overlay_header
@@ -2858,6 +2859,8 @@ pattern_fhypot:
     .asciiz "FHYPOT"
 pattern_fpow:
     .asciiz "FPOW"
+pattern_fatan2:
+    .asciiz "FATAN2"
 pattern_fsin:
     .asciiz "FSIN"
 pattern_fcos:
@@ -2923,6 +2926,7 @@ real_binary_pattern_table_local:
     .byte <pattern_fmod, REAL_FUNCTION_FMOD
     .byte <pattern_fhypot, REAL_FUNCTION_FHYPOT
     .byte <pattern_fpow, REAL_FUNCTION_FPOW
+    .byte <pattern_fatan2, REAL_FUNCTION_FATAN2
     .byte <pattern_fclamp, REAL_FUNCTION_FCLAMP
 real_binary_pattern_table_local_end:
 real_value_pattern_table_local_end:
@@ -2934,6 +2938,7 @@ pattern_fclamp:
 .assert >pattern_real_decl = >pattern_fmod, error, "real patterns must share one page"
 .assert >pattern_real_decl = >pattern_fhypot, error, "real patterns must share one page"
 .assert >pattern_real_decl = >pattern_fpow, error, "real patterns must share one page"
+.assert >pattern_real_decl = >pattern_fatan2, error, "real patterns must share one page"
 .assert >pattern_real_decl = >pattern_fclamp, error, "real patterns must share one page"
 pattern_endif:
     .asciiz "ENDIF"

@@ -2281,3 +2281,31 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   and 7,468 bytes.
 - Native MATH1 now exposes twenty-six link-selected calls and lacks 17 public
   routines. FATan2 is the next dependency-ordered public routine.
+
+## 2026-07-23 Shared MATH1 Two-Argument Arctangent
+
+- Added the independent 493-byte `RT_F_ATAN2.OBJ` dependency root. It reads
+  `y` and `x` through the binary REAL ABI and allows the destination to alias
+  either source.
+- The helper canonicalizes NaN, preserves IEEE-754 signed-zero quadrants,
+  handles zero axes and both-infinity pairs directly, and evaluates ordinary
+  finite operands through `FATan(y/x)` with the required signed-pi correction.
+- Native and Idun ACTC recognize `FATan2(y,x)` as a binary REAL intrinsic and
+  import only the shared root when referenced. ALINK then closes
+  `RT_F_DIV`, `RT_F_ATAN`, `RT_F_ADD`, `RT_F_SUB`, and their transitive
+  arithmetic dependencies without a linker-side math recognizer.
+- The exact 6502 verifier covers edge/random inputs and both input-alias forms.
+  The focused native ACTC/ALINK/VICE PRG prints `0.785398...` for
+  `FATan2(1,1)`, while Idun's generated MATH1 PRG executes
+  `FATan2(-1,-1)`.
+- Current native inventories are 1,376 broad direct-PRG shapes, 196 non-runtime
+  source-backed object-emission shapes, and 310 compiled-runtime relocation
+  oracle cases. The native suite remains 866 tests, including 252 overlay and
+  199 source-cache tests; Idun retains its 154-test host, 139-test sanitizer,
+  and 21-test direct-PRG gates.
+- Every overlay remains above its reserve. Pass 6 is 8,061 bytes with 131 bytes
+  free; pass 7 is 7,031 bytes with 1,161 bytes free; pass K is 5,899 bytes with
+  2,293 bytes free; passes L through U are respectively 6,129, 6,998, 7,120,
+  7,123, 7,147, 7,151, 7,334, 7,828, 8,147, and 7,477 bytes.
+- Native MATH1 now exposes twenty-seven link-selected calls and lacks 16 public
+  routines. FASin is the next dependency-ordered public routine.

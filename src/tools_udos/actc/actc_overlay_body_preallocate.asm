@@ -719,6 +719,11 @@ preallocate_real_binary_function_external_from_scan_y_overlay_try_fmax:
     jsr preallocate_consume_keyword_open_from_scan_y_overlay
     bcc preallocate_real_binary_function_external_from_scan_y_overlay_fpow
     ldy keyword_scan_y_local
+    lda #<pattern_fatan2
+    ldy #>pattern_fatan2
+    jsr preallocate_consume_keyword_open_from_scan_y_overlay
+    bcc preallocate_real_binary_function_external_from_scan_y_overlay_fatan2
+    ldy keyword_scan_y_local
     lda #<pattern_fclamp
     ldy #>pattern_fclamp
     jsr preallocate_consume_keyword_open_from_scan_y_overlay
@@ -738,6 +743,9 @@ preallocate_real_binary_function_external_from_scan_y_overlay_fhypot:
     bne preallocate_real_binary_function_external_from_scan_y_overlay_operator
 preallocate_real_binary_function_external_from_scan_y_overlay_fpow:
     lda #'w'
+    bne preallocate_real_binary_function_external_from_scan_y_overlay_operator
+preallocate_real_binary_function_external_from_scan_y_overlay_fatan2:
+    lda #'z'
 preallocate_real_binary_function_external_from_scan_y_overlay_operator:
     sta real_operator_local
     pha
@@ -2137,7 +2145,7 @@ preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes_near:
     lda #<pattern_ftrunc
     ldy #>pattern_ftrunc
     jsr symbol_buffer_matches_local_const
-    bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
+    bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes_near
     lda #<pattern_ffloor
     ldy #>pattern_ffloor
     jsr symbol_buffer_matches_local_const
@@ -2164,6 +2172,10 @@ preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes_near:
     bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
     lda #<pattern_fpow
     ldy #>pattern_fpow
+    jsr symbol_buffer_matches_local_const
+    bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
+    lda #<pattern_fatan2
+    ldy #>pattern_fatan2
     jsr symbol_buffer_matches_local_const
     bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
     lda #<pattern_fsin
@@ -2432,6 +2444,8 @@ pattern_fhypot:
     .asciiz "FHYPOT"
 pattern_fpow:
     .asciiz "FPOW"
+pattern_fatan2:
+    .asciiz "FATAN2"
 pattern_fsin:
     .asciiz "FSIN"
 pattern_fcos:

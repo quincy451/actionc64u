@@ -2330,6 +2330,7 @@ class TestActcOverlay(unittest.TestCase):
             ("LARGER", "rt_f_max", "FMax(B,A)"),
             ("REMAINDER", "rt_f_mod", "FMod(A,B)"),
             ("LENGTH", "rt_f_hypot", "FHypot(A,B)"),
+            ("DIRECTION", "rt_f_atan2", "FATan2(A,B)"),
         ):
             with self.subTest(function_name=function_name):
                 obj = self.compile_overlay_object(
@@ -2378,6 +2379,7 @@ class TestActcOverlay(unittest.TestCase):
                     "rt_f_max",
                     "rt_f_mod",
                     "rt_f_hypot",
+                    "rt_f_atan2",
                 ):
                     if sibling != runtime_module:
                         self.assertNotIn(f"u {sibling}\n", obj)
@@ -4559,22 +4561,35 @@ class TestActcOverlay(unittest.TestCase):
             "REAL Q\r"
             "REAL M\r"
             "REAL H\r"
+            "REAL T\r"
             "PROC MAIN()\r"
             "R=A+B\r"
             "Q=A/B\r"
             "M=FMOD(A,B)\r"
             "H=FHYPOT(A,B)\r"
+            "T=FATAN2(A,B)\r"
             "RETURN\r",
             "actc-overlay-preallocation-body-mode-real-binary-assignments",
             {"ACTC_PREALLOCATE_BODY_EXTERNALS_IN_OVERLAY": "1"},
         )
 
-        runtime_imports = ("rt_f_add", "rt_f_div", "rt_f_mod", "rt_f_hypot")
+        runtime_imports = (
+            "rt_f_add",
+            "rt_f_div",
+            "rt_f_mod",
+            "rt_f_hypot",
+            "rt_f_atan2",
+        )
         for runtime_import in runtime_imports:
             self.assertIn(f"u {runtime_import}\n", obj)
         self.assertLess(obj.index("u rt_f_add\n"), obj.index("u rt_f_div\n"), msg=obj)
         self.assertLess(obj.index("u rt_f_div\n"), obj.index("u rt_f_mod\n"), msg=obj)
         self.assertLess(obj.index("u rt_f_mod\n"), obj.index("u rt_f_hypot\n"), msg=obj)
+        self.assertLess(
+            obj.index("u rt_f_hypot\n"),
+            obj.index("u rt_f_atan2\n"),
+            msg=obj,
+        )
 
     def test_actc_preallocation_body_overlay_mode_maps_real_bridge_assignments(self) -> None:
         obj = self.compile_overlay_object(
@@ -8661,6 +8676,19 @@ class TestActcOverlay(unittest.TestCase):
                 ("rt_f_atan", "rt_f_cmp"),
             ),
             (
+                "atan2-print-position",
+                "MODULE MAIN\rREAL A\rREAL B\rPROC MAIN()\r"
+                "A=REAL(1)\rB=REAL(1)\rPrintRE(FATan2(A,B))\rRETURN\r",
+                ("rt_f_atan2", "rt_print_f"),
+            ),
+            (
+                "atan2-condition-position",
+                "MODULE MAIN\rREAL A\rREAL B\rREAL C\rPROC MAIN()\r"
+                "A=REAL(1)\rB=REAL(1)\rC=REAL(2)\r"
+                "IF FATan2(A,B)<C THEN\rPrintE(\"OK\")\rFI\rRETURN\r",
+                ("rt_f_atan2", "rt_f_cmp"),
+            ),
+            (
                 "exp-print-position",
                 "MODULE MAIN\rREAL A\rPROC MAIN()\r"
                 "A=REAL(1)\rPrintRE(FExp(A))\rRETURN\r",
@@ -8737,6 +8765,7 @@ class TestActcOverlay(unittest.TestCase):
                     "rt_f_cos",
                     "rt_f_tan",
                     "rt_f_atan",
+                    "rt_f_atan2",
                     "rt_f_exp",
                     "rt_f_ln",
                     "rt_f_log2",
@@ -8754,6 +8783,7 @@ class TestActcOverlay(unittest.TestCase):
             ("FMod", "rt_f_mod"),
             ("FHypot", "rt_f_hypot"),
             ("FPow", "rt_f_pow"),
+            ("FATan2", "rt_f_atan2"),
         ):
             with self.subTest(function_name=function_name):
                 obj = self.compile_overlay_object(
@@ -8782,6 +8812,7 @@ class TestActcOverlay(unittest.TestCase):
                     "rt_f_cos",
                     "rt_f_tan",
                     "rt_f_atan",
+                    "rt_f_atan2",
                 ):
                     if other_module != runtime_module:
                         self.assertNotIn(f"u {other_module}\n", obj)

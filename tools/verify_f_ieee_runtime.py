@@ -29,6 +29,7 @@ from generate_math_runtime import (
     MATH_NEG_HALF_PI_BITS,
     MATH_NEG_PI_BITS,
     MATH_PI_BITS,
+    MATH_THREE_QUARTER_PI_BITS,
     MATH_TWO_PI_BITS,
     RADIANS_TO_DEGREES_BITS,
     SIN_COEFFICIENT_BITS,
@@ -36,6 +37,7 @@ from generate_math_runtime import (
     addsub_core_module,
     addsub_wrapper_module,
     atan_module,
+    atan2_module,
     ceil_module,
     compare_module,
     cos_module,
@@ -613,6 +615,36 @@ def expected_atan(value: int) -> int:
     return result ^ sign
 
 
+def expected_atan2(y_value: int, x_value: int) -> int:
+    if is_nan(y_value) or is_nan(x_value):
+        return CANONICAL_QNAN
+    y_sign = y_value & 0x80000000
+    x_sign = x_value & 0x80000000
+    y_magnitude = y_value & 0x7FFFFFFF
+    x_magnitude = x_value & 0x7FFFFFFF
+
+    if y_magnitude == 0x7F800000 and x_magnitude == 0x7F800000:
+        magnitude = (
+            MATH_THREE_QUARTER_PI_BITS if x_sign else 0x3F490FDB
+        )
+        return magnitude ^ y_sign
+    if x_magnitude == 0:
+        if y_magnitude == 0:
+            return (MATH_PI_BITS ^ y_sign) if x_sign else y_value
+        return MATH_HALF_PI_BITS ^ y_sign
+    if y_magnitude == 0:
+        return (MATH_PI_BITS ^ y_sign) if x_sign else y_value
+
+    angle = expected_atan(expected_division(y_value, x_value))
+    if not x_sign:
+        return angle
+    return expected_addsub(
+        angle,
+        MATH_PI_BITS,
+        subtract=bool(y_sign),
+    )
+
+
 def runtime_builders(operation: str):
     special = special_value_module()
     if operation == "add":
@@ -725,6 +757,17 @@ def runtime_builders(operation: str):
         ]
     if operation == "atan":
         return [
+            atan_module(),
+            divide_module(),
+            addsub_wrapper_module("rt_f_sub", True),
+            addsub_wrapper_module("rt_f_add", False),
+            multiply_module(),
+            addsub_core_module(),
+            special,
+        ]
+    if operation == "atan2":
+        return [
+            atan2_module(),
             atan_module(),
             divide_module(),
             addsub_wrapper_module("rt_f_sub", True),
@@ -1045,7 +1088,7 @@ def verification_trig_cases(
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/exp/ln/log2/log10/pow/wrap/sin/cos/tan/atan/angle/min/max/clamp code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/exp/ln/log2/log10/pow/wrap/sin/cos/tan/atan/atan2/angle/min/max/clamp code against exact IEEE "
             "binary32"
         )
     )
@@ -1115,6 +1158,7 @@ def main() -> int:
             "cos",
             "tan",
             "atan",
+            "atan2",
             "deg_to_rad",
             "rad_to_deg",
             "min",
@@ -1207,6 +1251,8 @@ def main() -> int:
                     expected = expected_tan(left)
                 elif operation == "atan":
                     expected = expected_atan(left)
+                elif operation == "atan2":
+                    expected = expected_atan2(left, right)
                 elif operation == "deg_to_rad":
                     expected = expected_angle_scale(
                         left, DEGREES_TO_RADIANS_BITS
@@ -1250,6 +1296,7 @@ def main() -> int:
                 "cos",
                 "tan",
                 "atan",
+                "atan2",
                 "deg_to_rad",
                 "rad_to_deg",
             ):
@@ -1304,6 +1351,8 @@ def main() -> int:
                         if operation == "tan"
                         else expected_atan(left)
                         if operation == "atan"
+                        else expected_atan2(left, right)
+                        if operation == "atan2"
                         else expected_angle_scale(
                             left, DEGREES_TO_RADIANS_BITS
                         )
@@ -1322,7 +1371,7 @@ def main() -> int:
                 print(
                     f"rt_f_{operation} {len(alias_results)} in-place alias cases passed"
                 )
-                if operation in ("mod", "hypot", "pow"):
+                if operation in ("mod", "hypot", "pow", "atan2"):
                     alias_right_completed = subprocess.run(
                         [str(harness_path), str(runtime_path), "alias-right"],
                         input="".join(
@@ -1346,6 +1395,8 @@ def main() -> int:
                             else expected_pow(left, right)
                             if operation == "pow"
                             else expected_hypot(left, right)
+                            if operation == "hypot"
+                            else expected_atan2(left, right)
                         )
                         if actual != expected:
                             raise SystemExit(

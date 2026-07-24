@@ -922,11 +922,15 @@ preallocate_real_unary_print_external_from_scan_y_overlay:
     lda #<pattern_ffloor
     ldy #>pattern_ffloor
     jsr symbol_buffer_matches_local_const
-    bcc preallocate_real_unary_print_external_from_scan_y_overlay_ffloor
+    bcs :+
+    jmp preallocate_real_unary_print_external_from_scan_y_overlay_ffloor
+:
     lda #<pattern_fceil
     ldy #>pattern_fceil
     jsr symbol_buffer_matches_local_const
-    bcc preallocate_real_unary_print_external_from_scan_y_overlay_fceil
+    bcs :+
+    jmp preallocate_real_unary_print_external_from_scan_y_overlay_fceil
+:
     lda #<pattern_fround
     ldy #>pattern_fround
     jsr symbol_buffer_matches_local_const
@@ -947,6 +951,10 @@ preallocate_real_unary_print_external_from_scan_y_overlay:
     ldy #>pattern_ftan
     jsr symbol_buffer_matches_local_const
     bcc preallocate_real_unary_print_external_from_scan_y_overlay_ftan
+    lda #<pattern_fatan
+    ldy #>pattern_fatan
+    jsr symbol_buffer_matches_local_const
+    bcc preallocate_real_unary_print_external_from_scan_y_overlay_fatan
     lda #<pattern_fexp
     ldy #>pattern_fexp
     jsr symbol_buffer_matches_local_const
@@ -1005,6 +1013,9 @@ preallocate_real_unary_print_external_from_scan_y_overlay_fcos:
     bne preallocate_real_unary_print_external_from_scan_y_overlay_operator
 preallocate_real_unary_print_external_from_scan_y_overlay_ftan:
     lda #'y'
+    bne preallocate_real_unary_print_external_from_scan_y_overlay_operator
+preallocate_real_unary_print_external_from_scan_y_overlay_fatan:
+    lda #'j'
     bne preallocate_real_unary_print_external_from_scan_y_overlay_operator
 preallocate_real_unary_print_external_from_scan_y_overlay_fexp:
     lda #'x'
@@ -2122,7 +2133,7 @@ preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes_near:
     lda #<pattern_fsign
     ldy #>pattern_fsign
     jsr symbol_buffer_matches_local_const
-    bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
+    bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes_near
     lda #<pattern_ftrunc
     ldy #>pattern_ftrunc
     jsr symbol_buffer_matches_local_const
@@ -2165,6 +2176,10 @@ preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes_near:
     bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
     lda #<pattern_ftan
     ldy #>pattern_ftan
+    jsr symbol_buffer_matches_local_const
+    bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
+    lda #<pattern_fatan
+    ldy #>pattern_fatan
     jsr symbol_buffer_matches_local_const
     bcc preallocate_declared_symbol_is_reserved_call_keyword_overlay_yes
     lda #<pattern_degtorad
@@ -2423,6 +2438,8 @@ pattern_fcos:
     .asciiz "FCOS"
 pattern_ftan:
     .asciiz "FTAN"
+pattern_fatan:
+    .asciiz "FATAN"
 pattern_fexp:
     .asciiz "FEXP"
 pattern_fln:

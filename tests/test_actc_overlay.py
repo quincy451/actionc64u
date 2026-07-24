@@ -8648,6 +8648,19 @@ class TestActcOverlay(unittest.TestCase):
                 ("rt_f_tan", "rt_f_cmp"),
             ),
             (
+                "atan-print-position",
+                "MODULE MAIN\rREAL A\rPROC MAIN()\r"
+                "A=REAL(2)\rPrintRE(FATan(A))\rRETURN\r",
+                ("rt_f_atan", "rt_print_f"),
+            ),
+            (
+                "atan-condition-position",
+                "MODULE MAIN\rREAL A\rREAL B\rPROC MAIN()\r"
+                "A=REAL(2)\rB=REAL(2)\r"
+                "IF FATan(A)<B THEN\rPrintE(\"OK\")\rFI\rRETURN\r",
+                ("rt_f_atan", "rt_f_cmp"),
+            ),
+            (
                 "exp-print-position",
                 "MODULE MAIN\rREAL A\rPROC MAIN()\r"
                 "A=REAL(1)\rPrintRE(FExp(A))\rRETURN\r",
@@ -8723,6 +8736,7 @@ class TestActcOverlay(unittest.TestCase):
                     "rt_f_sin",
                     "rt_f_cos",
                     "rt_f_tan",
+                    "rt_f_atan",
                     "rt_f_exp",
                     "rt_f_ln",
                     "rt_f_log2",
@@ -8767,6 +8781,7 @@ class TestActcOverlay(unittest.TestCase):
                     "rt_f_sin",
                     "rt_f_cos",
                     "rt_f_tan",
+                    "rt_f_atan",
                 ):
                     if other_module != runtime_module:
                         self.assertNotIn(f"u {other_module}\n", obj)

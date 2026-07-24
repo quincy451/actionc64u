@@ -62,6 +62,15 @@ MATH_TWO_PI_BITS = 0x40C90FDB
 MATH_HALF_PI_BITS = 0x3FC90FDB
 MATH_NEG_PI_BITS = 0xC0490FDB
 MATH_NEG_HALF_PI_BITS = 0xBFC90FDB
+ATAN_REDUCTION_BITS = 0x3ED413CD
+ATAN_ODD_DENOMINATOR_BITS = (
+    0x40400000,
+    0x40A00000,
+    0x40E00000,
+    0x41100000,
+    0x41300000,
+    0x41500000,
+)
 SIN_COEFFICIENT_BITS = (
     0xBE2AAAAB,
     0x3C088898,
@@ -2836,6 +2845,233 @@ def tan_module() -> ObjectBuilder:
     return b
 
 
+def atan_module() -> ObjectBuilder:
+    """Build the portable MATH1 inverse-tangent range reduction and series."""
+    b = ObjectBuilder("rt_f_atan")
+
+    pointer_targets = (
+        "destination",
+        "source",
+        "reduced",
+        "square",
+        "term",
+        "result",
+        "work",
+        "one",
+        "quarter_pi",
+        "half_pi",
+        *(f"d{index}" for index in range(len(ATAN_ODD_DENOMINATOR_BITS))),
+        "nan",
+    )
+    pointer_offsets = {
+        target: index * 2 for index, target in enumerate(pointer_targets)
+    }
+
+    def load_local_pointer(target: str, destination: int) -> None:
+        b.immediate(0xA0, pointer_offsets[target])
+        b.immediate(0xA2, destination)
+        b.local_reference(0x20, "setp")
+
+    def call_binary(
+        helper: str, left: str, right: str, destination: str
+    ) -> None:
+        load_local_pointer(left, 0x02)
+        load_local_pointer(right, 0x04)
+        load_local_pointer(destination, 0x06)
+        b.jsr(helper)
+
+    def copy_local(source: str, destination: str) -> None:
+        load_local_pointer(source, 0x02)
+        load_local_pointer(destination, 0x06)
+        b.local_reference(0x20, "copy4")
+
+    # Preserve both public pointers and the input before dependencies reuse zero
+    # page. The local magnitude clears only the sign bit.
+    b.zero_page(0xA5, 0x06)
+    b.local_reference(0x8D, "pt")
+    b.zero_page(0xA5, 0x07)
+    b.local_reference(0x8D, "pth")
+    b.immediate(0xA0, 0x00)
+    b.label("save")
+    b.emit(0xB1, 0x02)
+    b.local_reference(0x99, "source")
+    b.emit(0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "save")
+
+    load_local_pointer("source", 0x02)
+    b.immediate(0xA0, 0x03)
+    b.emit(0xB1, 0x02)
+    b.immediate(0x29, 0x80)
+    b.local_reference(0x8D, "sign")
+    b.emit(0xB1, 0x02)
+    b.immediate(0x29, 0x7F)
+    b.emit(0x91, 0x02)
+
+    # Classify NaN and infinity directly so only finite arithmetic dependencies
+    # enter the linked closure.
+    b.immediate(0xC9, 0x7F)
+    b.branch(0xD0, "finite")
+    b.emit(0x88, 0xB1, 0x02)
+    b.branch(0x10, "finite")
+    b.immediate(0x29, 0x7F)
+    b.emit(0x88, 0x11, 0x02, 0x88, 0x11, 0x02)
+    b.branch(0xD0, "return_nan")
+    b.immediate(0xA0, pointer_offsets["half_pi"])
+    b.jmp_local("signed_return")
+
+    b.label("return_nan")
+    b.immediate(0xA0, pointer_offsets["nan"])
+    b.jmp_local("copy_return")
+
+    b.label("finite")
+    b.immediate(0xA0, 0x00)
+    b.emit(0xB1, 0x02, 0xC8, 0x11, 0x02, 0xC8, 0x11, 0x02, 0xC8, 0x11, 0x02)
+    b.branch(0xD0, "nonzero")
+    b.immediate(0xA0, pointer_offsets["source"])
+    b.jmp_local("signed_return")
+
+    # Positive finite binary32 encodings sort lexicographically. Test magnitude
+    # against one without loading the general comparator into the final PRG.
+    b.label("nonzero")
+    b.emit(0xB1, 0x02)
+    b.immediate(0xC9, 0x3F)
+    b.branch(0x90, "use_magnitude")
+    b.branch(0xD0, "reciprocal")
+    b.emit(0x88, 0xB1, 0x02)
+    b.immediate(0xC9, 0x80)
+    b.branch(0x90, "use_magnitude")
+    b.branch(0xD0, "reciprocal")
+    b.emit(0x88, 0xB1, 0x02, 0x88, 0x11, 0x02)
+    b.branch(0xD0, "reciprocal")
+
+    b.label("use_magnitude")
+    copy_local("source", "reduced")
+    b.immediate(0xA9, 0x00)
+    b.local_reference(0x8D, "inverted")
+    b.jmp_local("test_reduce")
+
+    b.label("reciprocal")
+    call_binary("rt_f_div", "one", "source", "reduced")
+    b.immediate(0xA9, 0x01)
+    b.local_reference(0x8D, "inverted")
+
+    # Reduce values above sqrt(2)-1 around pi/4. The reduced value is positive,
+    # so its raw bytes retain numeric ordering.
+    b.label("test_reduce")
+    b.immediate(0xA9, 0x00)
+    b.local_reference(0x8D, "shifted")
+    load_local_pointer("reduced", 0x02)
+    reduction_bytes = ATAN_REDUCTION_BITS.to_bytes(4, "little")
+    for index in range(3, -1, -1):
+        b.immediate(0xA0, index)
+        b.emit(0xB1, 0x02)
+        b.immediate(0xC9, reduction_bytes[index])
+        b.branch(0x90, "polynomial")
+        b.branch(0xD0, "shift")
+    b.jmp_local("polynomial")
+
+    b.label("shift")
+    call_binary("rt_f_sub", "reduced", "one", "work")
+    call_binary("rt_f_add", "reduced", "one", "result")
+    call_binary("rt_f_div", "work", "result", "reduced")
+    b.immediate(0xA9, 0x01)
+    b.local_reference(0x8D, "shifted")
+
+    # Evaluate x - x^3/3 + ... + x^13/13 in the source-library operation order.
+    b.label("polynomial")
+    call_binary("rt_f_mul", "reduced", "reduced", "square")
+    copy_local("reduced", "term")
+    copy_local("reduced", "result")
+    for index in range(len(ATAN_ODD_DENOMINATOR_BITS)):
+        call_binary("rt_f_mul", "term", "square", "term")
+        call_binary("rt_f_div", "term", f"d{index}", "work")
+        call_binary(
+            "rt_f_sub" if index % 2 == 0 else "rt_f_add",
+            "result",
+            "work",
+            "result",
+        )
+
+    b.local_reference(0xAD, "shifted")
+    b.branch(0xF0, "offset_done")
+    call_binary("rt_f_add", "result", "quarter_pi", "result")
+    b.label("offset_done")
+    b.local_reference(0xAD, "inverted")
+    b.branch(0xF0, "return_result")
+    call_binary("rt_f_sub", "half_pi", "result", "work")
+    b.immediate(0xA0, pointer_offsets["work"])
+    b.jmp_local("signed_return")
+
+    b.label("return_result")
+    b.immediate(0xA0, pointer_offsets["result"])
+
+    # Copy the selected positive magnitude before applying the input sign so
+    # constants remain immutable across calls and negative zero is retained.
+    b.label("signed_return")
+    b.immediate(0xA2, 0x02)
+    b.local_reference(0x20, "setp")
+    load_local_pointer("result", 0x06)
+    b.local_reference(0x20, "copy4")
+    load_local_pointer("result", 0x02)
+    b.immediate(0xA0, 0x03)
+    b.emit(0xB1, 0x02)
+    b.local_reference(0x4D, "sign")
+    b.emit(0x91, 0x02)
+    b.immediate(0xA0, pointer_offsets["result"])
+
+    b.label("copy_return")
+    b.immediate(0xA2, 0x02)
+    b.local_reference(0x20, "setp")
+    load_local_pointer("destination", 0x06)
+    b.jmp_local("copy4")
+
+    b.label("copy4")
+    b.immediate(0xA0, 0x00)
+    b.label("copy_loop")
+    b.emit(0xB1, 0x02, 0x91, 0x06, 0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "copy_loop")
+    b.emit(0x60)
+
+    b.label("setp")
+    b.local_reference(0xB9, "pt")
+    b.emit(0x95, 0x00, 0xC8)
+    b.local_reference(0xB9, "pt")
+    b.emit(0x95, 0x01, 0x60)
+
+    b.label("pt")
+    b.emit(0x00)
+    b.label("pth")
+    b.emit(0x00)
+    for target in pointer_targets[1:]:
+        offset = len(b.code)
+        b.emit(0x00, 0x00)
+        b.local_relocations.append((offset, target))
+
+    for label in ("source", "reduced", "square", "term", "result", "work"):
+        b.label(label)
+        b.emit(0x00, 0x00, 0x00, 0x00)
+    for label, bits in (
+        ("one", 0x3F800000),
+        ("quarter_pi", 0x3F490FDB),
+        ("half_pi", MATH_HALF_PI_BITS),
+        *(
+            (f"d{index}", bits)
+            for index, bits in enumerate(ATAN_ODD_DENOMINATOR_BITS)
+        ),
+        ("nan", 0x7FC00000),
+    ):
+        b.label(label)
+        b.emit(*bits.to_bytes(4, "little"))
+    for label in ("sign", "inverted", "shifted"):
+        b.label(label)
+        b.emit(0x00)
+
+    b.export("rt_f_atan")
+    return b
+
+
 def float_to_int_module() -> ObjectBuilder:
     """Build finite binary32 to signed 16-bit truncation toward zero."""
     b = ObjectBuilder("rt_f_to_i")
@@ -4843,6 +5079,7 @@ def main() -> int:
             sin_module(),
             cos_module(),
             tan_module(),
+            atan_module(),
             deg_to_rad_module(),
             rad_to_deg_module(),
             minmax_module("rt_f_min", maximum=False),

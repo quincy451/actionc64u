@@ -16,7 +16,7 @@ The exponent bias is `127`.
 Supported forms include decimal literals, exponent notation, arithmetic
 operators, comparisons, `REAL(x)`, `INT(r)`, and the bounded named-value
 `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`,
-`FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FCos`, `FTan`, `FMin`, `FMax`, `FClamp`,
+`FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FCos`, `FTan`, `FATan`, `FMin`, `FMax`, `FClamp`,
 `DegToRad`, and `RadToDeg` calls.
 
 Rules:
@@ -64,6 +64,10 @@ Rules:
 - `FTan(value)` evaluates the shared binary32 sine and cosine paths and divides
   the rounded results; poles and exceptional values therefore follow ordinary
   `rt_f_div` result semantics
+- `FATan(value)` preserves signed zero, maps either infinity to signed
+  binary32 `pi/2`, and maps NaN to canonical quiet NaN; finite values use
+  reciprocal and quarter-pi range reductions followed by the portable odd
+  series through `x^13/13`, with binary32 rounding after each operation
 - `DegToRad(value)` multiplies by binary32 `0x3C8EFA35` (`pi/180`);
   `RadToDeg(value)` multiplies by binary32 `0x42652EE0` (`180/pi`). Both use
   ordinary binary32 multiply semantics, including signed zero, infinity, NaN,
@@ -114,6 +118,7 @@ The linker-level REAL runtime surface uses stable helper symbols:
 - `rt_f_sin`
 - `rt_f_cos`
 - `rt_f_tan`
+- `rt_f_atan`
 - `rt_f_deg_to_rad`
 - `rt_f_rad_to_deg`
 - `rt_f_min`
@@ -232,6 +237,9 @@ The first implemented target-side helper ABI is intentionally narrow:
 - `rt_f_tan` reads through `$02/$03`, writes through `$06/$07`, preserves
   aliased source/destination values, and imports `rt_f_sin`, `rt_f_cos`, and
   `rt_f_div`
+- `rt_f_atan` reads through `$02/$03`, writes through `$06/$07`, preserves
+  aliased source/destination values, and imports only `rt_f_div`, `rt_f_sub`,
+  `rt_f_add`, and `rt_f_mul`
 - `rt_f_deg_to_rad` and `rt_f_rad_to_deg` read through `$02/$03`, write through
   `$06/$07`, and import `rt_f_mul`. Each 20-byte wrapper points `$04/$05` at
   its embedded positive scale factor before multiplication; the underlying
@@ -315,6 +323,8 @@ Examples:
   closure
 - `FTan(r)` imports `rt_f_tan`, which reaches the shared sine, cosine, division,
   range-reduction, and arithmetic closure without duplicating those objects
+- `FATan(r)` imports `rt_f_atan` plus only its division, subtraction, addition,
+  multiplication, and transitive special-value closure
 - `DegToRad(r)` imports `rt_f_deg_to_rad` plus its multiplication and
   special-value closure
 - `RadToDeg(r)` imports `rt_f_rad_to_deg` plus its multiplication and
@@ -357,13 +367,13 @@ constants, which ACTC folds without target storage or runtime imports, and
 documents the core source forms that ACTC already recognizes directly:
 `REAL(x)`, `INT(x)`, REAL arithmetic/comparison operators, `FAbs`, `FSqrt`,
 `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`,
-`FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FCos`, `FTan`, `FMin`, `FMax`, `FClamp`, `DegToRad`,
+`FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FCos`, `FTan`, `FATan`, `FMin`, `FMax`, `FClamp`, `DegToRad`,
 `RadToDeg`, and `PrintR` / `PrintRE`.
 
 `SRC/MATH1_DEMO.ACT` validates the exported-library path by compiling a small
 REAL absolute-value program through ACTC, linking it with ALINK, and running
 the linked `.PRG` directly. `FSqrt` covers all non-negative finite REAL32
-inputs. `FSin`, `FCos`, and `FTan` are link-selected trigonometric routines; the remaining
+inputs. `FSin`, `FCos`, `FTan`, and `FATan` are link-selected trigonometric routines; the remaining
 trigonometric and hyperbolic calls stay deferred until matching `RT_*.OBJ`
 modules and compiler mappings are implemented.
 

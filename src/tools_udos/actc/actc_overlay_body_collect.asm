@@ -735,9 +735,7 @@ collect_proc_body_ops_overlay_try_assignment_not_exit:
     jsr call_skip_inline_spaces_context
     lda #'='
     jsr match_scan_char_local
-    bcc :+
-    jmp collect_proc_body_ops_overlay_try_local_call
-:
+    bcs collect_proc_body_ops_overlay_try_local_call
     sty symbol_end_y_local
     jsr call_find_var_index_context
     bcc :+
@@ -1341,9 +1339,7 @@ emit_real_explicit_value_local_or_fail:
 :   jsr call_restore_source_mark_context
     ldy symbol_start_y_local
     jsr parse_positive_word_sum_local_or_fail
-    bcc :+
-    jmp emit_real_explicit_value_local_or_fail_wide
-:
+    bcs emit_real_explicit_value_local_or_fail_wide
     jsr call_skip_inline_spaces_context
     lda #')'
     jsr match_scan_char_local
@@ -1408,19 +1404,13 @@ emit_real_explicit_value_local_or_fail_wide:
     jsr call_skip_inline_spaces_context
     lda #')'
     jsr match_scan_char_local
-    bcc :+
-    jmp emit_real_explicit_value_local_or_fail_signed_prep
-:
+    bcs emit_real_explicit_value_local_or_fail_signed_prep
     lda #')'
     jsr consume_scan_char_local
-    bcc :+
-    jmp emit_real_explicit_value_local_or_fail_signed_prep
-:
+    bcs emit_real_explicit_value_local_or_fail_signed_prep
     jsr call_skip_inline_spaces_context
     jsr call_require_line_end_context
-    bcc :+
-    jmp emit_real_explicit_value_local_or_fail_signed_prep
-:
+    bcs emit_real_explicit_value_local_or_fail_signed_prep
     lda #ACTC_OVERLAY_CTX_EXPR_VALUE_PTR_LO
     jsr load_context_ptr_to_work_zp
     ldy #$00
@@ -1475,9 +1465,7 @@ emit_real_explicit_value_local_or_fail_signed_prep:
     jsr call_skip_inline_spaces_context
     lda #'-'
     jsr match_scan_char_local
-    bcc :+
-    jmp emit_real_explicit_value_local_or_fail_fail
-:
+    bcs emit_real_explicit_value_local_or_fail_fail
     lda #'-'
     jsr consume_scan_char_local
     bcs emit_real_explicit_value_local_or_fail_fail
@@ -2240,9 +2228,7 @@ emit_runtime_real_condition_clause_local_le:
     sta runtime_compare_flag_local
     lda #'='
     jsr consume_scan_char_local
-    bcc :+
-    jmp emit_runtime_real_condition_clause_local_or_fail_fail
-:
+    bcs emit_runtime_real_condition_clause_local_or_fail_fail
     jmp emit_runtime_real_condition_clause_local_rhs
 emit_runtime_real_condition_clause_local_ge:
     lda #'g'
@@ -2251,21 +2237,15 @@ emit_runtime_real_condition_clause_local_ge:
     sta runtime_compare_flag_local
     lda #'='
     jsr consume_scan_char_local
-    bcc :+
-    jmp emit_runtime_real_condition_clause_local_or_fail_fail
-:
+    bcs emit_runtime_real_condition_clause_local_or_fail_fail
 emit_runtime_real_condition_clause_local_rhs:
     jsr call_skip_inline_spaces_context
     jsr emit_runtime_real_value_local_or_fail
-    bcc :+
-    jmp emit_runtime_real_condition_clause_local_or_fail_fail
-:
+    bcs emit_runtime_real_condition_clause_local_or_fail_fail
     sty symbol_end_y_local
     lda #ACTC_OVERLAY_CTX_FIND_OR_STORE_RT_F_CMP_FN_LO
     jsr call_context_function
-    bcc :+
-    jmp emit_runtime_real_condition_clause_local_or_fail_fail
-:
+    bcs emit_runtime_real_condition_clause_local_or_fail_fail
     stx real_rhs_index_local
     jsr load_append_body_op_ptr
     ldx real_rhs_index_local
@@ -2278,16 +2258,12 @@ emit_runtime_real_condition_clause_local_rhs:
     lda runtime_compare_flag_local
     ldy #$00
     jsr call_loaded_target_with_a
-    bcc :+
-    jmp emit_runtime_real_condition_clause_local_or_fail_fail
-:
+    bcs emit_runtime_real_condition_clause_local_or_fail_fail
     jmp emit_runtime_real_condition_clause_local_have_flag
 emit_runtime_real_condition_clause_local_zero_flag:
     lda #ACTC_OVERLAY_CTX_STORE_ZERO_INT_LITERAL_FN_LO
     jsr call_context_function
-    bcc :+
-    jmp emit_runtime_real_condition_clause_local_or_fail_fail
-:
+    bcs emit_runtime_real_condition_clause_local_or_fail_fail
 emit_runtime_real_condition_clause_local_have_flag:
     stx real_rhs_index_local
     jsr load_append_body_op_ptr
@@ -2497,23 +2473,15 @@ emit_real_small_int_assignment_local_or_fail_signed:
     jsr call_skip_inline_spaces_context
     lda #'-'
     jsr match_scan_char_local
-    bcc :+
-    jmp emit_real_small_int_assignment_local_or_fail_fail
-:
+    bcs emit_real_small_int_assignment_local_or_fail_fail
     lda #'-'
     jsr consume_scan_char_local
-    bcc :+
-    jmp emit_real_small_int_assignment_local_or_fail_fail
-:
+    bcs emit_real_small_int_assignment_local_or_fail_fail
     jsr parse_optional_grouped_positive_word_sum_local_or_fail
-    bcc :+
-    jmp emit_real_small_int_assignment_local_or_fail_fail
-:
+    bcs emit_real_small_int_assignment_local_or_fail_fail
     jsr call_skip_inline_spaces_context
     jsr call_require_line_end_context
-    bcc :+
-    jmp emit_real_small_int_assignment_local_or_fail_fail
-:
+    bcs emit_real_small_int_assignment_local_or_fail_fail
     lda #ACTC_OVERLAY_CTX_EXPR_VALUE_PTR_LO
     jsr load_context_ptr_to_work_zp
     ldy #$00
@@ -2832,6 +2800,34 @@ call_loaded_target_with_a:
 ; Shared front-coded builtin lookup data.
 .include "actc_overlay_builtin_runtime_table.inc"
 
+pattern_proc:
+    .asciiz "PROC"
+pattern_func:
+    .asciiz "FUNC"
+pattern_asmblock:
+    .asciiz "ASMBLOCK"
+pattern_exit:
+    .asciiz "EXIT"
+pattern_for:
+    .asciiz "FOR"
+pattern_to:
+    .asciiz "TO"
+pattern_step:
+    .asciiz "STEP"
+pattern_if:
+    .asciiz "IF"
+pattern_while:
+    .asciiz "WHILE"
+pattern_do:
+    .asciiz "DO"
+pattern_od:
+    .asciiz "OD"
+pattern_until:
+    .asciiz "UNTIL"
+pattern_else:
+    .asciiz "ELSE"
+pattern_fi:
+    .asciiz "FI"
 pattern_int_decl:
     .asciiz "INT"
 pattern_real_decl:
@@ -2868,6 +2864,8 @@ pattern_fcos:
     .asciiz "FCOS"
 pattern_ftan:
     .asciiz "FTAN"
+pattern_fatan:
+    .asciiz "FATAN"
 pattern_fexp:
     .asciiz "FEXP"
 pattern_fln:
@@ -2894,6 +2892,7 @@ real_unary_pattern_table_local:
     .byte <pattern_fsin, 's'
     .byte <pattern_fcos, 'v'
     .byte <pattern_ftan, 'y'
+    .byte <pattern_fatan, 'j'
     .byte <pattern_fexp, 'x'
     .byte <pattern_fln, 'n'
     .byte <pattern_flog2, 'b'
@@ -2911,6 +2910,7 @@ real_unary_pattern_table_local_end:
 .assert >pattern_fabs = >pattern_fsin, error, "unary patterns must share one page"
 .assert >pattern_fabs = >pattern_fcos, error, "unary patterns must share one page"
 .assert >pattern_fabs = >pattern_ftan, error, "unary patterns must share one page"
+.assert >pattern_fabs = >pattern_fatan, error, "unary patterns must share one page"
 .assert >pattern_fabs = >pattern_fexp, error, "unary patterns must share one page"
 .assert >pattern_fabs = >pattern_fln, error, "unary patterns must share one page"
 .assert >pattern_fabs = >pattern_flog2, error, "unary patterns must share one page"
@@ -2935,34 +2935,6 @@ pattern_fclamp:
 .assert >pattern_real_decl = >pattern_fhypot, error, "real patterns must share one page"
 .assert >pattern_real_decl = >pattern_fpow, error, "real patterns must share one page"
 .assert >pattern_real_decl = >pattern_fclamp, error, "real patterns must share one page"
-pattern_proc:
-    .asciiz "PROC"
-pattern_func:
-    .asciiz "FUNC"
-pattern_asmblock:
-    .asciiz "ASMBLOCK"
-pattern_exit:
-    .asciiz "EXIT"
-pattern_for:
-    .asciiz "FOR"
-pattern_to:
-    .asciiz "TO"
-pattern_step:
-    .asciiz "STEP"
-pattern_if:
-    .asciiz "IF"
-pattern_while:
-    .asciiz "WHILE"
-pattern_do:
-    .asciiz "DO"
-pattern_od:
-    .asciiz "OD"
-pattern_until:
-    .asciiz "UNTIL"
-pattern_else:
-    .asciiz "ELSE"
-pattern_fi:
-    .asciiz "FI"
 pattern_endif:
     .asciiz "ENDIF"
 pattern_return:

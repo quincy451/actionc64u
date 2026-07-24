@@ -13,6 +13,8 @@ from fractions import Fraction
 from pathlib import Path
 
 from generate_math_runtime import (
+    ATAN_ODD_DENOMINATOR_BITS,
+    ATAN_REDUCTION_BITS,
     COS_COEFFICIENT_BITS,
     DEGREES_TO_RADIANS_BITS,
     EXP_COEFFICIENT_BITS,
@@ -33,6 +35,7 @@ from generate_math_runtime import (
     abs_module,
     addsub_core_module,
     addsub_wrapper_module,
+    atan_module,
     ceil_module,
     compare_module,
     cos_module,
@@ -576,6 +579,40 @@ def expected_tan(value: int) -> int:
     return expected_division(expected_sin(value), expected_cos(value))
 
 
+def expected_atan(value: int) -> int:
+    if is_nan(value):
+        return CANONICAL_QNAN
+    sign = value & 0x80000000
+    magnitude = value & 0x7FFFFFFF
+    if magnitude == 0x7F800000:
+        return MATH_HALF_PI_BITS ^ sign
+    if magnitude == 0:
+        return value
+
+    inverted = magnitude > 0x3F800000
+    reduced = (
+        expected_division(0x3F800000, magnitude) if inverted else magnitude
+    )
+    shifted = reduced > ATAN_REDUCTION_BITS
+    if shifted:
+        numerator = expected_addsub(reduced, 0x3F800000, True)
+        denominator = expected_addsub(reduced, 0x3F800000, False)
+        reduced = expected_division(numerator, denominator)
+
+    square = expected_multiply(reduced, reduced)
+    term = reduced
+    result = term
+    for index, denominator in enumerate(ATAN_ODD_DENOMINATOR_BITS):
+        term = expected_multiply(term, square)
+        contribution = expected_division(term, denominator)
+        result = expected_addsub(result, contribution, index % 2 == 0)
+    if shifted:
+        result = expected_addsub(result, 0x3F490FDB, False)
+    if inverted:
+        result = expected_addsub(MATH_HALF_PI_BITS, result, True)
+    return result ^ sign
+
+
 def runtime_builders(operation: str):
     special = special_value_module()
     if operation == "add":
@@ -683,6 +720,16 @@ def runtime_builders(operation: str):
             multiply_module(),
             addsub_wrapper_module("rt_f_sub", True),
             addsub_wrapper_module("rt_f_add", False),
+            addsub_core_module(),
+            special,
+        ]
+    if operation == "atan":
+        return [
+            atan_module(),
+            divide_module(),
+            addsub_wrapper_module("rt_f_sub", True),
+            addsub_wrapper_module("rt_f_add", False),
+            multiply_module(),
             addsub_core_module(),
             special,
         ]
@@ -998,7 +1045,7 @@ def verification_trig_cases(
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/exp/ln/log2/log10/pow/wrap/sin/cos/tan/angle/min/max/clamp code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/exp/ln/log2/log10/pow/wrap/sin/cos/tan/atan/angle/min/max/clamp code against exact IEEE "
             "binary32"
         )
     )
@@ -1067,6 +1114,7 @@ def main() -> int:
             "sin",
             "cos",
             "tan",
+            "atan",
             "deg_to_rad",
             "rad_to_deg",
             "min",
@@ -1083,7 +1131,7 @@ def main() -> int:
                 else pow_cases
                 if operation == "pow"
                 else trig_cases
-                if operation in ("wrap_pi", "sin", "cos", "tan")
+                if operation in ("wrap_pi", "sin", "cos", "tan", "atan")
                 else cases
             )
             runtime_path = work / f"rt_f_{operation}.bin"
@@ -1157,6 +1205,8 @@ def main() -> int:
                     expected = expected_cos(left)
                 elif operation == "tan":
                     expected = expected_tan(left)
+                elif operation == "atan":
+                    expected = expected_atan(left)
                 elif operation == "deg_to_rad":
                     expected = expected_angle_scale(
                         left, DEGREES_TO_RADIANS_BITS
@@ -1199,6 +1249,7 @@ def main() -> int:
                 "sin",
                 "cos",
                 "tan",
+                "atan",
                 "deg_to_rad",
                 "rad_to_deg",
             ):
@@ -1251,6 +1302,8 @@ def main() -> int:
                         if operation == "cos"
                         else expected_tan(left)
                         if operation == "tan"
+                        else expected_atan(left)
+                        if operation == "atan"
                         else expected_angle_scale(
                             left, DEGREES_TO_RADIANS_BITS
                         )

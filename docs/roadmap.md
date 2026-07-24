@@ -2254,3 +2254,30 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   and 7,460 bytes.
 - Native MATH1 now exposes twenty-five link-selected calls and lacks 18 public
   routines. FATan is the next dependency-ordered public routine.
+
+## 2026-07-23 Shared MATH1 Arctangent
+
+- Added the independent 1,032-byte `RT_F_ATAN.OBJ` dependency root. It
+  snapshots aliased input/output storage, preserves signed zero, maps
+  infinities to signed binary32 pi/2, canonicalizes NaN, and implements the
+  portable reciprocal/quarter-pi reduction and odd series through `x^13/13`.
+- The object imports only `RT_F_DIV`, `RT_F_SUB`, `RT_F_ADD`, and `RT_F_MUL`.
+  It does not require the comparison or sine/cosine roots.
+- Native ACTC recognizes `FATan(A)` in bounded assignment, print, condition,
+  and postfix REAL-function trees. Idun ACTC uses the same intrinsic and no
+  longer compiles the portable source body.
+- The exact 6502 verifier covers edge/random inputs and in-place aliasing. The
+  focused native ACTC/ALINK/VICE PRG prints `1.107148...` for `FATan(2)`,
+  verifies the complete arithmetic closure, and prunes unrelated roots.
+- Compacted sixteen pass-6 branch-over-jump sequences into equivalent direct
+  carry branches and reordered constant strings to retain the one-page unary
+  lookup invariant. Pass 6 now has more reserve than before this slice.
+- Current inventories are 1,375 broad direct-PRG shapes, 196 non-runtime
+  source-backed object-emission shapes, and 309 compiled-runtime relocation
+  oracle cases.
+- Every overlay remains above its reserve. Pass 6 is 8,052 bytes with 140 bytes
+  free; pass 7 is 6,999 bytes with 1,193 bytes free; passes L through U are
+  respectively 6,120, 6,989, 7,111, 7,114, 7,138, 7,142, 7,325, 7,819, 8,138,
+  and 7,468 bytes.
+- Native MATH1 now exposes twenty-six link-selected calls and lacks 17 public
+  routines. FATan2 is the next dependency-ordered public routine.

@@ -51,6 +51,7 @@ class TestMathRuntime(unittest.TestCase):
             "sin",
             "cos",
             "tan",
+            "atan",
             "exp",
             "ln",
             "log2",

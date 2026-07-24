@@ -3305,6 +3305,121 @@ def atan2_module() -> ObjectBuilder:
     return b
 
 
+def asin_module() -> ObjectBuilder:
+    """Build the portable MATH1 inverse-sine pipeline."""
+    b = ObjectBuilder("rt_f_asin")
+
+    pointer_targets = (
+        "destination",
+        "source",
+        "square",
+        "remaining",
+        "root",
+        "one",
+        "nan",
+    )
+    pointer_offsets = {
+        target: index * 2 for index, target in enumerate(pointer_targets)
+    }
+
+    def load_local_pointer(target: str, destination: int) -> None:
+        b.immediate(0xA0, pointer_offsets[target])
+        b.immediate(0xA2, destination)
+        b.local_reference(0x20, "setp")
+
+    def call_binary(
+        helper: str, left: str, right: str, destination: str
+    ) -> None:
+        load_local_pointer(left, 0x02)
+        load_local_pointer(right, 0x04)
+        load_local_pointer(destination, 0x06)
+        b.jsr(helper)
+
+    def copy_local(source: str, destination: str) -> None:
+        load_local_pointer(source, 0x02)
+        load_local_pointer(destination, 0x06)
+        b.local_reference(0x20, "copy4")
+
+    # Snapshot both public pointers before dependencies reuse zero page.
+    b.zero_page(0xA5, 0x06)
+    b.local_reference(0x8D, "pt")
+    b.zero_page(0xA5, 0x07)
+    b.local_reference(0x8D, "pth")
+    b.immediate(0xA0, 0x00)
+    b.label("save")
+    b.emit(0xB1, 0x02)
+    b.local_reference(0x99, "source")
+    b.emit(0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "save")
+
+    # Unsigned magnitude ordering matches positive IEEE binary32 ordering.
+    # Reject NaNs and values outside [-1, 1] without linking the comparator.
+    b.local_reference(0xAD, "source3")
+    b.immediate(0x29, 0x7F)
+    b.immediate(0xC9, 0x3F)
+    b.branch(0x90, "evaluate")
+    b.branch(0xD0, "invalid")
+    b.local_reference(0xAD, "source2")
+    b.immediate(0xC9, 0x80)
+    b.branch(0x90, "evaluate")
+    b.branch(0xD0, "invalid")
+    b.local_reference(0xAD, "source1")
+    b.local_reference(0x0D, "source0")
+    b.branch(0xD0, "invalid")
+
+    # Match the source-level binary32 operation order exactly.
+    b.label("evaluate")
+    call_binary("rt_f_mul", "source", "source", "square")
+    call_binary("rt_f_sub", "one", "square", "remaining")
+    load_local_pointer("remaining", 0x02)
+    load_local_pointer("root", 0x06)
+    b.jsr("rt_f_sqrt")
+    call_binary("rt_f_atan2", "source", "root", "destination")
+    b.emit(0x60)
+
+    b.label("invalid")
+    copy_local("nan", "destination")
+    b.emit(0x60)
+
+    b.label("copy4")
+    b.immediate(0xA0, 0x00)
+    b.label("copy_loop")
+    b.emit(0xB1, 0x02, 0x91, 0x06, 0xC8)
+    b.immediate(0xC0, 0x04)
+    b.branch(0xD0, "copy_loop")
+    b.emit(0x60)
+
+    b.label("setp")
+    b.local_reference(0xB9, "pt")
+    b.emit(0x95, 0x00, 0xC8)
+    b.local_reference(0xB9, "pt")
+    b.emit(0x95, 0x01, 0x60)
+
+    b.label("pt")
+    b.emit(0x00)
+    b.label("pth")
+    b.emit(0x00)
+    for target in pointer_targets[1:]:
+        offset = len(b.code)
+        b.emit(0x00, 0x00)
+        b.local_relocations.append((offset, target))
+
+    b.label("source")
+    for index in range(4):
+        b.label(f"source{index}")
+        b.emit(0x00)
+    for label in ("square", "remaining", "root"):
+        b.label(label)
+        b.emit(0x00, 0x00, 0x00, 0x00)
+    for label, bits in (("one", 0x3F800000), ("nan", 0x7FC00000)):
+        b.label(label)
+        b.emit(*bits.to_bytes(4, "little"))
+
+    b.export("rt_f_asin")
+    return b
+
+
 def float_to_int_module() -> ObjectBuilder:
     """Build finite binary32 to signed 16-bit truncation toward zero."""
     b = ObjectBuilder("rt_f_to_i")
@@ -5314,6 +5429,7 @@ def main() -> int:
             tan_module(),
             atan_module(),
             atan2_module(),
+            asin_module(),
             deg_to_rad_module(),
             rad_to_deg_module(),
             minmax_module("rt_f_min", maximum=False),

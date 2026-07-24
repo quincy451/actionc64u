@@ -2309,3 +2309,27 @@ Retired roadmap items for CP/M-era runner flows are no longer maintained.
   7,123, 7,147, 7,151, 7,334, 7,828, 8,147, and 7,477 bytes.
 - Native MATH1 now exposes twenty-seven link-selected calls and lacks 16 public
   routines. FASin is the next dependency-ordered public routine.
+
+## 2026-07-23 Shared MATH1 Inverse Sine
+
+- Added the independent 220-byte `RT_F_ASIN.OBJ` dependency root. It snapshots
+  aliased input/output storage, preserves signed zero, returns signed binary32
+  pi/2 at the endpoints, and canonicalizes NaN or magnitudes above one.
+- The helper evaluates `FATan2(value,FSqrt(1-value*value))` and directly imports
+  only `RT_F_MUL`, `RT_F_SUB`, `RT_F_SQRT`, and `RT_F_ATAN2`. ALINK closes
+  their transitive graph without linker-side math recognition.
+- Native and Idun ACTC recognize `FASin(value)` as a unary REAL intrinsic and
+  select the same object only when referenced. Idun no longer compiles the
+  portable source body.
+- The exact 6502 verifier covers edge/random inputs and in-place aliasing. The
+  focused native ACTC/ALINK/VICE PRG prints `1.570796...` for `FASin(1)`,
+  while Idun's generated MATH1 PRG executes `FASin(0.5)`.
+- Current native inventories are 1,377 broad direct-PRG shapes, 196 non-runtime
+  source-backed object-emission shapes, and 311 compiled-runtime relocation
+  oracle cases.
+- Every overlay remains above its reserve. Pass 6 is 8,069 bytes with 123 bytes
+  free; pass 7 is 7,065 bytes with 1,127 bytes free; pass K is 5,899 bytes with
+  2,293 bytes free; passes L through U are respectively 6,137, 7,006, 7,128,
+  7,131, 7,155, 7,159, 7,342, 7,836, 8,155, and 7,485 bytes.
+- Native MATH1 now exposes twenty-eight link-selected calls and lacks 15 public
+  routines. FACos is the next dependency-ordered public routine.

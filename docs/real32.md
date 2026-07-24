@@ -16,7 +16,7 @@ The exponent bias is `127`.
 Supported forms include decimal literals, exponent notation, arithmetic
 operators, comparisons, `REAL(x)`, `INT(r)`, and the bounded named-value
 `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`,
-`FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FCos`, `FTan`, `FATan`, `FATan2`, `FMin`, `FMax`, `FClamp`,
+`FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FCos`, `FTan`, `FATan`, `FATan2`, `FASin`, `FMin`, `FMax`, `FClamp`,
 `DegToRad`, and `RadToDeg` calls.
 
 Rules:
@@ -73,6 +73,10 @@ Rules:
   `y` is nonzero, and returns signed `pi/4` or `3*pi/4` for pairs of
   infinities; ordinary finite values evaluate `FATan(y/x)` and apply the
   appropriate signed `pi` correction
+- `FASin(value)` accepts `[-1,1]`, maps NaN or an out-of-domain magnitude to
+  canonical quiet NaN, returns signed `pi/2` at the endpoints, and preserves
+  signed zero. Ordinary inputs evaluate `value*value`, `1-square`, square root,
+  and `FATan2(value,root)` with binary32 rounding after every operation
 - `DegToRad(value)` multiplies by binary32 `0x3C8EFA35` (`pi/180`);
   `RadToDeg(value)` multiplies by binary32 `0x42652EE0` (`180/pi`). Both use
   ordinary binary32 multiply semantics, including signed zero, infinity, NaN,
@@ -333,6 +337,9 @@ Examples:
 - `FATan2(y,x)` imports `rt_f_atan2`; that root directly imports `rt_f_div`,
   `rt_f_atan`, `rt_f_add`, and `rt_f_sub`, and ALINK selects only their
   transitive arithmetic closure
+- `FASin(r)` imports `rt_f_asin`; its 220-byte root directly imports
+  `rt_f_mul`, `rt_f_sub`, `rt_f_sqrt`, and `rt_f_atan2`, and ALINK selects only
+  their transitive arithmetic closure
 - `DegToRad(r)` imports `rt_f_deg_to_rad` plus its multiplication and
   special-value closure
 - `RadToDeg(r)` imports `rt_f_rad_to_deg` plus its multiplication and
@@ -375,19 +382,22 @@ constants, which ACTC folds without target storage or runtime imports, and
 documents the core source forms that ACTC already recognizes directly:
 `REAL(x)`, `INT(x)`, REAL arithmetic/comparison operators, `FAbs`, `FSqrt`,
 `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`,
-`FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FCos`, `FTan`, `FATan`, `FATan2`, `FMin`, `FMax`, `FClamp`, `DegToRad`,
+`FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FCos`, `FTan`, `FATan`, `FATan2`, `FASin`, `FMin`, `FMax`, `FClamp`, `DegToRad`,
 `RadToDeg`, and `PrintR` / `PrintRE`.
 
 `SRC/MATH1_DEMO.ACT` validates the exported-library path by compiling a small
 REAL absolute-value program through ACTC, linking it with ALINK, and running
 the linked `.PRG` directly. `FSqrt` covers all non-negative finite REAL32
-inputs. `FSin`, `FCos`, `FTan`, `FATan`, and `FATan2` are link-selected trigonometric routines; the remaining
+inputs. `FSin`, `FCos`, `FTan`, `FATan`, `FATan2`, and `FASin` are link-selected trigonometric routines; the remaining
 trigonometric and hyperbolic calls stay deferred until matching `RT_*.OBJ`
 modules and compiler mappings are implemented.
 
 `rt_f_atan2` uses the binary REAL ABI: `y` is read through `$02/$03`, `x`
 through `$04/$05`, and the result is written through `$06/$07`. The
 destination may alias either source.
+
+`rt_f_asin` uses the unary REAL ABI: the source is read through `$02/$03` and
+the result is written through `$06/$07`. The destination may alias the source.
 
 ## Current Status
 

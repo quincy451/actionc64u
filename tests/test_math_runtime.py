@@ -53,6 +53,7 @@ class TestMathRuntime(unittest.TestCase):
             "tan",
             "atan",
             "atan2",
+            "asin",
             "exp",
             "ln",
             "log2",

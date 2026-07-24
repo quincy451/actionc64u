@@ -36,6 +36,7 @@ from generate_math_runtime import (
     abs_module,
     addsub_core_module,
     addsub_wrapper_module,
+    asin_module,
     atan_module,
     atan2_module,
     ceil_module,
@@ -645,6 +646,14 @@ def expected_atan2(y_value: int, x_value: int) -> int:
     )
 
 
+def expected_asin(value: int) -> int:
+    if is_nan(value) or (value & 0x7FFFFFFF) > 0x3F800000:
+        return CANONICAL_QNAN
+    square = expected_multiply(value, value)
+    remaining = expected_addsub(0x3F800000, square, True)
+    return expected_atan2(value, expected_square_root(remaining))
+
+
 def runtime_builders(operation: str):
     special = special_value_module()
     if operation == "add":
@@ -773,6 +782,19 @@ def runtime_builders(operation: str):
             addsub_wrapper_module("rt_f_sub", True),
             addsub_wrapper_module("rt_f_add", False),
             multiply_module(),
+            addsub_core_module(),
+            special,
+        ]
+    if operation == "asin":
+        return [
+            asin_module(),
+            square_root_module(),
+            atan2_module(),
+            atan_module(),
+            divide_module(),
+            multiply_module(),
+            addsub_wrapper_module("rt_f_sub", True),
+            addsub_wrapper_module("rt_f_add", False),
             addsub_core_module(),
             special,
         ]
@@ -1088,7 +1110,7 @@ def verification_trig_cases(
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/exp/ln/log2/log10/pow/wrap/sin/cos/tan/atan/atan2/angle/min/max/clamp code against exact IEEE "
+            "Verify generated add/sub/mul/cmp/sign/trunc/floor/ceil/round/frac/mod/hypot/exp/ln/log2/log10/pow/wrap/sin/cos/tan/atan/atan2/asin/angle/min/max/clamp code against exact IEEE "
             "binary32"
         )
     )
@@ -1159,6 +1181,7 @@ def main() -> int:
             "tan",
             "atan",
             "atan2",
+            "asin",
             "deg_to_rad",
             "rad_to_deg",
             "min",
@@ -1175,7 +1198,7 @@ def main() -> int:
                 else pow_cases
                 if operation == "pow"
                 else trig_cases
-                if operation in ("wrap_pi", "sin", "cos", "tan", "atan")
+                if operation in ("wrap_pi", "sin", "cos", "tan", "atan", "asin")
                 else cases
             )
             runtime_path = work / f"rt_f_{operation}.bin"
@@ -1253,6 +1276,8 @@ def main() -> int:
                     expected = expected_atan(left)
                 elif operation == "atan2":
                     expected = expected_atan2(left, right)
+                elif operation == "asin":
+                    expected = expected_asin(left)
                 elif operation == "deg_to_rad":
                     expected = expected_angle_scale(
                         left, DEGREES_TO_RADIANS_BITS
@@ -1297,6 +1322,7 @@ def main() -> int:
                 "tan",
                 "atan",
                 "atan2",
+                "asin",
                 "deg_to_rad",
                 "rad_to_deg",
             ):
@@ -1353,6 +1379,8 @@ def main() -> int:
                         if operation == "atan"
                         else expected_atan2(left, right)
                         if operation == "atan2"
+                        else expected_asin(left)
+                        if operation == "asin"
                         else expected_angle_scale(
                             left, DEGREES_TO_RADIANS_BITS
                         )

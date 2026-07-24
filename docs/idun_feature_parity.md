@@ -26,7 +26,7 @@ What is still missing on native UDOS falls into five portable groups:
    calls and returns, reentrant/frame-backed locals, arrays, pointers, records,
    strings, indirect parameters, bounded recursive frames, and complete
    structured-expression control including `ELSEIF`.
-2. Libraries: 16 MATH1 routines and 45 high-level GFX1 routines, each packaged
+2. Libraries: 15 MATH1 routines and 45 high-level GFX1 routines, each packaged
    so ALINK includes only reachable OBJ1 dependencies.
 3. Application facilities: command-tail-backed program arguments, application
    REU arrays, program-owned overlays, and ASP1/ABM1 resource declarations and
@@ -124,12 +124,12 @@ not parity artifacts.
 | Program-owned overlay sections | `OVERLAY`/`ENDOVERLAY` and relocated `OverlayCall` | No native source lowering | Native compiler gap; ACTC tool overlays are not equivalent |
 | Program argument entry | `MAIN(argc,argv)` through the Idun target service | `MAIN()` and UDOS command-tail workflow | OS-specific contracts; expose equivalent user arguments without copying the Idun upload ABI |
 | IEEE-754 binary32 arithmetic and exceptional values | Standalone modules | Standalone modules plus native support modules | Parity at runtime |
-| General REAL source expressions, calls, and returns | Full binary32 compiler path with intrinsic `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FCos`, `FTan`, `FATan`, `FATan2`, `FMin`, and `FMax` | Core operations, bounded nested straight-line trees over module REAL values, and up to two nested two-REAL-parameter functions with bounded static REAL locals, frame-preserved acyclic calls, at most four sequential or depth-four nested conditionals per function, immediate returns inside those controls with a terminal fallback, at most four `DO ... UNTIL`/`WHILE ... DO`/plain `DO` loops per function with nearest-loop `EXIT`, and at most four CARD-counter `FOR` loops with constant steps and constant or named CARD bounds | Partial parity; recursive/reentrant locals, general REAL-function `FOR` bound expressions/runtime steps and nested counter conversion, mixed loop/conditional nesting, returns inside loops, controls beyond the four-control/depth-four bound, unrestricted user-call argument trees and nested calls, mixed types, arbitrary signatures/calls, and recursive frames remain gaps |
+| General REAL source expressions, calls, and returns | Full binary32 compiler path with intrinsic `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FCos`, `FTan`, `FATan`, `FATan2`, `FASin`, `FMin`, and `FMax` | Core operations, bounded nested straight-line trees over module REAL values, and up to two nested two-REAL-parameter functions with bounded static REAL locals, frame-preserved acyclic calls, at most four sequential or depth-four nested conditionals per function, immediate returns inside those controls with a terminal fallback, at most four `DO ... UNTIL`/`WHILE ... DO`/plain `DO` loops per function with nearest-loop `EXIT`, and at most four CARD-counter `FOR` loops with constant steps and constant or named CARD bounds | Partial parity; recursive/reentrant locals, general REAL-function `FOR` bound expressions/runtime steps and nested counter conversion, mixed loop/conditional nesting, returns inside loops, controls beyond the four-control/depth-four bound, unrestricted user-call argument trees and nested calls, mixed types, arbitrary signatures/calls, and recursive frames remain gaps |
 | INPUT1 joystick/two-button mouse API | 19 declarations | 19 declarations | Parity; physical checks remain |
 | DBF1 API | 20 declarations | 20 declarations | Parity; physical REU/disk checks remain |
 | SIDSPR1 API | 37 declarations | 37 declarations | Parity; physical SID/display checks remain |
-| Full MATH1 source library | 43 public routines plus 8 constants, 51 catalog features; `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FCos`, `FTan`, `FATan`, `FATan2`, `FMin`, `FMax`, `DegToRad`, and `RadToDeg` are intrinsic and the remaining implementations are portable source | Eight compile-time constants plus twenty-seven link-selected callable builtins: `PrintR`, `PrintRE`, `FAbs`, `FSqrt`, `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FCos`, `FTan`, `FATan`, `FATan2`, `FMin`, `FMax`, `FClamp`, `DegToRad`, and `RadToDeg` | Constants plus twenty-one shared intrinsic semantics are at parity; native implementation gap remains for 16 public routines |
-| MATH1 reachable-only packaging | Included library routines are pruned to the transitive graph referenced by project routines and module-level routine addresses; `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FCos`, `FTan`, `FATan`, `FATan2`, `FMin`, `FMax`, `DegToRad`, and `RadToDeg` remain independent OBJs | Constants emit no code; twenty-seven callable builtins import independent OBJ modules | Packaging behavior is at parity for implemented routines; native still lacks 16 public routines |
+| Full MATH1 source library | 43 public routines plus 8 constants, 51 catalog features; `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FCos`, `FTan`, `FATan`, `FATan2`, `FASin`, `FMin`, `FMax`, `DegToRad`, and `RadToDeg` are intrinsic and the remaining implementations are portable source | Eight compile-time constants plus twenty-eight link-selected callable builtins: `PrintR`, `PrintRE`, `FAbs`, `FSqrt`, `FSign`, `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FCos`, `FTan`, `FATan`, `FATan2`, `FASin`, `FMin`, `FMax`, `FClamp`, `DegToRad`, and `RadToDeg` | Constants plus twenty-two shared intrinsic semantics are at parity; native implementation gap remains for 15 public routines |
+| MATH1 reachable-only packaging | Included library routines are pruned to the transitive graph referenced by project routines and module-level routine addresses; `FTrunc`, `FFloor`, `FCeil`, `FRound`, `FFrac`, `FMod`, `FHypot`, `FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FCos`, `FTan`, `FATan`, `FATan2`, `FASin`, `FMin`, `FMax`, `DegToRad`, and `RadToDeg` remain independent OBJs | Constants emit no code; twenty-eight callable builtins import independent OBJ modules | Packaging behavior is at parity for implemented routines; native still lacks 15 public routines |
 | Full GFX1 source library | 67 public source routines plus 16 constants; 60 routines plus the constants form the 76-feature GFX1 catalog, while seven low-level sprite aliases are cataloged under SIDSPR1 | Fifteen low-level callable declarations | Native implementation gap |
 | ASP1/ABM1 resources and compiler embedding | Linux editors and ACTC loader | Contract documented only | Native implementation gap |
 | Source formatting | `actspc` and ACTEDIT F6 | No complete UDOS formatter | Native workflow gap |
@@ -143,7 +143,7 @@ not parity artifacts.
 
 ## Concrete Native Gaps
 
-The 16 missing MATH1 routines are `FASin`, `FACos`, `FSec`, `FCsc`, `FCot`,
+The 15 missing MATH1 routines are `FACos`, `FSec`, `FCsc`, `FCot`,
 `FASec`, `FACsc`, `FACot`,
 `FVersin`, `FHaversin`, `FSinh`, `FCosh`, `FTanh`, `FASinh`,
 `FACosh`, and `FATanh`. They require wider general REAL function lowering,
@@ -230,7 +230,7 @@ the same host-side implementation is neither required nor desirable.
 | Work package | Portable result | Native C64U/UDOS work | Idun/Alpine work | State |
 | --- | --- | --- | --- | --- |
 | Compiler expression and call core | The same supported typed source produces equivalent OBJ1 calls, storage, returns, and direct-PRG results | Extend passes L/M/N/O beyond two nonrecursive two-REAL-parameter callees, bounded static REAL locals, frame-preserved acyclic calls, and four bounded controls to general functions, parameters, recursive/reentrant locals, structured control, and nested calls; then add arrays, pointers, records, strings, indirect parameters, and bounded frames | Keep Linux ACTC as the behavioral oracle and add every shared fixture to its regression suite | In progress; passes L/M/N/O prove both `MAIN` selectors, backward and forward acyclic edges, and sequential/depth-four function conditionals, but not a general or recursive call graph |
-| MATH1 | All 43 routines and 8 constants have the same binary32/domain behavior and unused routines are absent from the PRG | Lower the 20 missing source routines as compiler support permits; package each routine or dependency group as OBJ1 | Complete: ACTC emits only source routines reachable from `MAIN`, while intrinsic helpers remain independent OBJ1 modules | In progress; Idun packaging is complete and native has 23 callable entries |
+| MATH1 | All 43 routines and 8 constants have the same binary32/domain behavior and unused routines are absent from the PRG | Lower the 15 missing source routines as compiler support permits; package each routine or dependency group as OBJ1 | Complete: ACTC emits only source routines reachable from `MAIN`, while intrinsic helpers remain independent OBJ1 modules | In progress; Idun packaging is complete and native has 28 callable entries |
 | GFX1 | The common 60-routine/16-constant catalog behaves the same on the C64 target | Implement the 45 missing high-level routines in reachable OBJ1 groups and retain the existing 15 low-level calls | Keep the implemented source library and generated-program tests as the reference | Native implementation pending |
 | Resources | `SPRITE`, `MSPRITE`, `BITMAP`, and `MBITMAP` validate ASP1/ABM1 and expose equivalent linked asset addresses | Load through UDOS/REU services, emit aligned relocatable data, and add native ACTSPRITE/ACTBITMAP plus ACTEDIT F8 | Keep POSIX loading and Linux editors; add shared malformed-resource and emitted-layout fixtures | Native implementation pending |
 | Program entry and application storage | Portable argument values, application REU arrays, and program-owned overlays have matching target semantics | Decode the UDOS command tail into target-owned `argc`/`argv`; add source lowering for REU arrays and application overlays | Retain Idun upload arguments and Linux-side placement; do not export that transport as a language contract | Native implementation pending |
@@ -260,10 +260,10 @@ The shipped native `LIB/MATH1.ACT` is now an actual include header rather than
 a second application module. `INCLUDE "MATH1"` exposes all eight portable
 constants before or after the caller's `MODULE` declaration. The constants
 fold to literal binary32 words, allocate no target storage, and select no
-runtime object. The twenty-seven currently supported calls remain compiler-recognized
+runtime object. The twenty-eight currently supported calls remain compiler-recognized
 builtins documented in the header; each helper is still an independent OBJ1
 module selected only when reachable. Idun lowers `FTrunc`, `FFloor`, `FCeil`,
-`FRound`, `FFrac`, `FMod`, `FHypot`, `FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FCos`, `FTan`, `FATan`, `FATan2`,
+`FRound`, `FFrac`, `FMod`, `FHypot`, `FPow`, `FExp`, `FLn`, `FLog2`, `FLog10`, `FSin`, `FCos`, `FTan`, `FATan`, `FATan2`, `FASin`,
 `DegToRad`, and `RadToDeg` to the
 same shared helpers and keeps portable source implementations for the other
 MATH1 routines because its host compiler can lower those bodies directly.
@@ -379,7 +379,7 @@ Remaining work is dependency ordered:
 1. Generalize native REAL declarations, parameters, frame-backed locals,
    expressions, calls, and returns enough to compile portable multi-function
    MATH1 modules.
-2. Port the remaining 16 MATH1 routines in dependency-sized OBJ modules and
+2. Port the remaining 15 MATH1 routines in dependency-sized OBJ modules and
    prove representative values in direct linked PRGs without making unused
    functions reachable. Keep Idun's project-rooted library call-graph pruning
    and independent intrinsic modules covered as the packaging reference.
@@ -854,20 +854,19 @@ proofs for both directions. Shared
 `real_function_literal_clamp_comma_locals_postfix.act` combines four grouped
 REAL locals, multiplication, three comparisons, and three immediate returns;
 both generated 6502 programs store `-1`, `0`, and `1`. Current
-inventories are 1,376 broad direct-PRG shapes, 196 non-runtime source-backed
-object-emission shapes, and 310
-compiled-runtime relocation-oracle cases. Pass 6 is 8,061 bytes with 131 bytes
-free, and pass 7 is 7,031 bytes with 1,161 bytes free. Pass L is 6,129 bytes with 2,063
-bytes free; pass M is 6,998 bytes with
-1,194 bytes free; pass N is 7,120 bytes with 1,072 bytes free under its 1 KiB
-gate; pass O is 7,123 bytes with 1,069 bytes free under the same gate. The
-pass-P image is 7,147 bytes with 1,045 bytes free under the same gate. The
-pass-Q image is 7,151 bytes with 1,041 bytes free under the same gate. Pass R is
-7,334 bytes with 858 bytes free under its dedicated 768-byte gate. Pass S is
-7,828 bytes with 364 bytes free under its dedicated 256-byte gate. Pass T is
-8,147 bytes with 45 bytes free under its dedicated 32-byte gate. Pass U is 7,477
-bytes with 715 bytes free under its dedicated 640-byte gate. The public
-MATH1 gap is now 16 routines.
+inventories are 1,377 broad direct-PRG shapes, 196 non-runtime source-backed
+object-emission shapes, and 311 compiled-runtime relocation-oracle cases. Pass 6 is 8,069 bytes with 123 bytes
+free, and pass 7 is 7,065 bytes with 1,127 bytes free. Pass L is 6,137 bytes with 2,055
+bytes free; pass M is 7,006 bytes with
+1,186 bytes free; pass N is 7,128 bytes with 1,064 bytes free under its 1 KiB
+gate; pass O is 7,131 bytes with 1,061 bytes free under the same gate. The
+pass-P image is 7,155 bytes with 1,037 bytes free under the same gate. The
+pass-Q image is 7,159 bytes with 1,033 bytes free under the same gate. Pass R is
+7,342 bytes with 850 bytes free under its dedicated 768-byte gate. Pass S is
+7,836 bytes with 356 bytes free under its dedicated 256-byte gate. Pass T is
+8,155 bytes with 37 bytes free under its dedicated 32-byte gate. Pass U is 7,485
+bytes with 707 bytes free under its dedicated 640-byte gate. The public
+MATH1 gap is now 15 routines.
 
 The current MATH1 exponential slice adds `RT_F_EXP.OBJ` as an independently
 selected dependency root. It uses the portable degree-8 polynomial with
@@ -945,6 +944,16 @@ infinity, and all four quadrant rules, then uses `RT_F_DIV.OBJ` and
 `RT_F_SUB.OBJ` for the pi correction. The destination may alias either source.
 The focused native direct PRG prints `0.785398...` for `FATan2(1,1)`, and
 Idun's generated MATH1 PRG executes `FATan2(-1,-1)` through the same object.
+
+The inverse-sine slice adds the independent 220-byte `RT_F_ASIN.OBJ` root.
+Both compilers lower `FASin(value)` directly to this alias-safe unary object.
+It canonicalizes NaN and out-of-domain magnitudes, preserves signed zero,
+returns signed pi/2 at the endpoints, and follows the portable binary32
+`value*value`, `1-square`, square-root, FATan2 operation order. Its direct
+imports are only multiplication, subtraction, square root, and FATan2. The
+focused native direct PRG prints `1.570796...` for `FASin(1)`, and Idun's
+generated MATH1 PRG executes `FASin(0.5)` through the same object. `FACos` is
+the next dependency-ordered public routine.
 
 Pass 1 now contains only the streamed module-header validator. Moving the
 transform into `ACTC_OVLI.BIN` reduced pass 1 to 788 bytes. Integer folding,

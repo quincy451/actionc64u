@@ -138,6 +138,10 @@ Current status:
   implements signed-zero, infinity, NaN, and all four quadrant rules, and
   imports only `rt_f_div.obj`, `rt_f_atan.obj`, `rt_f_add.obj`, and
   `rt_f_sub.obj`.
+- `rt_f_asin.obj` is a 220-byte alias-safe unary dependency root. It rejects
+  NaN and magnitudes above one, evaluates `x*x`, `1-x*x`, square root, and
+  FATan2 in binary32 source order, and imports only `rt_f_mul.obj`,
+  `rt_f_sub.obj`, `rt_f_sqrt.obj`, and `rt_f_atan2.obj`.
 - `rt_f_exp.obj` reads a REAL32 value through `$02/$03`, writes through
   `$06/$07`, and implements the portable MATH1 range-reduced degree-8
   exponential. It is safe when source and destination alias and imports only
